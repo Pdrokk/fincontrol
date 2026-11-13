@@ -1,14 +1,9 @@
-
 import { useState } from 'react'
 import './assets/main.css'
 
 type Tipo = 'receita' | 'despesa'
-type Pagina =
-  | 'dashboard'
-  | 'transacoes'
-  | 'relatorios'
-  | 'categorias'
-  | 'configuracoes'
+
+type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -21,15 +16,7 @@ interface Transacao {
 
 const categorias: Record<Tipo, string[]> = {
   receita: ['Salário', 'Freelance', 'Investimentos', 'Outros'],
-  despesa: [
-    'Alimentação',
-    'Moradia',
-    'Transporte',
-    'Saúde',
-    'Educação',
-    'Lazer',
-    'Outros'
-  ]
+  despesa: ['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Outros']
 }
 
 const nomesPaginas: Record<Pagina, string> = {
@@ -40,14 +27,14 @@ const nomesPaginas: Record<Pagina, string> = {
   configuracoes: 'Configurações'
 }
 
-function formatarMoeda(centavos: number) {
+function formatarMoeda(centavos: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(centavos / 100)
 }
 
-function App() {
+function App(): React.JSX.Element {
   const [pagina, setPagina] = useState<Pagina>('dashboard')
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
 
@@ -55,34 +42,44 @@ function App() {
   const [valor, setValor] = useState('')
   const [tipo, setTipo] = useState<Tipo>('despesa')
   const [categoria, setCategoria] = useState('Alimentação')
-  const [data, setData] = useState(() => {
+
+  const [data, setData] = useState((): string => {
     const hoje = new Date()
     const ano = hoje.getFullYear()
     const mes = String(hoje.getMonth() + 1).padStart(2, '0')
     const dia = String(hoje.getDate()).padStart(2, '0')
+
     return `${ano}-${mes}-${dia}`
   })
 
   const totalReceitas = transacoes
-    .filter(t => t.tipo === 'receita')
+    .filter((t) => t.tipo === 'receita')
     .reduce((soma, t) => soma + t.valorCentavos, 0)
 
   const totalDespesas = transacoes
-    .filter(t => t.tipo === 'despesa')
+    .filter((t) => t.tipo === 'despesa')
     .reduce((soma, t) => soma + t.valorCentavos, 0)
 
   const saldo = totalReceitas - totalDespesas
 
-  const transacoesOrdenadas = [...transacoes].sort(
-    (a, b) => b.data.localeCompare(a.data)
-  )
+  const transacoesOrdenadas = [...transacoes].sort((a, b) => b.data.localeCompare(a.data))
 
-  function alterarTipo(novoTipo: Tipo) {
+  const despesasPorCategoria = categorias.despesa
+    .map((nome) => ({
+      nome,
+      total: transacoes
+        .filter((t) => t.tipo === 'despesa' && t.categoria === nome)
+        .reduce((soma, t) => soma + t.valorCentavos, 0)
+    }))
+    .filter((item) => item.total > 0)
+    .sort((a, b) => b.total - a.total)
+
+  function alterarTipo(novoTipo: Tipo): void {
     setTipo(novoTipo)
     setCategoria(categorias[novoTipo][0])
   }
 
-  function adicionarTransacao(e: React.FormEvent<HTMLFormElement>) {
+  function adicionarTransacao(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault()
 
     const numero = Number(valor.replace(',', '.'))
@@ -108,43 +105,33 @@ function App() {
       data
     }
 
-    setTransacoes(anteriores => [...anteriores, novaTransacao])
+    setTransacoes((anteriores) => [...anteriores, novaTransacao])
+
     setDescricao('')
     setValor('')
     setPagina('transacoes')
   }
 
-  function excluirTransacao(id: string) {
+  function excluirTransacao(id: string): void {
     if (!window.confirm('Deseja excluir esta transação?')) {
       return
     }
 
-    setTransacoes(anteriores =>
-      anteriores.filter(transacao => transacao.id !== id)
-    )
+    setTransacoes((anteriores) => anteriores.filter((transacao) => transacao.id !== id))
   }
 
-  const despesasPorCategoria = categorias.despesa
-    .map(nome => ({
-      nome,
-      total: transacoes
-        .filter(t => t.tipo === 'despesa' && t.categoria === nome)
-        .reduce((soma, t) => soma + t.valorCentavos, 0)
-    }))
-    .filter(item => item.total > 0)
-    .sort((a, b) => b.total - a.total)
-
-  function listaTransacoes(lista: Transacao[]) {
+  function listaTransacoes(lista: Transacao[]): React.JSX.Element {
     if (lista.length === 0) {
       return <p className="vazio">Nenhuma transação cadastrada.</p>
     }
 
     return (
       <div className="lista">
-        {lista.map(t => (
+        {lista.map((t) => (
           <div className="transacao" key={t.id}>
             <div className="transacao-info">
               <strong>{t.descricao}</strong>
+
               <span>
                 {t.categoria} • {t.data.split('-').reverse().join('/')}
               </span>
@@ -157,7 +144,8 @@ function App() {
 
             <button
               className="botao-excluir"
-              onClick={() => excluirTransacao(t.id)}
+              type="button"
+              onClick={(): void => excluirTransacao(t.id)}
             >
               Excluir
             </button>
@@ -171,14 +159,16 @@ function App() {
     <div className="fincontrol">
       <aside className="sidebar">
         <h1>FinControl</h1>
+
         <p className="sidebar-subtitulo">Controle Financeiro</p>
 
         <nav>
-          {(Object.keys(nomesPaginas) as Pagina[]).map(item => (
+          {(Object.keys(nomesPaginas) as Pagina[]).map((item) => (
             <button
               key={item}
+              type="button"
               className={pagina === item ? 'ativo' : ''}
-              onClick={() => setPagina(item)}
+              onClick={(): void => setPagina(item)}
             >
               {nomesPaginas[item]}
             </button>
@@ -197,7 +187,8 @@ function App() {
 
           <button
             className="botao-primario"
-            onClick={() => setPagina('transacoes')}
+            type="button"
+            onClick={(): void => setPagina('transacoes')}
           >
             + Nova transação
           </button>
@@ -213,21 +204,18 @@ function App() {
 
               <div className="card">
                 <h3>Receitas</h3>
-                <strong className="receita">
-                  {formatarMoeda(totalReceitas)}
-                </strong>
+                <strong className="receita">{formatarMoeda(totalReceitas)}</strong>
               </div>
 
               <div className="card">
                 <h3>Despesas</h3>
-                <strong className="despesa">
-                  {formatarMoeda(totalDespesas)}
-                </strong>
+                <strong className="despesa">{formatarMoeda(totalDespesas)}</strong>
               </div>
             </section>
 
             <section className="painel">
               <h3>Últimas Transações</h3>
+
               {listaTransacoes(transacoesOrdenadas.slice(0, 5))}
             </section>
           </>
@@ -243,7 +231,7 @@ function App() {
                   Descrição
                   <input
                     value={descricao}
-                    onChange={e => setDescricao(e.target.value)}
+                    onChange={(e): void => setDescricao(e.target.value)}
                     placeholder="Ex: Supermercado"
                     required
                   />
@@ -256,7 +244,7 @@ function App() {
                     min="0.01"
                     step="0.01"
                     value={valor}
-                    onChange={e => setValor(e.target.value)}
+                    onChange={(e): void => setValor(e.target.value)}
                     placeholder="0,00"
                     required
                   />
@@ -264,12 +252,7 @@ function App() {
 
                 <label>
                   Tipo
-                  <select
-                    value={tipo}
-                    onChange={e =>
-                      alterarTipo(e.target.value as Tipo)
-                    }
-                  >
+                  <select value={tipo} onChange={(e): void => alterarTipo(e.target.value as Tipo)}>
                     <option value="despesa">Despesa</option>
                     <option value="receita">Receita</option>
                   </select>
@@ -277,11 +260,8 @@ function App() {
 
                 <label>
                   Categoria
-                  <select
-                    value={categoria}
-                    onChange={e => setCategoria(e.target.value)}
-                  >
-                    {categorias[tipo].map(nome => (
+                  <select value={categoria} onChange={(e): void => setCategoria(e.target.value)}>
+                    {categorias[tipo].map((nome) => (
                       <option key={nome} value={nome}>
                         {nome}
                       </option>
@@ -294,7 +274,7 @@ function App() {
                   <input
                     type="date"
                     value={data}
-                    onChange={e => setData(e.target.value)}
+                    onChange={(e): void => setData(e.target.value)}
                     required
                   />
                 </label>
@@ -307,6 +287,7 @@ function App() {
 
             <section className="painel">
               <h3>Histórico de transações</h3>
+
               {listaTransacoes(transacoesOrdenadas)}
             </section>
           </>
@@ -317,7 +298,9 @@ function App() {
             <h3>Resumo financeiro</h3>
 
             <p>Receitas: {formatarMoeda(totalReceitas)}</p>
+
             <p>Despesas: {formatarMoeda(totalDespesas)}</p>
+
             <p>Saldo: {formatarMoeda(saldo)}</p>
 
             <h3 className="subtitulo">Despesas por categoria</h3>
@@ -325,12 +308,14 @@ function App() {
             {despesasPorCategoria.length === 0 ? (
               <p className="vazio">Nenhuma despesa registrada.</p>
             ) : (
-              despesasPorCategoria.map(item => (
+              despesasPorCategoria.map((item) => (
                 <div className="categoria-linha" key={item.nome}>
                   <div className="categoria-texto">
                     <span>{item.nome}</span>
+
                     <strong>{formatarMoeda(item.total)}</strong>
                   </div>
+
                   <div className="barra-fundo">
                     <div
                       className="barra-progresso"
@@ -350,16 +335,22 @@ function App() {
             <h3>Categorias disponíveis</h3>
 
             <h4 className="subtitulo">Receitas</h4>
+
             <div className="etiquetas">
-              {categorias.receita.map(nome => (
-                <span className="etiqueta" key={nome}>{nome}</span>
+              {categorias.receita.map((nome) => (
+                <span className="etiqueta" key={nome}>
+                  {nome}
+                </span>
               ))}
             </div>
 
             <h4 className="subtitulo">Despesas</h4>
+
             <div className="etiquetas">
-              {categorias.despesa.map(nome => (
-                <span className="etiqueta" key={nome}>{nome}</span>
+              {categorias.despesa.map((nome) => (
+                <span className="etiqueta" key={nome}>
+                  {nome}
+                </span>
               ))}
             </div>
           </section>
@@ -368,9 +359,13 @@ function App() {
         {pagina === 'configuracoes' && (
           <section className="painel">
             <h3>Sobre o aplicativo</h3>
+
             <p>FinControl — Controle Financeiro Pessoal</p>
+
             <p>Versão de desenvolvimento: 0.1.0</p>
+
             <p>Moeda: Real brasileiro (BRL)</p>
+
             <p>Armazenamento permanente: ainda não configurado.</p>
           </section>
         )}
