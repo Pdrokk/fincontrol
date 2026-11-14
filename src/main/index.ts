@@ -1,7 +1,11 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { iniciarBanco } from './database'
 import icon from '../../resources/icon.png?asset'
+import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
+
+import type { NovaTransacao } from './database'
 
 function createWindow(): void {
   // Create the browser window.
@@ -39,6 +43,25 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  iniciarBanco()
+
+  ipcMain.handle('transacoes:listar', () => {
+    return listarTransacoes()
+  })
+
+  ipcMain.handle('transacoes:salvar', (_evento, dados: NovaTransacao) => {
+    return salvarTransacao(dados)
+  })
+
+  ipcMain.handle('transacoes:remover', (_evento, id: string) => {
+    removerTransacao(id)
+    return true
+  })
+
+  ipcMain.handle('transacoes:editar', (_evento, id: string, dados: NovaTransacao) => {
+    return editarTransacao(id, dados)
+  })
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 

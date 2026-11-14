@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './assets/main.css'
 
 type Tipo = 'receita' | 'despesa'
@@ -37,6 +37,39 @@ function formatarMoeda(centavos: number): string {
 function App(): React.JSX.Element {
   const [pagina, setPagina] = useState<Pagina>('dashboard')
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
+
+  const [carregando, setCarregando] = useState(true)
+  const [salvando, setSalvando] = useState(false)
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [erroBanco, setErroBanco] = useState('')
+
+  useEffect((): (() => void) => {
+    let ativo = true
+
+    window.fincontrol
+      .listarTransacoes()
+      .then((registros): void => {
+        if (ativo) {
+          setTransacoes(registros)
+        }
+      })
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar SQLite:', erro)
+
+        if (ativo) {
+          setErroBanco('Não foi possível carregar as transações.')
+        }
+      })
+      .finally((): void => {
+        if (ativo) {
+          setCarregando(false)
+        }
+      })
+
+    return (): void => {
+      ativo = false
+    }
+  }, [])
 
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
@@ -79,8 +112,35 @@ function App(): React.JSX.Element {
     setCategoria(categorias[novoTipo][0])
   }
 
-  function adicionarTransacao(e: React.FormEvent<HTMLFormElement>): void {
+  function iniciarEdicao(transacao: Transacao): void {
+    setEditandoId(transacao.id)
+    setDescricao(transacao.descricao)
+    setValor((transacao.valorCentavos / 100).toFixed(2))
+    setTipo(transacao.tipo)
+    setCategoria(transacao.categoria)
+    setData(transacao.data)
+    setPagina('transacoes')
+
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelarEdicao(): void {
+    setEditandoId(null)
+    setDescricao('')
+    setValor('')
+    setTipo('despesa')
+    setCategoria('Alimentação')
+  }
+
+  
+  async function adicionarTransacao(
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> {
     e.preventDefault()
+
+    if (salvando || carregando || erroBanco) {
+      return
+    }
 
     const numero = Number(valor.replace(',', '.'))
     const centavos = Math.round(numero * 100)
@@ -92,12 +152,11 @@ function App(): React.JSX.Element {
       centavos <= 0 ||
       !data
     ) {
-      alert('Preencha os campos com um valor válido.')
+      alert('Preencha os campos corretamente.')
       return
     }
 
-    const novaTransacao: Transacao = {
-      id: crypto.randomUUID(),
+    const dados = {
       descricao: descricao.trim(),
       valorCentavos: centavos,
       tipo,
@@ -105,19 +164,57 @@ function App(): React.JSX.Element {
       data
     }
 
-    setTransacoes((anteriores) => [...anteriores, novaTransacao])
+    try {
+      setSalvando(true)
 
-    setDescricao('')
-    setValor('')
-    setPagina('transacoes')
+      if (editandoId !== null) {
+        const atualizada =
+          await window.fincontrol.editarTransacao(
+            editandoId,
+            dados
+          )
+
+        setTransacoes((anteriores) =>
+          anteriores.map((transacao) =>
+            transacao.id === editandoId
+              ? atualizada
+              : transacao
+          )
+        )
+      } else {
+        const novaTransacao =
+          await window.fincontrol.salvarTransacao(dados)
+
+        setTransacoes((anteriores) => [
+          ...anteriores,
+          novaTransacao
+        ])
+      }
+
+      cancelarEdicao()
+      setPagina('transacoes')
+    } catch (erro) {
+      console.error('Erro ao salvar transação:', erro)
+      alert('Não foi possível salvar a transação.')
+    } finally {
+      setSalvando(false)
+    }
   }
 
-  function excluirTransacao(id: string): void {
+
+  async function excluirTransacao(id: string): Promise<void> {
     if (!window.confirm('Deseja excluir esta transação?')) {
       return
     }
 
-    setTransacoes((anteriores) => anteriores.filter((transacao) => transacao.id !== id))
+    try {
+      await window.fincontrol.removerTransacao(id)
+
+      setTransacoes((anteriores) => anteriores.filter((transacao) => transacao.id !== id))
+    } catch (erro) {
+      console.error('Erro ao excluir:', erro)
+      alert('Não foi possível excluir a transação.')
+    }
   }
 
   function listaTransacoes(lista: Transacao[]): React.JSX.Element {
@@ -141,11 +238,21 @@ function App(): React.JSX.Element {
               {t.tipo === 'receita' ? '+' : '-'}
               {formatarMoeda(t.valorCentavos)}
             </strong>
+            
+<button
+  className="botao-editar"
+  type="button"
+  onClick={(): void => iniciarEdicao(t)}
+>
+  Editar
+</button>
 
             <button
               className="botao-excluir"
               type="button"
-              onClick={(): void => excluirTransacao(t.id)}
+              onClick={(): void => {
+                void excluirTransacao(t.id)
+              }}
             >
               Excluir
             </button>
@@ -179,6 +286,14 @@ function App(): React.JSX.Element {
       </aside>
 
       <main className="content">
+        {carregando && <p role="status">Carregando dados financeiros...</p>}
+
+        {erroBanco && (
+          <p role="alert" style={{ color: '#dc2626' }}>
+            {erroBanco}
+          </p>
+        )}
+
         <header className="cabecalho">
           <div>
             <h2>{nomesPaginas[pagina]}</h2>
@@ -188,7 +303,10 @@ function App(): React.JSX.Element {
           <button
             className="botao-primario"
             type="button"
-            onClick={(): void => setPagina('transacoes')}
+            onClick={(): void => {
+  cancelarEdicao()
+  setPagina('transacoes')
+}}
           >
             + Nova transação
           </button>
@@ -224,9 +342,16 @@ function App(): React.JSX.Element {
         {pagina === 'transacoes' && (
           <>
             <section className="painel">
-              <h3>Adicionar movimentação</h3>
+              <h3>
+  {editandoId ? 'Editar movimentação' : 'Adicionar movimentação'}
+</h3>
 
-              <form onSubmit={adicionarTransacao} className="formulario">
+              <form
+                onSubmit={(e): void => {
+                  void adicionarTransacao(e)
+                }}
+                className="formulario"
+              >
                 <label>
                   Descrição
                   <input
@@ -279,9 +404,30 @@ function App(): React.JSX.Element {
                   />
                 </label>
 
-                <button className="botao-primario" type="submit">
-                  Salvar transação
-                </button>
+                
+<button
+  className="botao-primario"
+  type="submit"
+  disabled={salvando || carregando || Boolean(erroBanco)}
+>
+  {salvando
+    ? 'Salvando...'
+    : editandoId
+      ? 'Salvar alterações'
+      : 'Salvar transação'}
+</button>
+
+{editandoId && (
+  <button
+    type="button"
+    className="botao-cancelar"
+    onClick={cancelarEdicao}
+    disabled={salvando}
+  >
+    Cancelar edição
+  </button>
+)}
+
               </form>
             </section>
 

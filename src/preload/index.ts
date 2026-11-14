@@ -1,4 +1,4 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -20,3 +20,30 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api
 }
+
+const fincontrolAPI = {
+  listarTransacoes: (): Promise<unknown> => ipcRenderer.invoke('transacoes:listar'),
+
+  salvarTransacao: (dados: {
+    descricao: string
+    valorCentavos: number
+    tipo: 'receita' | 'despesa'
+    categoria: string
+    data: string
+  }): Promise<unknown> => ipcRenderer.invoke('transacoes:salvar', dados),
+
+  removerTransacao: (id: string): Promise<boolean> => ipcRenderer.invoke('transacoes:remover', id),
+
+  editarTransacao: (
+    id: string,
+    dados: {
+      descricao: string
+      valorCentavos: number
+      tipo: 'receita' | 'despesa'
+      categoria: string
+      data: string
+    }
+  ): Promise<unknown> => ipcRenderer.invoke('transacoes:editar', id, dados)
+}
+
+contextBridge.exposeInMainWorld('fincontrol', fincontrolAPI)
