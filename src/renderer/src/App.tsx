@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import GraficosFinanceiros from './components/GraficosFinanceiros'
 import './assets/main.css'
 
 type Tipo = 'receita' | 'despesa'
@@ -37,6 +38,12 @@ function formatarMoeda(centavos: number): string {
 function App(): React.JSX.Element {
   const [pagina, setPagina] = useState<Pagina>('dashboard')
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
+
+  const [mesFiltro, setMesFiltro] = useState('todos')
+  const [anoFiltro, setAnoFiltro] = useState('todos')
+  const [tipoFiltro, setTipoFiltro] = useState('todos')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
+  const [busca, setBusca] = useState('')
 
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
@@ -85,32 +92,69 @@ function App(): React.JSX.Element {
     return `${ano}-${mes}-${dia}`
   })
 
-  const totalReceitas = transacoes
+  const meses = [
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro'
+  ]
+
+  const anosDisponiveis = Array.from(new Set(transacoes.map((t) => t.data.slice(0, 4)))).sort(
+    (a, b) => b.localeCompare(a)
+  )
+
+  const transacoesPeriodo = transacoes.filter((t) => {
+    const ano = t.data.slice(0, 4)
+    const mes = t.data.slice(5, 7)
+
+    const correspondeAno = anoFiltro === 'todos' || ano === anoFiltro
+
+    const correspondeMes = mesFiltro === 'todos' || mes === mesFiltro
+
+    return correspondeAno && correspondeMes
+  })
+
+  const totalReceitas = transacoesPeriodo
     .filter((t) => t.tipo === 'receita')
     .reduce((soma, t) => soma + t.valorCentavos, 0)
 
-  const totalDespesas = transacoes
+  const totalDespesas = transacoesPeriodo
     .filter((t) => t.tipo === 'despesa')
     .reduce((soma, t) => soma + t.valorCentavos, 0)
 
   const saldo = totalReceitas - totalDespesas
 
-  const transacoesOrdenadas = [...transacoes].sort((a, b) => b.data.localeCompare(a.data))
+  const transacoesFiltradas = transacoesPeriodo.filter((t) => {
+    const correspondeTipo = tipoFiltro === 'todos' || t.tipo === tipoFiltro
+
+    const correspondeCategoria = categoriaFiltro === 'todas' || t.categoria === categoriaFiltro
+
+    const correspondeBusca = t.descricao
+      .toLocaleLowerCase('pt-BR')
+      .includes(busca.trim().toLocaleLowerCase('pt-BR'))
+
+    return correspondeTipo && correspondeCategoria && correspondeBusca
+  })
+
+  const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => b.data.localeCompare(a.data))
 
   const despesasPorCategoria = categorias.despesa
     .map((nome) => ({
       nome,
-      total: transacoes
+      total: transacoesPeriodo
         .filter((t) => t.tipo === 'despesa' && t.categoria === nome)
         .reduce((soma, t) => soma + t.valorCentavos, 0)
     }))
     .filter((item) => item.total > 0)
     .sort((a, b) => b.total - a.total)
-
-  function alterarTipo(novoTipo: Tipo): void {
-    setTipo(novoTipo)
-    setCategoria(categorias[novoTipo][0])
-  }
 
   function iniciarEdicao(transacao: Transacao): void {
     setEditandoId(transacao.id)
@@ -132,10 +176,12 @@ function App(): React.JSX.Element {
     setCategoria('Alimentação')
   }
 
-  
-  async function adicionarTransacao(
-    e: React.FormEvent<HTMLFormElement>
-  ): Promise<void> {
+  function alterarTipo(novoTipo: Tipo): void {
+    setTipo(novoTipo)
+    setCategoria(categorias[novoTipo][0])
+  }
+
+  async function adicionarTransacao(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
 
     if (salvando || carregando || erroBanco) {
@@ -168,27 +214,15 @@ function App(): React.JSX.Element {
       setSalvando(true)
 
       if (editandoId !== null) {
-        const atualizada =
-          await window.fincontrol.editarTransacao(
-            editandoId,
-            dados
-          )
+        const atualizada = await window.fincontrol.editarTransacao(editandoId, dados)
 
         setTransacoes((anteriores) =>
-          anteriores.map((transacao) =>
-            transacao.id === editandoId
-              ? atualizada
-              : transacao
-          )
+          anteriores.map((transacao) => (transacao.id === editandoId ? atualizada : transacao))
         )
       } else {
-        const novaTransacao =
-          await window.fincontrol.salvarTransacao(dados)
+        const novaTransacao = await window.fincontrol.salvarTransacao(dados)
 
-        setTransacoes((anteriores) => [
-          ...anteriores,
-          novaTransacao
-        ])
+        setTransacoes((anteriores) => [...anteriores, novaTransacao])
       }
 
       cancelarEdicao()
@@ -200,7 +234,6 @@ function App(): React.JSX.Element {
       setSalvando(false)
     }
   }
-
 
   async function excluirTransacao(id: string): Promise<void> {
     if (!window.confirm('Deseja excluir esta transação?')) {
@@ -238,14 +271,10 @@ function App(): React.JSX.Element {
               {t.tipo === 'receita' ? '+' : '-'}
               {formatarMoeda(t.valorCentavos)}
             </strong>
-            
-<button
-  className="botao-editar"
-  type="button"
-  onClick={(): void => iniciarEdicao(t)}
->
-  Editar
-</button>
+
+            <button className="botao-editar" type="button" onClick={(): void => iniciarEdicao(t)}>
+              Editar
+            </button>
 
             <button
               className="botao-excluir"
@@ -304,13 +333,64 @@ function App(): React.JSX.Element {
             className="botao-primario"
             type="button"
             onClick={(): void => {
-  cancelarEdicao()
-  setPagina('transacoes')
-}}
+              cancelarEdicao()
+              setPagina('transacoes')
+            }}
           >
             + Nova transação
           </button>
         </header>
+
+        {(pagina === 'dashboard' || pagina === 'transacoes' || pagina === 'relatorios') && (
+          <section className="filtros-periodo">
+            <div className="filtro-campo">
+              <label htmlFor="mesFiltro">Mês</label>
+
+              <select
+                id="mesFiltro"
+                value={mesFiltro}
+                onChange={(e): void => setMesFiltro(e.target.value)}
+              >
+                <option value="todos">Todos os meses</option>
+
+                {meses.map((nome, index) => (
+                  <option key={nome} value={String(index + 1).padStart(2, '0')}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filtro-campo">
+              <label htmlFor="anoFiltro">Ano</label>
+
+              <select
+                id="anoFiltro"
+                value={anoFiltro}
+                onChange={(e): void => setAnoFiltro(e.target.value)}
+              >
+                <option value="todos">Todos os anos</option>
+
+                {anosDisponiveis.map((ano) => (
+                  <option key={ano} value={ano}>
+                    {ano}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className="botao-limpar"
+              onClick={(): void => {
+                setMesFiltro('todos')
+                setAnoFiltro('todos')
+              }}
+            >
+              Limpar período
+            </button>
+          </section>
+        )}
 
         {pagina === 'dashboard' && (
           <>
@@ -331,10 +411,14 @@ function App(): React.JSX.Element {
               </div>
             </section>
 
+            <GraficosFinanceiros transacoes={transacoesPeriodo} />
+
             <section className="painel">
               <h3>Últimas Transações</h3>
 
-              {listaTransacoes(transacoesOrdenadas.slice(0, 5))}
+              {listaTransacoes(
+                [...transacoesPeriodo].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5)
+              )}
             </section>
           </>
         )}
@@ -342,9 +426,71 @@ function App(): React.JSX.Element {
         {pagina === 'transacoes' && (
           <>
             <section className="painel">
-              <h3>
-  {editandoId ? 'Editar movimentação' : 'Adicionar movimentação'}
-</h3>
+              <h3>{editandoId ? 'Editar movimentação' : 'Adicionar movimentação'}</h3>
+
+              <div className="filtros-avancados">
+                <div className="filtro-campo">
+                  <label htmlFor="busca">Pesquisar</label>
+                  <input
+                    id="busca"
+                    type="text"
+                    placeholder="Buscar descrição..."
+                    value={busca}
+                    onChange={(e): void => setBusca(e.target.value)}
+                  />
+                </div>
+
+                <div className="filtro-campo">
+                  <label htmlFor="tipoFiltro">Tipo</label>
+                  <select
+                    id="tipoFiltro"
+                    value={tipoFiltro}
+                    onChange={(e): void => {
+                      setTipoFiltro(e.target.value)
+                      setCategoriaFiltro('todas')
+                    }}
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="receita">Receitas</option>
+                    <option value="despesa">Despesas</option>
+                  </select>
+                </div>
+
+                <div className="filtro-campo">
+                  <label htmlFor="categoriaFiltro">Categoria</label>
+
+                  <select
+                    id="categoriaFiltro"
+                    value={categoriaFiltro}
+                    onChange={(e): void => setCategoriaFiltro(e.target.value)}
+                  >
+                    <option value="todas">Todas as categorias</option>
+
+                    {Array.from(
+                      new Set([
+                        ...(tipoFiltro === 'despesa' ? [] : categorias.receita),
+                        ...(tipoFiltro === 'receita' ? [] : categorias.despesa)
+                      ])
+                    ).map((nome) => (
+                      <option key={nome} value={nome}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  className="botao-limpar"
+                  onClick={(): void => {
+                    setBusca('')
+                    setTipoFiltro('todos')
+                    setCategoriaFiltro('todas')
+                  }}
+                >
+                  Limpar busca
+                </button>
+              </div>
 
               <form
                 onSubmit={(e): void => {
@@ -404,30 +550,24 @@ function App(): React.JSX.Element {
                   />
                 </label>
 
-                
-<button
-  className="botao-primario"
-  type="submit"
-  disabled={salvando || carregando || Boolean(erroBanco)}
->
-  {salvando
-    ? 'Salvando...'
-    : editandoId
-      ? 'Salvar alterações'
-      : 'Salvar transação'}
-</button>
+                <button
+                  className="botao-primario"
+                  type="submit"
+                  disabled={salvando || carregando || Boolean(erroBanco)}
+                >
+                  {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Salvar transação'}
+                </button>
 
-{editandoId && (
-  <button
-    type="button"
-    className="botao-cancelar"
-    onClick={cancelarEdicao}
-    disabled={salvando}
-  >
-    Cancelar edição
-  </button>
-)}
-
+                {editandoId && (
+                  <button
+                    type="button"
+                    className="botao-cancelar"
+                    onClick={cancelarEdicao}
+                    disabled={salvando}
+                  >
+                    Cancelar edição
+                  </button>
+                )}
               </form>
             </section>
 
@@ -440,40 +580,44 @@ function App(): React.JSX.Element {
         )}
 
         {pagina === 'relatorios' && (
-          <section className="painel">
-            <h3>Resumo financeiro</h3>
+          <>
+            <GraficosFinanceiros transacoes={transacoesPeriodo} />
 
-            <p>Receitas: {formatarMoeda(totalReceitas)}</p>
+            <section className="painel">
+              <h3>Resumo financeiro</h3>
 
-            <p>Despesas: {formatarMoeda(totalDespesas)}</p>
+              <p>Receitas: {formatarMoeda(totalReceitas)}</p>
 
-            <p>Saldo: {formatarMoeda(saldo)}</p>
+              <p>Despesas: {formatarMoeda(totalDespesas)}</p>
 
-            <h3 className="subtitulo">Despesas por categoria</h3>
+              <p>Saldo: {formatarMoeda(saldo)}</p>
 
-            {despesasPorCategoria.length === 0 ? (
-              <p className="vazio">Nenhuma despesa registrada.</p>
-            ) : (
-              despesasPorCategoria.map((item) => (
-                <div className="categoria-linha" key={item.nome}>
-                  <div className="categoria-texto">
-                    <span>{item.nome}</span>
+              <h3 className="subtitulo">Despesas por categoria</h3>
 
-                    <strong>{formatarMoeda(item.total)}</strong>
+              {despesasPorCategoria.length === 0 ? (
+                <p className="vazio">Nenhuma despesa registrada.</p>
+              ) : (
+                despesasPorCategoria.map((item) => (
+                  <div className="categoria-linha" key={item.nome}>
+                    <div className="categoria-texto">
+                      <span>{item.nome}</span>
+
+                      <strong>{formatarMoeda(item.total)}</strong>
+                    </div>
+
+                    <div className="barra-fundo">
+                      <div
+                        className="barra-progresso"
+                        style={{
+                          width: `${(item.total / totalDespesas) * 100}%`
+                        }}
+                      />
+                    </div>
                   </div>
-
-                  <div className="barra-fundo">
-                    <div
-                      className="barra-progresso"
-                      style={{
-                        width: `${(item.total / totalDespesas) * 100}%`
-                      }}
-                    />
-                  </div>
-                </div>
-              ))
-            )}
-          </section>
+                ))
+              )}
+            </section>
+          </>
         )}
 
         {pagina === 'categorias' && (
