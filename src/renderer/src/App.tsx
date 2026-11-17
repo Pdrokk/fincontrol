@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
 import './assets/main.css'
+import {
+  LayoutDashboard,
+  ArrowLeftRight,
+  ChartNoAxesCombined,
+  Tags,
+  Settings,
+  Wallet
+} from 'lucide-react'
 
 type Tipo = 'receita' | 'despesa'
 
@@ -28,6 +36,14 @@ const nomesPaginas: Record<Pagina, string> = {
   configuracoes: 'Configurações'
 }
 
+const iconesPaginas = {
+  dashboard: LayoutDashboard,
+  transacoes: ArrowLeftRight,
+  relatorios: ChartNoAxesCombined,
+  categorias: Tags,
+  configuracoes: Settings
+}
+
 function formatarMoeda(centavos: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -49,6 +65,20 @@ function App(): React.JSX.Element {
   const [salvando, setSalvando] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [erroBanco, setErroBanco] = useState('')
+
+  const [tema, setTema] = useState<'light' | 'dark'>(() => {
+    return localStorage.getItem('fincontrol-tema') === 'dark' ? 'dark' : 'light'
+  })
+
+  function alternarTema(): void {
+    setTema((anterior) => {
+      const novoTema = anterior === 'light' ? 'dark' : 'light'
+
+      localStorage.setItem('fincontrol-tema', novoTema)
+
+      return novoTema
+    })
+  }
 
   useEffect((): (() => void) => {
     let ativo = true
@@ -292,26 +322,36 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <div className="fincontrol">
+    <div className="fincontrol" data-theme={tema}>
       <aside className="sidebar">
-        <h1>FinControl</h1>
+        <div className="sidebar-logo" title="FinControl">
+          <Wallet size={27} strokeWidth={2.2} />
+        </div>
 
-        <p className="sidebar-subtitulo">Controle Financeiro</p>
+        <nav aria-label="Menu principal">
+          {(Object.keys(nomesPaginas) as Pagina[]).map((item) => {
+            const Icone = iconesPaginas[item]
 
-        <nav>
-          {(Object.keys(nomesPaginas) as Pagina[]).map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={pagina === item ? 'ativo' : ''}
-              onClick={(): void => setPagina(item)}
-            >
-              {nomesPaginas[item]}
-            </button>
-          ))}
+            return (
+              <button
+                key={item}
+                type="button"
+                title={nomesPaginas[item]}
+                aria-label={nomesPaginas[item]}
+                aria-current={pagina === item ? 'page' : undefined}
+                className={pagina === item ? 'ativo' : ''}
+                onClick={(): void => setPagina(item)}
+              >
+                <Icone size={22} strokeWidth={1.9} />
+                <span className="menu-texto">{nomesPaginas[item]}</span>
+              </button>
+            )
+          })}
         </nav>
 
-        <p className="sidebar-rodape">FinControl • TCC</p>
+        <div className="sidebar-rodape" title="FinControl">
+          <Wallet size={19} />
+        </div>
       </aside>
 
       <main className="content">
@@ -322,12 +362,20 @@ function App(): React.JSX.Element {
             {erroBanco}
           </p>
         )}
-
         <header className="cabecalho">
           <div>
             <h2>{nomesPaginas[pagina]}</h2>
             <p>Organize seu dinheiro com praticidade.</p>
           </div>
+
+          <button
+            type="button"
+            className="botao-tema"
+            onClick={alternarTema}
+            aria-label={tema === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
+          >
+            {tema === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+          </button>
 
           <button
             className="botao-primario"

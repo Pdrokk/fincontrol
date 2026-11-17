@@ -504,3 +504,314 @@ button:disabled {
     grid-column: auto;
   }
 }
+
+/* FINCONTROL - SISTEMA DE TEMAS */
+
+.fincontrol {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border-color: #e2e8f0;
+  --sidebar-bg: #0f172a;
+  --input-bg: #ffffff;
+
+  background: var(--bg);
+  color: var(--text);
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.fincontrol[data-theme='dark'] {
+  --bg: #0b1220;
+  --surface: #1e293b;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --border-color: #334155;
+  --sidebar-bg: #080f1c;
+  --input-bg: #273449;
+}
+
+.fincontrol .content {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.fincontrol .sidebar {
+  background: var(--sidebar-bg);
+}
+
+.fincontrol .card,
+.fincontrol .painel,
+.fincontrol .grafico-card,
+.fincontrol .filtros-periodo,
+.fincontrol .filtros-avancados {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-color);
+}
+
+.fincontrol .card h3,
+.fincontrol .cabecalho p,
+.fincontrol .grafico-card > p,
+.fincontrol .filtro-campo label,
+.fincontrol .transacao-info span {
+  color: var(--muted);
+}
+
+.fincontrol .grafico-card h3,
+.fincontrol .legenda-item strong,
+.fincontrol .categoria-texto strong,
+.fincontrol .transacao-info strong {
+  color: var(--text);
+}
+
+.fincontrol input,
+.fincontrol select {
+  background: var(--input-bg);
+  color: var(--text);
+  border-color: var(--border-color);
+}
+
+.fincontrol .transacao {
+  border-color: var(--border-color);
+}
+
+.botao-tema {
+  padding: 11px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.botao-tema:hover {
+  opacity: 0.85;
+}
+
+.fincontrol[data-theme='dark'] .barra-fundo {
+  background: #334155;
+}
+
+.fincontrol[data-theme='dark'] .botao-limpar,
+.fincontrol[data-theme='dark'] .botao-cancelar {
+  background: #334155;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+.fincontrol[data-theme='dark'] .etiqueta {
+  background: #14532d;
+  color: #bbf7d0;
+}
+
+.fincontrol[data-theme='dark'] .legenda-item {
+  color: #cbd5e1;
+}
+
+/* FINCONTROL - REDESIGN 7.2 */
+
+/* Estrutura principal */
+
+.fincontrol {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.fincontrol .content {
+  min-width: 0;
+  padding: 32px;
+}
+
+/* Menu lateral compacto */
+
+.fincontrol .sidebar {
+  width: 76px;
+  min-width: 76px;
+  padding: 24px 12px;
+  align-items: center;
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar-logo {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #2563eb;
+  margin-bottom: 45px;
+}
+
+.fincontrol[data-theme='dark'] .sidebar-logo {
+  color: #60a5fa;
+}
+
+.fincontrol .sidebar nav {
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+}
+
+.fincontrol .sidebar nav button {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #94a3b8;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.fincontrol .sidebar nav button:hover {
+  color: #60a5fa;
+  background: #1e293b;
+}
+
+.fincontrol .sidebar nav button.ativo {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 4px 12px #2563eb33;
+}
+
+.fincontrol .sidebar nav button.ativo:hover {
+  background: #1d4ed8;
+}
+
+.fincontrol .sidebar .menu-texto {
+  display: none;
+}
+
+.fincontrol .sidebar-rodape {
+  margin-top: auto;
+  color: #64748b;
+}
+
+/* Cabeçalho */
+
+.fincontrol .cabecalho {
+  margin-bottom: 30px;
+  padding: 6px 0;
+}
+
+.fincontrol .cabecalho h2 {
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  color: var(--text);
+}
+
+.fincontrol .cabecalho p {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Cartões financeiros */
+
+.fincontrol .cards {
+  gap: 20px;
+  margin-bottom: 26px;
+}
+
+.fincontrol .card {
+  position: relative;
+  min-height: 145px;
+  padding: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 5px 22px #00000008;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.fincontrol .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 9px 24px #00000012;
+}
+
+.fincontrol .card h3 {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 22px;
+}
+
+.fincontrol .card strong {
+  font-size: clamp(21px, 2vw, 30px);
+  letter-spacing: -0.5px;
+}
+
+/* Identificação discreta dos indicadores */
+
+.fincontrol .card:nth-child(1) {
+  border-top: 3px solid #2563eb;
+}
+
+.fincontrol .card:nth-child(2) {
+  border-top: 3px solid #16a34a;
+}
+
+.fincontrol .card:nth-child(3) {
+  border-top: 3px solid #ef4444;
+}
+
+/* Outros cartões e painéis */
+
+.fincontrol .painel,
+.fincontrol .grafico-card {
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  box-shadow: 0 5px 22px #00000008;
+}
+
+.fincontrol .botao-primario {
+  background: #2563eb;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.fincontrol .botao-primario:hover {
+  background: #1d4ed8;
+}
+
+/* Adaptação de botões e foco */
+
+.fincontrol button:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 3px;
+}
+
+.fincontrol[data-theme='dark'] .card,
+.fincontrol[data-theme='dark'] .painel,
+.fincontrol[data-theme='dark'] .grafico-card {
+  box-shadow: 0 5px 22px #00000022;
+}
+
+/* Responsividade desktop */
+
+@media (max-width: 950px) {
+  .fincontrol .sidebar {
+    width: 66px;
+    min-width: 66px;
+    padding: 20px 8px;
+  }
+
+  .fincontrol .content {
+    padding: 20px;
+  }
+
+  .fincontrol .cards {
+    grid-template-columns: 1fr;
+  }
+}

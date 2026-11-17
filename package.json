@@ -24,6 +24,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-updater": "^6.8.9",
+    "lucide-react": "^1.74.0",
     "react-is": "^19.3.1",
     "recharts": "^3.10.1"
   },
