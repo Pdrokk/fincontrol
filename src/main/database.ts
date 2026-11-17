@@ -26,6 +26,12 @@ export function iniciarBanco(): void {
     )
   `)
 
+  // Migração não destrutiva: lançamentos anteriores permanecem sem conta vinculada.
+  const colunas = banco.prepare("PRAGMA table_info(transacoes)").all() as { name: string }[]
+  if (!colunas.some((coluna) => coluna.name === 'conta_id')) {
+    banco.exec('ALTER TABLE transacoes ADD COLUMN conta_id TEXT')
+  }
+
   console.log('SQLite iniciado em:', caminho)
 }
 
@@ -44,6 +50,7 @@ export interface Transacao {
   tipo: 'receita' | 'despesa'
   categoria: string
   data: string
+  contaId: string | null
 }
 
 export type NovaTransacao = Omit<Transacao, 'id'>
@@ -60,7 +67,8 @@ export function listarTransacoes(): Transacao[] {
       valor_centavos AS valorCentavos,
       tipo,
       categoria,
-      data
+      data,
+      conta_id AS contaId
     FROM transacoes
     ORDER BY data DESC, rowid DESC
   `
@@ -68,6 +76,14 @@ export function listarTransacoes(): Transacao[] {
     .all()
 
   return registros as unknown as Transacao[]
+}
+
+function validarContaId(contaId: string | null | undefined): string | null {
+  if (contaId == null || contaId === '') return null
+  if (typeof contaId !== 'string') throw new Error('Conta inválida.')
+  const existe = obterBanco().prepare('SELECT id FROM contas WHERE id = ?').get(contaId)
+  if (!existe) throw new Error('Conta bancária não encontrada.')
+  return contaId
 }
 
 export function salvarTransacao(dados: NovaTransacao): Transacao {
@@ -104,13 +120,16 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
     throw new Error('Data inválida.')
   }
 
+  const contaId = validarContaId(dados.contaId)
+
   const transacao: Transacao = {
     id: randomUUID(),
     descricao: dados.descricao.trim(),
     valorCentavos: dados.valorCentavos,
     tipo: dados.tipo,
     categoria: dados.categoria.trim(),
-    data: dados.data
+    data: dados.data,
+    contaId
   }
 
   const db = obterBanco()
@@ -123,9 +142,10 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
       valor_centavos,
       tipo,
       categoria,
-      data
+      data,
+      conta_id
     )
-    VALUES (?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `
   ).run(
     transacao.id,
@@ -133,7 +153,8 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
     transacao.valorCentavos,
     transacao.tipo,
     transacao.categoria,
-    transacao.data
+    transacao.data,
+    transacao.contaId
   )
 
   return transacao
@@ -191,6 +212,7 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
     throw new Error('Data inválida.')
   }
 
+  const contaId = validarContaId(dados.contaId)
   const banco = obterBanco()
 
   const resultado = banco
@@ -202,7 +224,8 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
       valor_centavos = ?,
       tipo = ?,
       categoria = ?,
-      data = ?
+      data = ?,
+      conta_id = ?
     WHERE id = ?
   `
     )
@@ -212,6 +235,7 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
       dados.tipo,
       dados.categoria.trim(),
       dados.data,
+      contaId,
       id
     )
 
@@ -225,6 +249,7 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
     valorCentavos: dados.valorCentavos,
     tipo: dados.tipo,
     categoria: dados.categoria.trim(),
-    data: dados.data
+    data: dados.data,
+    contaId
   }
 }
