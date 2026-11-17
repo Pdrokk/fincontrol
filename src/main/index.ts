@@ -16,6 +16,8 @@ import {
 import type { NovaConta, NovaTransferencia } from './contas'
 
 import type { NovaTransacao } from './database'
+import { criarTabelasCartoes, listarCartoes, cadastrarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas } from './cartoes'
+import type { NovoCartao, NovaCompra } from './cartoes'
 
 function createWindow(): void {
   // Create the browser window.
@@ -55,6 +57,13 @@ function createWindow(): void {
 app.whenReady().then(() => {
   iniciarBanco()
   criarTabelaContas()
+  criarTabelasCartoes()
+
+  ipcMain.handle('cartoes:listar', () => listarCartoes())
+  ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
+  ipcMain.handle('compras-cartao:listar', () => listarCompras())
+  ipcMain.handle('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
+  ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
 
   ipcMain.handle('contas:listar', () => {
     return listarContas()
