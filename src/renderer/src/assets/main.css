@@ -928,3 +928,38 @@ button:disabled {
   justify-content: center;
   gap: 8px;
 }
+
+/* FINCONTROL - CARTÕES DE CRÉDITO */
+
+.fincontrol .pagina-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.fincontrol .pagina-cartoes > .painel {
+  margin-top: 0;
+}
+
+.fincontrol .pagina-cartoes .formulario .botao-primario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fincontrol .pagina-cartoes .cartao-conta h3 {
+  font-size: 22px;
+}
+
+.fincontrol .pagina-cartoes .transacao {
+  gap: 16px;
+}
+
+.fincontrol .pagina-cartoes .transacao-info {
+  min-width: 0;
+}
+
+.fincontrol .pagina-cartoes .transacao-info span {
+  overflow-wrap: anywhere;
+}
