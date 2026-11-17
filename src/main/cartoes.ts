@@ -318,7 +318,7 @@ export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
     throw new Error('Selecione um cartão e uma conta.')
   }
   if (typeof dados.competencia !== 'string' ||
-      !/^\\d{4}-(0[1-9]|1[0-2])$/.test(dados.competencia)) {
+      !/^\d{4}-(0[1-9]|1[0-2])$/.test(dados.competencia)) {
     throw new Error('Competência inválida.')
   }
   validarData(dados.dataPagamento)
