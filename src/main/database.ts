@@ -27,7 +27,7 @@ export function iniciarBanco(): void {
   `)
 
   // Migração não destrutiva: lançamentos anteriores permanecem sem conta vinculada.
-  const colunas = banco.prepare("PRAGMA table_info(transacoes)").all() as { name: string }[]
+  const colunas = banco.prepare('PRAGMA table_info(transacoes)').all() as { name: string }[]
   if (!colunas.some((coluna) => coluna.name === 'conta_id')) {
     banco.exec('ALTER TABLE transacoes ADD COLUMN conta_id TEXT')
   }

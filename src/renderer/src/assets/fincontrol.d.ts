@@ -46,11 +46,15 @@ declare global {
 
       listarContas: () => Promise<ContaFinanceira[]>
 
-      cadastrarConta: (dados: Omit<ContaFinanceira, 'id' | 'saldoAtualCentavos'>) => Promise<ContaFinanceira>
+      cadastrarConta: (
+        dados: Omit<ContaFinanceira, 'id' | 'saldoAtualCentavos'>
+      ) => Promise<ContaFinanceira>
 
       listarTransferencias: () => Promise<TransferenciaFinanceira[]>
 
-      criarTransferencia: (dados: Omit<TransferenciaFinanceira, 'id'>) => Promise<TransferenciaFinanceira>
+      criarTransferencia: (
+        dados: Omit<TransferenciaFinanceira, 'id'>
+      ) => Promise<TransferenciaFinanceira>
     }
   }
 }

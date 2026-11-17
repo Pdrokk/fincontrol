@@ -33,7 +33,9 @@ export type NovaTransferencia = Omit<Transferencia, 'id'>
 export function criarTabelaContas(): void {
   const db = obterBanco()
   // Banco legado: ampliar o CHECK de tipo sem descartar contas existentes.
-  const tabela = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='contas'").get() as { sql: string } | undefined
+  const tabela = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='contas'")
+    .get() as { sql: string } | undefined
   if (tabela && !tabela.sql.includes("'salario'")) {
     db.exec('BEGIN IMMEDIATE')
     try {
@@ -88,7 +90,9 @@ export function criarTabelaContas(): void {
 
 export function listarContas(): Conta[] {
   const db = obterBanco()
-  const registros = db.prepare(`
+  const registros = db
+    .prepare(
+      `
     SELECT c.id, c.banco, c.nome, c.tipo,
       c.saldo_inicial_centavos AS saldoInicialCentavos,
       c.saldo_inicial_centavos
@@ -98,7 +102,9 @@ export function listarContas(): Conta[] {
       - COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE origem_id = c.id), 0)
         AS saldoAtualCentavos
     FROM contas c ORDER BY c.criado_em DESC
-  `).all()
+  `
+    )
+    .all()
   return registros as unknown as Conta[]
 }
 
@@ -122,31 +128,58 @@ export function cadastrarConta(dados: NovaConta): Conta {
     saldoInicialCentavos: dados.saldoInicialCentavos,
     saldoAtualCentavos: dados.saldoInicialCentavos
   }
-  obterBanco().prepare(`
+  obterBanco()
+    .prepare(
+      `
     INSERT INTO contas (id, banco, nome, tipo, saldo_inicial_centavos, criado_em)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(conta.id, conta.banco, conta.nome, conta.tipo, conta.saldoInicialCentavos, new Date().toISOString())
+  `
+    )
+    .run(
+      conta.id,
+      conta.banco,
+      conta.nome,
+      conta.tipo,
+      conta.saldoInicialCentavos,
+      new Date().toISOString()
+    )
   return conta
 }
 
 export function listarTransferencias(): Transferencia[] {
-  return obterBanco().prepare(`
+  return obterBanco()
+    .prepare(
+      `
     SELECT id, origem_id AS origemId, destino_id AS destinoId,
       valor_centavos AS valorCentavos, data, descricao
     FROM transferencias ORDER BY data DESC, rowid DESC
-  `).all() as unknown as Transferencia[]
+  `
+    )
+    .all() as unknown as Transferencia[]
 }
 
 export function transferirEntreContas(dados: NovaTransferencia): Transferencia {
   if (!dados || typeof dados !== 'object') throw new Error('Transferência inválida.')
-  if (typeof dados.origemId !== 'string' || typeof dados.destinoId !== 'string' ||
-      dados.origemId === dados.destinoId) throw new Error('Escolha duas contas diferentes.')
+  if (
+    typeof dados.origemId !== 'string' ||
+    typeof dados.destinoId !== 'string' ||
+    dados.origemId === dados.destinoId
+  )
+    throw new Error('Escolha duas contas diferentes.')
   if (!Number.isSafeInteger(dados.valorCentavos) || dados.valorCentavos <= 0)
     throw new Error('Valor inválido.')
-  if (typeof dados.descricao !== 'string' || !dados.descricao.trim() || dados.descricao.length > 200)
+  if (
+    typeof dados.descricao !== 'string' ||
+    !dados.descricao.trim() ||
+    dados.descricao.length > 200
+  )
     throw new Error('Descrição inválida.')
-  if (typeof dados.data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dados.data) ||
-      Number.isNaN(Date.parse(dados.data)) || new Date(dados.data).toISOString().slice(0, 10) !== dados.data)
+  if (
+    typeof dados.data !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(dados.data) ||
+    Number.isNaN(Date.parse(dados.data)) ||
+    new Date(dados.data).toISOString().slice(0, 10) !== dados.data
+  )
     throw new Error('Data inválida.')
 
   const db = obterBanco()
@@ -159,12 +192,24 @@ export function transferirEntreContas(dados: NovaTransferencia): Transferencia {
     if (origem.saldoAtualCentavos < dados.valorCentavos)
       throw new Error('Saldo insuficiente na conta de origem.')
 
-    const transferencia: Transferencia = { id: randomUUID(), ...dados, descricao: dados.descricao.trim() }
-    db.prepare(`
+    const transferencia: Transferencia = {
+      id: randomUUID(),
+      ...dados,
+      descricao: dados.descricao.trim()
+    }
+    db.prepare(
+      `
       INSERT INTO transferencias (id, origem_id, destino_id, valor_centavos, data, descricao)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(transferencia.id, transferencia.origemId, transferencia.destinoId,
-      transferencia.valorCentavos, transferencia.data, transferencia.descricao)
+    `
+    ).run(
+      transferencia.id,
+      transferencia.origemId,
+      transferencia.destinoId,
+      transferencia.valorCentavos,
+      transferencia.data,
+      transferencia.descricao
+    )
     db.exec('COMMIT')
     return transferencia
   } catch (erro) {

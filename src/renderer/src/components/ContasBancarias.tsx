@@ -28,7 +28,9 @@ const nomesTipos: Record<TipoConta, string> = {
 }
 
 function formatarMoeda(centavos: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    centavos / 100
+  )
 }
 
 function parseCentavos(texto: string): number | null {
@@ -41,7 +43,11 @@ function parseCentavos(texto: string): number | null {
 
 function dataLocal(): string {
   const hoje = new Date()
-  return [hoje.getFullYear(), String(hoje.getMonth() + 1).padStart(2, '0'), String(hoje.getDate()).padStart(2, '0')].join('-')
+  return [
+    hoje.getFullYear(),
+    String(hoje.getMonth() + 1).padStart(2, '0'),
+    String(hoje.getDate()).padStart(2, '0')
+  ].join('-')
 }
 
 export default function ContasBancarias(): React.JSX.Element {
@@ -85,7 +91,9 @@ export default function ContasBancarias(): React.JSX.Element {
       .finally((): void => {
         if (ativo) setCarregando(false)
       })
-    return (): void => { ativo = false }
+    return (): void => {
+      ativo = false
+    }
   }, [])
 
   async function salvarConta(evento: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -99,7 +107,10 @@ export default function ContasBancarias(): React.JSX.Element {
     try {
       setSalvando(true)
       await window.fincontrol.cadastrarConta({
-        banco: banco.trim(), nome: nome.trim(), tipo, saldoInicialCentavos
+        banco: banco.trim(),
+        nome: nome.trim(),
+        tipo,
+        saldoInicialCentavos
       })
       await recarregar()
       setBanco('')
@@ -109,7 +120,9 @@ export default function ContasBancarias(): React.JSX.Element {
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível cadastrar a conta.')
-    } finally { setSalvando(false) }
+    } finally {
+      setSalvando(false)
+    }
   }
 
   async function salvarTransferencia(evento: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -123,14 +136,20 @@ export default function ContasBancarias(): React.JSX.Element {
     try {
       setSalvando(true)
       await window.fincontrol.criarTransferencia({
-        origemId, destinoId, valorCentavos, data, descricao: descricao.trim()
+        origemId,
+        destinoId,
+        valorCentavos,
+        data,
+        descricao: descricao.trim()
       })
       await recarregar()
       setValorTransferencia('')
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível transferir. Verifique os saldos e as contas selecionadas.')
-    } finally { setSalvando(false) }
+    } finally {
+      setSalvando(false)
+    }
   }
 
   const total = contas.reduce((soma, conta) => soma + conta.saldoAtualCentavos, 0)
@@ -143,7 +162,10 @@ export default function ContasBancarias(): React.JSX.Element {
     <div className="pagina-contas">
       <section className="painel">
         <div className="titulo-contas">
-          <div><h3>Minhas contas</h3><p>Gerencie seus bancos e saldos financeiros.</p></div>
+          <div>
+            <h3>Minhas contas</h3>
+            <p>Gerencie seus bancos e saldos financeiros.</p>
+          </div>
           <Landmark size={26} />
         </div>
         <div className="resumo-contas">
@@ -156,11 +178,16 @@ export default function ContasBancarias(): React.JSX.Element {
         <div className="grade-contas">
           {contas.map((conta) => (
             <article className="cartao-conta" key={conta.id}>
-              <div className="cartao-conta-topo"><Wallet size={24} /><strong>{conta.banco}</strong></div>
+              <div className="cartao-conta-topo">
+                <Wallet size={24} />
+                <strong>{conta.banco}</strong>
+              </div>
               <span>Saldo atual</span>
               <h3>{formatarMoeda(conta.saldoAtualCentavos)}</h3>
               <p>{conta.nome}</p>
-              <small>{nomesTipos[conta.tipo]} · Inicial: {formatarMoeda(conta.saldoInicialCentavos)}</small>
+              <small>
+                {nomesTipos[conta.tipo]} · Inicial: {formatarMoeda(conta.saldoInicialCentavos)}
+              </small>
             </article>
           ))}
         </div>
@@ -171,27 +198,57 @@ export default function ContasBancarias(): React.JSX.Element {
 
       <section className="painel">
         <h3>Cadastrar nova conta</h3>
-        <form className="formulario" onSubmit={(e): void => { void salvarConta(e) }}>
-          <label>Banco ou instituição
-            <input value={banco} maxLength={100} onChange={(e): void => setBanco(e.target.value)}
-              placeholder="Ex: Nubank" required />
+        <form
+          className="formulario"
+          onSubmit={(e): void => {
+            void salvarConta(e)
+          }}
+        >
+          <label>
+            Banco ou instituição
+            <input
+              value={banco}
+              maxLength={100}
+              onChange={(e): void => setBanco(e.target.value)}
+              placeholder="Ex: Nubank"
+              required
+            />
           </label>
-          <label>Nome da conta
-            <input value={nome} maxLength={100} onChange={(e): void => setNome(e.target.value)}
-              placeholder="Ex: Conta principal" required />
+          <label>
+            Nome da conta
+            <input
+              value={nome}
+              maxLength={100}
+              onChange={(e): void => setNome(e.target.value)}
+              placeholder="Ex: Conta principal"
+              required
+            />
           </label>
-          <label>Tipo de conta
+          <label>
+            Tipo de conta
             <select value={tipo} onChange={(e): void => setTipo(e.target.value as TipoConta)}>
               {Object.entries(nomesTipos).map(([chave, rotulo]) => (
-                <option key={chave} value={chave}>{rotulo}</option>
+                <option key={chave} value={chave}>
+                  {rotulo}
+                </option>
               ))}
             </select>
           </label>
-          <label>Saldo inicial (R$)
-            <input type="text" inputMode="decimal" value={saldo}
-              onChange={(e): void => setSaldo(e.target.value)} required />
+          <label>
+            Saldo inicial (R$)
+            <input
+              type="text"
+              inputMode="decimal"
+              value={saldo}
+              onChange={(e): void => setSaldo(e.target.value)}
+              required
+            />
           </label>
-          <button type="submit" className="botao-primario" disabled={salvando || carregando || Boolean(erro)}>
+          <button
+            type="submit"
+            className="botao-primario"
+            disabled={salvando || carregando || Boolean(erro)}
+          >
             <Plus size={17} /> {salvando ? 'Salvando...' : 'Cadastrar conta'}
           </button>
         </form>
@@ -200,31 +257,67 @@ export default function ContasBancarias(): React.JSX.Element {
       <section className="painel">
         <h3>Transferir entre contas</h3>
         <p>Transferências não são receitas nem despesas.</p>
-        <form className="formulario" onSubmit={(e): void => { void salvarTransferencia(e) }}>
-          <label>Conta de origem
+        <form
+          className="formulario"
+          onSubmit={(e): void => {
+            void salvarTransferencia(e)
+          }}
+        >
+          <label>
+            Conta de origem
             <select value={origemId} onChange={(e): void => setOrigemId(e.target.value)} required>
               <option value="">Selecione a conta</option>
-              {contas.map((c) => <option key={c.id} value={c.id}>{c.banco} · {c.nome}</option>)}
+              {contas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.banco} · {c.nome}
+                </option>
+              ))}
             </select>
           </label>
-          <label>Conta de destino
+          <label>
+            Conta de destino
             <select value={destinoId} onChange={(e): void => setDestinoId(e.target.value)} required>
               <option value="">Selecione a conta</option>
-              {contas.map((c) => <option key={c.id} value={c.id}>{c.banco} · {c.nome}</option>)}
+              {contas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.banco} · {c.nome}
+                </option>
+              ))}
             </select>
           </label>
-          <label>Valor (R$)
-            <input value={valorTransferencia} onChange={(e): void => setValorTransferencia(e.target.value)}
-              placeholder="100,00" inputMode="decimal" required />
+          <label>
+            Valor (R$)
+            <input
+              value={valorTransferencia}
+              onChange={(e): void => setValorTransferencia(e.target.value)}
+              placeholder="100,00"
+              inputMode="decimal"
+              required
+            />
           </label>
-          <label>Data
-            <input type="date" value={data} onChange={(e): void => setData(e.target.value)} required />
+          <label>
+            Data
+            <input
+              type="date"
+              value={data}
+              onChange={(e): void => setData(e.target.value)}
+              required
+            />
           </label>
-          <label>Descrição
-            <input maxLength={200} value={descricao} onChange={(e): void => setDescricao(e.target.value)} required />
+          <label>
+            Descrição
+            <input
+              maxLength={200}
+              value={descricao}
+              onChange={(e): void => setDescricao(e.target.value)}
+              required
+            />
           </label>
-          <button type="submit" className="botao-primario"
-            disabled={salvando || carregando || Boolean(erro) || contas.length < 2}>
+          <button
+            type="submit"
+            className="botao-primario"
+            disabled={salvando || carregando || Boolean(erro) || contas.length < 2}
+          >
             <ArrowLeftRight size={17} /> {salvando ? 'Transferindo...' : 'Confirmar transferência'}
           </button>
         </form>
@@ -234,7 +327,10 @@ export default function ContasBancarias(): React.JSX.Element {
           <div className="transacao" key={item.id}>
             <div className="transacao-info">
               <strong>{item.descricao}</strong>
-              <span>{nomeConta(item.origemId)} → {nomeConta(item.destinoId)} · {item.data.split('-').reverse().join('/')}</span>
+              <span>
+                {nomeConta(item.origemId)} → {nomeConta(item.destinoId)} ·{' '}
+                {item.data.split('-').reverse().join('/')}
+              </span>
             </div>
             <strong>{formatarMoeda(item.valorCentavos)}</strong>
           </div>

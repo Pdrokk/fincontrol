@@ -5,7 +5,13 @@ import { iniciarBanco } from './database'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
-import { criarTabelaContas, listarContas, cadastrarConta, listarTransferencias, transferirEntreContas } from './contas'
+import {
+  criarTabelaContas,
+  listarContas,
+  cadastrarConta,
+  listarTransferencias,
+  transferirEntreContas
+} from './contas'
 
 import type { NovaConta, NovaTransferencia } from './contas'
 

@@ -125,12 +125,17 @@ function App(): React.JSX.Element {
 
   useEffect((): (() => void) => {
     let ativo = true
-    window.fincontrol.listarContas()
+    window.fincontrol
+      .listarContas()
       .then((registros): void => {
         if (ativo) setContas(registros)
       })
-      .catch((erro: unknown): void => { console.error('Erro ao carregar contas:', erro) })
-    return (): void => { ativo = false }
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar contas:', erro)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [pagina, transacoes])
 
   const [descricao, setDescricao] = useState('')
@@ -321,11 +326,10 @@ function App(): React.JSX.Element {
               <strong>{t.descricao}</strong>
 
               <span>
-                {t.categoria} • {t.data.split('-').reverse().join('/')} • {
-                  t.contaId
-                    ? (contas.find((conta) => conta.id === t.contaId)?.nome ?? 'Conta vinculada')
-                    : 'Sem conta'
-                }
+                {t.categoria} • {t.data.split('-').reverse().join('/')} •{' '}
+                {t.contaId
+                  ? (contas.find((conta) => conta.id === t.contaId)?.nome ?? 'Conta vinculada')
+                  : 'Sem conta'}
               </span>
             </div>
 
@@ -495,7 +499,11 @@ function App(): React.JSX.Element {
             <section className="cards">
               <div className="card">
                 <h3>Saldo nas contas bancárias</h3>
-                <strong>{formatarMoeda(contas.reduce((total, conta) => total + conta.saldoAtualCentavos, 0))}</strong>
+                <strong>
+                  {formatarMoeda(
+                    contas.reduce((total, conta) => total + conta.saldoAtualCentavos, 0)
+                  )}
+                </strong>
                 <p>Considera somente as movimentações vinculadas às contas.</p>
               </div>
               <div className="card">
