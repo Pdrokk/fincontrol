@@ -815,3 +815,122 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+
+/* ========================================
+   FINCONTROL - CARTÕES BANCÁRIOS
+======================================== */
+
+.fincontrol .pagina-contas {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.fincontrol .pagina-contas .painel {
+  margin-top: 0;
+}
+
+.fincontrol .titulo-contas {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  color: var(--text);
+}
+
+.fincontrol .titulo-contas p {
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.fincontrol .resumo-contas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  border-radius: 14px;
+  margin-bottom: 24px;
+}
+
+.fincontrol .resumo-contas span,
+.fincontrol .resumo-contas small {
+  color: var(--muted);
+}
+
+.fincontrol .resumo-contas strong {
+  color: var(--text);
+  font-size: 28px;
+}
+
+.fincontrol .grade-contas {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 270px), 1fr)
+  );
+  gap: 20px;
+}
+
+.fincontrol .cartao-conta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 215px;
+  padding: 26px;
+  border-radius: 18px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #172b52, #2563eb);
+  border: 1px solid #ffffff1c;
+  box-shadow: 0 8px 20px #00000018;
+  transition: transform 0.2s;
+}
+
+.fincontrol .cartao-conta:hover {
+  transform: translateY(-3px);
+}
+
+.fincontrol .cartao-conta:nth-child(2n) {
+  background: linear-gradient(135deg, #134e4a, #0f766e);
+}
+
+.fincontrol .cartao-conta:nth-child(3n) {
+  background: linear-gradient(135deg, #4c1d95, #7c3aed);
+}
+
+.fincontrol .cartao-conta-topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.fincontrol .cartao-conta h3 {
+  font-size: 28px;
+  color: #ffffff;
+  margin: 0;
+}
+
+.fincontrol .cartao-conta strong,
+.fincontrol .cartao-conta span,
+.fincontrol .cartao-conta p,
+.fincontrol .cartao-conta small {
+  color: #ffffff;
+}
+
+.fincontrol .cartao-conta span,
+.fincontrol .cartao-conta small {
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+.fincontrol .pagina-contas .formulario .botao-primario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+

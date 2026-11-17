@@ -5,6 +5,10 @@ import { iniciarBanco } from './database'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
+import { criarTabelaContas, listarContas, cadastrarConta } from './contas'
+
+import type { NovaConta } from './contas'
+
 import type { NovaTransacao } from './database'
 
 function createWindow(): void {
@@ -44,6 +48,15 @@ function createWindow(): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   iniciarBanco()
+  criarTabelaContas()
+
+  ipcMain.handle('contas:listar', () => {
+    return listarContas()
+  })
+
+  ipcMain.handle('contas:cadastrar', (_evento, dados: NovaConta) => {
+    return cadastrarConta(dados)
+  })
 
   ipcMain.handle('transacoes:listar', () => {
     return listarTransacoes()

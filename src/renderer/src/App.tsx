@@ -7,12 +7,15 @@ import {
   ChartNoAxesCombined,
   Tags,
   Settings,
-  Wallet
+  Wallet,
+  Landmark
 } from 'lucide-react'
+
+import ContasBancarias from './components/ContasBancarias'
 
 type Tipo = 'receita' | 'despesa'
 
-type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'configuracoes'
+type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -33,6 +36,7 @@ const nomesPaginas: Record<Pagina, string> = {
   transacoes: 'Transações',
   relatorios: 'Relatórios',
   categorias: 'Categorias',
+  contas: 'Minhas contas',
   configuracoes: 'Configurações'
 }
 
@@ -41,6 +45,7 @@ const iconesPaginas = {
   transacoes: ArrowLeftRight,
   relatorios: ChartNoAxesCombined,
   categorias: Tags,
+  contas: Landmark,
   configuracoes: Settings
 }
 
@@ -356,7 +361,7 @@ function App(): React.JSX.Element {
 
       <main className="content">
         {carregando && <p role="status">Carregando dados financeiros...</p>}
-
+        {pagina === 'contas' && <ContasBancarias />}
         {erroBanco && (
           <p role="alert" style={{ color: '#dc2626' }}>
             {erroBanco}

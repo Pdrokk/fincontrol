@@ -43,7 +43,16 @@ const fincontrolAPI = {
       categoria: string
       data: string
     }
-  ): Promise<unknown> => ipcRenderer.invoke('transacoes:editar', id, dados)
+  ): Promise<unknown> => ipcRenderer.invoke('transacoes:editar', id, dados),
+
+  listarContas: (): Promise<unknown> => ipcRenderer.invoke('contas:listar'),
+
+  cadastrarConta: (dados: {
+    banco: string
+    nome: string
+    tipo: 'corrente' | 'poupanca' | 'dinheiro' | 'outra'
+    saldoInicialCentavos: number
+  }): Promise<unknown> => ipcRenderer.invoke('contas:cadastrar', dados)
 }
 
 contextBridge.exposeInMainWorld('fincontrol', fincontrolAPI)

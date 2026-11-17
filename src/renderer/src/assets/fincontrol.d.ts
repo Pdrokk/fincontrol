@@ -11,6 +11,14 @@ interface TransacaoFinanceira {
   data: string
 }
 
+interface ContaFinanceira {
+  id: string
+  banco: string
+  nome: string
+  tipo: 'corrente' | 'poupanca' | 'dinheiro' | 'outra'
+  saldoInicialCentavos: number
+}
+
 declare global {
   interface Window {
     fincontrol: {
@@ -24,6 +32,10 @@ declare global {
         id: string,
         dados: Omit<TransacaoFinanceira, 'id'>
       ) => Promise<TransacaoFinanceira>
+
+      listarContas: () => Promise<ContaFinanceira[]>
+
+      cadastrarConta: (dados: Omit<ContaFinanceira, 'id'>) => Promise<ContaFinanceira>
     }
   }
 }
