@@ -222,6 +222,16 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
     if (!cartaoAtual || compra.valorCentavos > cartaoAtual.limiteDisponivelCentavos) {
       throw new Error('Limite disponível insuficiente para esta compra.')
     }
+    // Não alterar o valor de uma fatura já quitada.
+    const verificarQuitacao = db.prepare(
+      'SELECT id FROM pagamentos_fatura WHERE cartao_id = ? AND competencia = ?'
+    )
+    for (let i = 0; i < compra.numeroParcelas; i++) {
+      const competencia = somarMeses(ano, mes, i)
+      if (verificarQuitacao.get(compra.cartaoId, competencia)) {
+        throw new Error('Já existe fatura paga neste período. Não é possível incluir novas parcelas.')
+      }
+    }
     db.prepare(`
       INSERT INTO compras_cartao
         (id, cartao_id, descricao, categoria, data, valor_centavos, numero_parcelas, criado_em)
