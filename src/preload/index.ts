@@ -56,6 +56,26 @@ const fincontrolAPI = {
     saldoInicialCentavos: number
   }): Promise<unknown> => ipcRenderer.invoke('contas:cadastrar', dados),
 
+  listarCartoes: (): Promise<unknown> => ipcRenderer.invoke('cartoes:listar'),
+  cadastrarCartao: (dados: {
+    contaId: string | null
+    nome: string
+    banco: string
+    limiteCentavos: number
+    diaFechamento: number
+    diaVencimento: number
+  }): Promise<unknown> => ipcRenderer.invoke('cartoes:cadastrar', dados),
+  listarComprasCartao: (): Promise<unknown> => ipcRenderer.invoke('compras-cartao:listar'),
+  cadastrarCompraCartao: (dados: {
+    cartaoId: string
+    descricao: string
+    categoria: string
+    data: string
+    valorCentavos: number
+    numeroParcelas: number
+  }): Promise<unknown> => ipcRenderer.invoke('compras-cartao:cadastrar', dados),
+  listarFaturasPrevistas: (): Promise<unknown> => ipcRenderer.invoke('faturas-previstas:listar'),
+
   listarTransferencias: (): Promise<unknown> => ipcRenderer.invoke('transferencias:listar'),
 
   criarTransferencia: (dados: {
