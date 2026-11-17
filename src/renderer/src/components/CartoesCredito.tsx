@@ -7,6 +7,8 @@ interface Cartao {
   nome: string
   banco: string
   limiteCentavos: number
+  limiteUtilizadoCentavos: number
+  limiteDisponivelCentavos: number
   diaFechamento: number
   diaVencimento: number
 }
@@ -14,6 +16,7 @@ interface Conta {
   id: string
   nome: string
   banco: string
+  saldoAtualCentavos: number
 }
 interface Compra {
   id: string
@@ -30,6 +33,10 @@ interface Fatura {
   vencimento: string
   totalCentavos: number
   quantidadeParcelas: number
+  paga: boolean
+  pagamentoId: string | null
+  contaPagamentoId: string | null
+  dataPagamento: string | null
 }
 
 function moeda(centavos: number): string {
@@ -57,6 +64,7 @@ export default function CartoesCredito(): React.JSX.Element {
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [contaPagamento, setContaPagamento] = useState<Record<string, string>>({})
 
   const [banco, setBanco] = useState('')
   const [nome, setNome] = useState('')
@@ -160,11 +168,42 @@ export default function CartoesCredito(): React.JSX.Element {
     } finally { setSalvando(false) }
   }
 
+  async function confirmarPagamento(fatura: Fatura): Promise<void> {
+    if (salvando || fatura.paga) return
+    const chave = fatura.cartaoId + ':' + fatura.competencia
+    const cartao = cartoes.find((c) => c.id === fatura.cartaoId)
+    const contaIdPagamento = contaPagamento[chave] || cartao?.contaId || ''
+    if (!contaIdPagamento) {
+      alert('Selecione uma conta bancária para pagar a fatura.')
+      return
+    }
+    if (!window.confirm(
+      `Confirmar pagamento integral de ${moeda(fatura.totalCentavos)} com vencimento em ${fatura.vencimento}?`
+    )) return
+    try {
+      setSalvando(true)
+      await window.fincontrol.pagarFatura({
+        cartaoId: fatura.cartaoId,
+        competencia: fatura.competencia,
+        contaId: contaIdPagamento,
+        dataPagamento: dataLocal()
+      })
+      await atualizar()
+      alert('Fatura paga! O saldo da conta e o limite foram atualizados.')
+    } catch (falha) {
+      console.error(falha)
+      alert('Não foi possível pagar a fatura. Confirme o saldo e se ela já foi paga.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
   const nomeCartao = (id: string): string => {
     const c = cartoes.find((item) => item.id === id)
     return c ? `${c.banco} · ${c.nome}` : 'Cartão não encontrado'
   }
-  const totalPrevisto = faturas.reduce((soma, fatura) => soma + fatura.totalCentavos, 0)
+  const totalAberto = faturas.filter((f) => !f.paga)
+    .reduce((soma, fatura) => soma + fatura.totalCentavos, 0)
 
   return (
     <div className="pagina-cartoes">
@@ -178,9 +217,9 @@ export default function CartoesCredito(): React.JSX.Element {
         </div>
 
         <div className="resumo-contas">
-          <span>Total das parcelas cadastradas (ainda sem pagamentos registrados)</span>
-          <strong>{moeda(totalPrevisto)}</strong>
-          <small>Este valor é uma obrigação futura e não é abatido do saldo bancário nesta etapa.</small>
+          <span>Total de faturas em aberto</span>
+          <strong>{moeda(totalAberto)}</strong>
+          <small>Pagamentos são registrados na conta escolhida e não geram despesas duplicadas.</small>
         </div>
 
         {carregando && <p>Carregando dados...</p>}
@@ -191,7 +230,9 @@ export default function CartoesCredito(): React.JSX.Element {
             <article className="cartao-conta" key={c.id}>
               <div className="cartao-conta-topo"><CreditCard size={24} /><strong>{c.banco}</strong></div>
               <span>{c.nome}</span>
-              <h3>Limite: {moeda(c.limiteCentavos)}</h3>
+              <h3>Disponível: {moeda(c.limiteDisponivelCentavos)}</h3>
+              <p>Limite contratado: {moeda(c.limiteCentavos)}</p>
+              <p>Utilizado: {moeda(c.limiteUtilizadoCentavos)}</p>
               <p>Fechamento: dia {c.diaFechamento} · Vencimento: dia {c.diaVencimento}</p>
               <small>{c.contaId ? 'Conta: ' + (contas.find((x) => x.id === c.contaId)?.nome ?? 'Vinculada') : 'Sem conta para pagamento definida'}</small>
             </article>
@@ -267,16 +308,53 @@ export default function CartoesCredito(): React.JSX.Element {
           <CalendarDays size={23} />
         </div>
         {faturas.length === 0 && <p className="vazio">Nenhuma fatura prevista.</p>}
-        {faturas.map((f) => (
-          <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
-            <div className="transacao-info">
-              <strong>{nomeCartao(f.cartaoId)}</strong>
-              <span>Fechamento: {f.competencia} · Vencimento: {f.vencimento.split('-').reverse().join('/')} · {f.quantidadeParcelas} parcela(s)</span>
+        {faturas.map((f) => {
+          const chave = `${f.cartaoId}:${f.competencia}`
+          const cartao = cartoes.find((c) => c.id === f.cartaoId)
+          const contaSelecionada = contaPagamento[chave] || cartao?.contaId || ''
+          return (
+            <div className="transacao fatura-linha" key={chave}>
+              <div className="transacao-info">
+                <strong>{nomeCartao(f.cartaoId)} · {f.competencia}</strong>
+                <span>Vencimento: {f.vencimento.split('-').reverse().join('/')} · {f.quantidadeParcelas} parcela(s)</span>
+                <span>{f.paga ? `Paga em ${f.dataPagamento?.split('-').reverse().join('/')}` : 'Em aberto'}</span>
+              </div>
+              <strong>{moeda(f.totalCentavos)}</strong>
+              {!f.paga && (
+                <div className="pagamento-acoes">
+                  <label>
+                    Conta para pagamento
+                    <select
+                      value={contaSelecionada}
+                      aria-label={`Conta para fatura ${f.competencia}`}
+                      onChange={(e): void => setContaPagamento((prev) => ({
+                        ...prev, [chave]: e.target.value
+                      }))}
+                    >
+                      <option value="">Selecionar conta</option>
+                      {contas.map((c) => (
+                        <option value={c.id} key={c.id}>
+                          {c.banco} · {c.nome} ({moeda(c.saldoAtualCentavos)})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="botao-primario"
+                    disabled={salvando || !contaSelecionada}
+                    onClick={(): void => { void confirmarPagamento(f) }}
+                  >
+                    {salvando ? 'Processando...' : 'Pagar fatura'}
+                  </button>
+                </div>
+              )}
             </div>
-            <strong>{moeda(f.totalCentavos)}</strong>
-          </div>
-        ))}
-        <p className="vazio">Faturas são previsões; o registro de pagamento será desenvolvido na etapa seguinte.</p>
+          )
+        })}
+        <p className="vazio">
+          Pagamento integral nesta versão. O pagamento não gera uma nova despesa nos relatórios.
+        </p>
       </section>
 
       <section className="painel">
