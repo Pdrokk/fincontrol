@@ -8,14 +8,16 @@ import {
   Tags,
   Settings,
   Wallet,
-  Landmark
+  Landmark,
+  CreditCard
 } from 'lucide-react'
 
 import ContasBancarias from './components/ContasBancarias'
+import CartoesCredito from './components/CartoesCredito'
 
 type Tipo = 'receita' | 'despesa'
 
-type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'configuracoes'
+type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'cartoes' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -25,6 +27,14 @@ interface Transacao {
   categoria: string
   data: string
   contaId: string | null
+}
+
+interface FaturaResumo {
+  cartaoId: string
+  competencia: string
+  vencimento: string
+  totalCentavos: number
+  quantidadeParcelas: number
 }
 
 interface ContaResumo {
@@ -45,6 +55,7 @@ const nomesPaginas: Record<Pagina, string> = {
   relatorios: 'Relatórios',
   categorias: 'Categorias',
   contas: 'Minhas contas',
+  cartoes: 'Cartões e faturas',
   configuracoes: 'Configurações'
 }
 
@@ -54,6 +65,7 @@ const iconesPaginas = {
   relatorios: ChartNoAxesCombined,
   categorias: Tags,
   contas: Landmark,
+  cartoes: CreditCard,
   configuracoes: Settings
 }
 
@@ -69,6 +81,7 @@ function App(): React.JSX.Element {
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [contas, setContas] = useState<ContaResumo[]>([])
   const [contaId, setContaId] = useState('')
+  const [faturasPrevistas, setFaturasPrevistas] = useState<FaturaResumo[]>([])
 
   const [mesFiltro, setMesFiltro] = useState('todos')
   const [anoFiltro, setAnoFiltro] = useState('todos')
@@ -137,6 +150,14 @@ function App(): React.JSX.Element {
       ativo = false
     }
   }, [pagina, transacoes])
+
+  useEffect((): (() => void) => {
+    let ativo = true
+    window.fincontrol.listarFaturasPrevistas()
+      .then((lista): void => { if (ativo) setFaturasPrevistas(lista) })
+      .catch((erro: unknown): void => { console.error('Erro ao carregar faturas:', erro) })
+    return (): void => { ativo = false }
+  }, [pagina])
 
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
@@ -425,6 +446,7 @@ function App(): React.JSX.Element {
         </header>
 
         {pagina === 'contas' && <ContasBancarias />}
+        {pagina === 'cartoes' && <CartoesCredito />}
 
         {(pagina === 'dashboard' || pagina === 'transacoes' || pagina === 'relatorios') && (
           <section className="filtros-periodo">
@@ -516,6 +538,25 @@ function App(): React.JSX.Element {
               </div>
             </section>
 
+            <section className="painel">
+              <h3>Cartões e faturas previstas</h3>
+              <p>Valores das parcelas cadastradas, sem impactar o saldo bancário até o pagamento.</p>
+              <p>
+                Total previsto: <strong>{formatarMoeda(faturasPrevistas.reduce((total, f) => total + f.totalCentavos, 0))}</strong>
+              </p>
+              {faturasPrevistas.slice(0, 3).map((f) => (
+                <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
+                  <div className="transacao-info">
+                    <strong>Fatura {f.competencia}</strong>
+                    <span>Vencimento: {f.vencimento.split('-').reverse().join('/')}</span>
+                  </div>
+                  <strong>{formatarMoeda(f.totalCentavos)}</strong>
+                </div>
+              ))}
+              <button type="button" className="botao-editar" onClick={(): void => setPagina('cartoes')}>
+                Ver cartões e faturas
+              </button>
+            </section>
             <GraficosFinanceiros transacoes={transacoesPeriodo} />
 
             <section className="painel">
