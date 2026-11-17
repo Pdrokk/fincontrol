@@ -100,6 +100,7 @@ export function listarContas(): Conta[] {
                    FROM transacoes t WHERE t.conta_id = c.id), 0)
       + COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE destino_id = c.id), 0)
       - COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE origem_id = c.id), 0)
+      - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_fatura WHERE conta_id = c.id), 0)
         AS saldoAtualCentavos
     FROM contas c ORDER BY c.criado_em DESC
   `
