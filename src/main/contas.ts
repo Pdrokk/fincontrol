@@ -32,7 +32,6 @@ export type NovaTransferencia = Omit<Transferencia, 'id'>
 
 export function criarTabelaContas(): void {
   const db = obterBanco()
-  const colunas = db.prepare("PRAGMA table_info(contas)").all() as { name: string }[]
   // Banco legado: ampliar o CHECK de tipo sem descartar contas existentes.
   const tabela = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='contas'").get() as { sql: string } | undefined
   if (tabela && !tabela.sql.includes("'salario'")) {
@@ -85,7 +84,6 @@ export function criarTabelaContas(): void {
     CREATE INDEX IF NOT EXISTS idx_transferencias_destino ON transferencias(destino_id);
     CREATE INDEX IF NOT EXISTS idx_transacoes_conta ON transacoes(conta_id);
   `)
-  void colunas
 }
 
 export function listarContas(): Conta[] {
