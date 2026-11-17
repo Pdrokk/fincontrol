@@ -35,6 +35,21 @@ interface FaturaResumo {
   vencimento: string
   totalCentavos: number
   quantidadeParcelas: number
+  paga: boolean
+  pagamentoId: string | null
+  contaPagamentoId: string | null
+  dataPagamento: string | null
+}
+
+interface ParcelaCartaoRelatorio {
+  id: string
+  descricao: string
+  valorCentavos: number
+  tipo: 'despesa'
+  categoria: string
+  data: string
+  contaId: null
+  origem: 'cartao'
 }
 
 interface ContaResumo {
@@ -82,6 +97,7 @@ function App(): React.JSX.Element {
   const [contas, setContas] = useState<ContaResumo[]>([])
   const [contaId, setContaId] = useState('')
   const [faturasPrevistas, setFaturasPrevistas] = useState<FaturaResumo[]>([])
+  const [parcelasCartao, setParcelasCartao] = useState<ParcelaCartaoRelatorio[]>([])
 
   const [mesFiltro, setMesFiltro] = useState('todos')
   const [anoFiltro, setAnoFiltro] = useState('todos')
@@ -153,9 +169,17 @@ function App(): React.JSX.Element {
 
   useEffect((): (() => void) => {
     let ativo = true
-    window.fincontrol.listarFaturasPrevistas()
-      .then((lista): void => { if (ativo) setFaturasPrevistas(lista) })
-      .catch((erro: unknown): void => { console.error('Erro ao carregar faturas:', erro) })
+    Promise.all([
+      window.fincontrol.listarFaturasPrevistas(),
+      window.fincontrol.listarParcelasRelatorio()
+    ]).then(([listaFaturas, listaParcelas]): void => {
+      if (ativo) {
+        setFaturasPrevistas(listaFaturas)
+        setParcelasCartao(listaParcelas)
+      }
+    }).catch((erro: unknown): void => {
+      console.error('Erro ao carregar faturas e parcelas:', erro)
+    })
     return (): void => { ativo = false }
   }, [pagina])
 
@@ -188,20 +212,25 @@ function App(): React.JSX.Element {
     'Dezembro'
   ]
 
-  const anosDisponiveis = Array.from(new Set(transacoes.map((t) => t.data.slice(0, 4)))).sort(
-    (a, b) => b.localeCompare(a)
-  )
+  // Receitas/despesas bancárias e parcelas do cartão são fontes distintas.
+  // O pagamento da fatura NÃO entra como despesa novamente.
+  const transacoesContabeis: Transacao[] = [...transacoes, ...parcelasCartao]
+  const anosDisponiveis = Array.from(
+    new Set(transacoesContabeis.map((t) => t.data.slice(0, 4)))
+  ).sort((a, b) => b.localeCompare(a))
 
-  const transacoesPeriodo = transacoes.filter((t) => {
+  function pertencePeriodo(t: Transacao): boolean {
     const ano = t.data.slice(0, 4)
     const mes = t.data.slice(5, 7)
+    return (anoFiltro === 'todos' || ano === anoFiltro) &&
+      (mesFiltro === 'todos' || mes === mesFiltro)
+  }
 
-    const correspondeAno = anoFiltro === 'todos' || ano === anoFiltro
-
-    const correspondeMes = mesFiltro === 'todos' || mes === mesFiltro
-
-    return correspondeAno && correspondeMes
-  })
+  const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
+  const transacoesBancariasPeriodo = transacoes.filter(pertencePeriodo)
+  const totalParcelasCartao = parcelasCartao
+    .filter(pertencePeriodo)
+    .reduce((total, t) => total + t.valorCentavos, 0)
 
   const totalReceitas = transacoesPeriodo
     .filter((t) => t.tipo === 'receita')
@@ -213,7 +242,7 @@ function App(): React.JSX.Element {
 
   const saldo = totalReceitas - totalDespesas
 
-  const transacoesFiltradas = transacoesPeriodo.filter((t) => {
+  const transacoesFiltradas = transacoesBancariasPeriodo.filter((t) => {
     const correspondeTipo = tipoFiltro === 'todos' || t.tipo === tipoFiltro
 
     const correspondeCategoria = categoriaFiltro === 'todas' || t.categoria === categoriaFiltro
@@ -503,7 +532,7 @@ function App(): React.JSX.Element {
           <>
             <section className="cards">
               <div className="card">
-                <h3>Saldo Total</h3>
+                <h3>Resultado do período</h3>
                 <strong>{formatarMoeda(saldo)}</strong>
               </div>
 
@@ -513,7 +542,7 @@ function App(): React.JSX.Element {
               </div>
 
               <div className="card">
-                <h3>Despesas</h3>
+                <h3>Despesas (incluindo parcelas)</h3>
                 <strong className="despesa">{formatarMoeda(totalDespesas)}</strong>
               </div>
             </section>
@@ -539,12 +568,12 @@ function App(): React.JSX.Element {
             </section>
 
             <section className="painel">
-              <h3>Cartões e faturas previstas</h3>
-              <p>Valores das parcelas cadastradas, sem impactar o saldo bancário até o pagamento.</p>
+              <h3>Cartões e faturas</h3>
+              <p>Parcelas por competência: {formatarMoeda(totalParcelasCartao)} no período selecionado. O pagamento da fatura só altera o saldo bancário.</p>
               <p>
-                Total previsto: <strong>{formatarMoeda(faturasPrevistas.reduce((total, f) => total + f.totalCentavos, 0))}</strong>
+                Faturas em aberto: <strong>{formatarMoeda(faturasPrevistas.filter((f) => !f.paga).reduce((total, f) => total + f.totalCentavos, 0))}</strong>
               </p>
-              {faturasPrevistas.slice(0, 3).map((f) => (
+              {faturasPrevistas.filter((f) => !f.paga).slice(0, 3).map((f) => (
                 <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
                   <div className="transacao-info">
                     <strong>Fatura {f.competencia}</strong>
@@ -560,10 +589,10 @@ function App(): React.JSX.Element {
             <GraficosFinanceiros transacoes={transacoesPeriodo} />
 
             <section className="painel">
-              <h3>Últimas Transações</h3>
+              <h3>Últimas Transações Bancárias</h3>
 
               {listaTransacoes(
-                [...transacoesPeriodo].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5)
+                [...transacoesBancariasPeriodo].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5)
               )}
             </section>
           </>
@@ -742,7 +771,7 @@ function App(): React.JSX.Element {
             <GraficosFinanceiros transacoes={transacoesPeriodo} />
 
             <section className="painel">
-              <h3>Resumo financeiro</h3>
+              <h3>Resumo financeiro por competência</h3>
 
               <p>Receitas: {formatarMoeda(totalReceitas)}</p>
 
