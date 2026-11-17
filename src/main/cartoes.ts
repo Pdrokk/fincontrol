@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { obterBanco } from './database'
+import { listarContas } from './contas'
 
 export interface Cartao {
   id: string
@@ -7,11 +8,13 @@ export interface Cartao {
   nome: string
   banco: string
   limiteCentavos: number
+  limiteUtilizadoCentavos: number
+  limiteDisponivelCentavos: number
   diaFechamento: number
   diaVencimento: number
 }
 
-export type NovoCartao = Omit<Cartao, 'id'>
+export type NovoCartao = Omit<Cartao, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>
 
 export interface Compra {
   id: string
@@ -31,6 +34,32 @@ export interface FaturaPrevista {
   vencimento: string
   totalCentavos: number
   quantidadeParcelas: number
+  paga: boolean
+  pagamentoId: string | null
+  contaPagamentoId: string | null
+  dataPagamento: string | null
+}
+
+export interface PagamentoFatura {
+  id: string
+  cartaoId: string
+  competencia: string
+  contaId: string
+  dataPagamento: string
+  valorCentavos: number
+}
+
+export type NovoPagamentoFatura = Pick<PagamentoFatura, 'cartaoId' | 'competencia' | 'contaId' | 'dataPagamento'>
+
+export interface ParcelaRelatorio {
+  id: string
+  descricao: string
+  valorCentavos: number
+  tipo: 'despesa'
+  categoria: string
+  data: string
+  contaId: null
+  origem: 'cartao'
 }
 
 export function criarTabelasCartoes(): void {
@@ -67,19 +96,39 @@ export function criarTabelasCartoes(): void {
       UNIQUE (compra_id, numero)
     );
 
+    CREATE TABLE IF NOT EXISTS pagamentos_fatura (
+      id TEXT PRIMARY KEY,
+      cartao_id TEXT NOT NULL REFERENCES cartoes(id),
+      competencia TEXT NOT NULL,
+      conta_id TEXT NOT NULL REFERENCES contas(id),
+      data_pagamento TEXT NOT NULL,
+      valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0),
+      UNIQUE (cartao_id, competencia)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pagamentos_fatura_conta ON pagamentos_fatura(conta_id);
+
     CREATE INDEX IF NOT EXISTS idx_parcelas_cartao_mes
       ON parcelas_cartao(cartao_id, competencia);
   `)
 }
 
 export function listarCartoes(): Cartao[] {
-  return obterBanco().prepare(`
-    SELECT id, conta_id AS contaId, nome, banco,
-      limite_centavos AS limiteCentavos,
-      dia_fechamento AS diaFechamento,
-      dia_vencimento AS diaVencimento
-    FROM cartoes ORDER BY criado_em DESC
-  `).all() as unknown as Cartao[]
+  const registros = obterBanco().prepare(`
+    SELECT c.id, c.conta_id AS contaId, c.nome, c.banco,
+      c.limite_centavos AS limiteCentavos,
+      c.dia_fechamento AS diaFechamento,
+      c.dia_vencimento AS diaVencimento,
+      COALESCE((SELECT SUM(p.valor_centavos) FROM parcelas_cartao p
+                WHERE p.cartao_id = c.id), 0)
+      - COALESCE((SELECT SUM(pf.valor_centavos) FROM pagamentos_fatura pf
+                  WHERE pf.cartao_id = c.id), 0) AS limiteUtilizadoCentavos
+    FROM cartoes c ORDER BY c.criado_em DESC
+  `).all() as unknown as Omit<Cartao, 'limiteDisponivelCentavos'>[]
+  return registros.map((c) => ({
+    ...c,
+    limiteDisponivelCentavos: c.limiteCentavos - c.limiteUtilizadoCentavos
+  }))
 }
 
 export function cadastrarCartao(dados: NovoCartao): Cartao {
@@ -103,6 +152,8 @@ export function cadastrarCartao(dados: NovoCartao): Cartao {
     nome: dados.nome.trim(),
     banco: dados.banco.trim(),
     limiteCentavos: dados.limiteCentavos,
+    limiteUtilizadoCentavos: 0,
+    limiteDisponivelCentavos: dados.limiteCentavos,
     diaFechamento: dados.diaFechamento,
     diaVencimento: dados.diaVencimento
   }
@@ -167,6 +218,10 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
 
   db.exec('BEGIN IMMEDIATE')
   try {
+    const cartaoAtual = listarCartoes().find((item) => item.id === compra.cartaoId)
+    if (!cartaoAtual || compra.valorCentavos > cartaoAtual.limiteDisponivelCentavos) {
+      throw new Error('Limite disponível insuficiente para esta compra.')
+    }
     db.prepare(`
       INSERT INTO compras_cartao
         (id, cartao_id, descricao, categoria, data, valor_centavos, numero_parcelas, criado_em)
@@ -208,18 +263,112 @@ function vencimentoFatura(competencia: string, fechamento: number, vencimento: n
 export function listarFaturasPrevistas(): FaturaPrevista[] {
   const cartoes = listarCartoes()
   const parcelas = obterBanco().prepare(`
-    SELECT cartao_id AS cartaoId, competencia,
-      SUM(valor_centavos) AS totalCentavos, COUNT(*) AS quantidadeParcelas
-    FROM parcelas_cartao
-    GROUP BY cartao_id, competencia
-    ORDER BY competencia ASC
-  `).all() as unknown as Omit<FaturaPrevista, 'vencimento'>[]
+    SELECT p.cartao_id AS cartaoId, p.competencia,
+      SUM(p.valor_centavos) AS totalCentavos,
+      COUNT(*) AS quantidadeParcelas,
+      pf.id AS pagamentoId, pf.conta_id AS contaPagamentoId,
+      pf.data_pagamento AS dataPagamento
+    FROM parcelas_cartao p
+    LEFT JOIN pagamentos_fatura pf
+      ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
+    GROUP BY p.cartao_id, p.competencia, pf.id, pf.conta_id, pf.data_pagamento
+    ORDER BY p.competencia ASC
+  `).all() as unknown as Omit<FaturaPrevista, 'vencimento' | 'paga'>[]
   return parcelas.map((p) => {
     const cartao = cartoes.find((c) => c.id === p.cartaoId)
     if (!cartao) throw new Error('Cartão de fatura não encontrado.')
     return {
       ...p,
+      paga: p.pagamentoId !== null,
       vencimento: vencimentoFatura(p.competencia, cartao.diaFechamento, cartao.diaVencimento)
     }
   })
+}
+
+export function listarParcelasParaRelatorios(): ParcelaRelatorio[] {
+  const registros = obterBanco().prepare(`
+    SELECT p.id, (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
+      p.valor_centavos AS valorCentavos, c.categoria, p.competencia
+    FROM parcelas_cartao p
+    JOIN compras_cartao c ON c.id = p.compra_id
+    ORDER BY p.competencia ASC, p.numero ASC
+  `).all() as unknown as {
+    id: string
+    descricao: string
+    valorCentavos: number
+    categoria: string
+    competencia: string
+  }[]
+  return registros.map((r) => ({
+    id: r.id,
+    descricao: r.descricao,
+    valorCentavos: r.valorCentavos,
+    categoria: r.categoria,
+    data: r.competencia + '-01',
+    tipo: 'despesa',
+    contaId: null,
+    origem: 'cartao'
+  }))
+}
+
+export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
+  if (!dados || typeof dados !== 'object') throw new Error('Pagamento inválido.')
+  if (typeof dados.cartaoId !== 'string' || !dados.cartaoId ||
+      typeof dados.contaId !== 'string' || !dados.contaId) {
+    throw new Error('Selecione um cartão e uma conta.')
+  }
+  if (typeof dados.competencia !== 'string' ||
+      !/^\\d{4}-(0[1-9]|1[0-2])$/.test(dados.competencia)) {
+    throw new Error('Competência inválida.')
+  }
+  validarData(dados.dataPagamento)
+
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const cartao = db.prepare('SELECT id FROM cartoes WHERE id = ?').get(dados.cartaoId)
+    if (!cartao) throw new Error('Cartão não encontrado.')
+
+    const fatura = db.prepare(`
+      SELECT SUM(valor_centavos) AS total
+      FROM parcelas_cartao
+      WHERE cartao_id = ? AND competencia = ?
+    `).get(dados.cartaoId, dados.competencia) as { total: number | null } | undefined
+    const total = fatura?.total
+    if (!total || !Number.isSafeInteger(total) || total <= 0) {
+      throw new Error('Fatura inexistente ou inválida.')
+    }
+
+    const anterior = db.prepare(`
+      SELECT id FROM pagamentos_fatura WHERE cartao_id = ? AND competencia = ?
+    `).get(dados.cartaoId, dados.competencia)
+    if (anterior) throw new Error('Fatura já paga.')
+
+    // Contas são recalculadas dentro da transação de gravação.
+    const conta = listarContas().find((c) => c.id === dados.contaId)
+    if (!conta) throw new Error('Conta bancária não encontrada.')
+    if (conta.saldoAtualCentavos < total) throw new Error('Saldo insuficiente na conta.')
+
+    const pagamento: PagamentoFatura = {
+      id: randomUUID(),
+      cartaoId: dados.cartaoId,
+      competencia: dados.competencia,
+      contaId: dados.contaId,
+      dataPagamento: dados.dataPagamento,
+      valorCentavos: total
+    }
+    db.prepare(`
+      INSERT INTO pagamentos_fatura
+        (id, cartao_id, competencia, conta_id, data_pagamento, valor_centavos)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      pagamento.id, pagamento.cartaoId, pagamento.competencia,
+      pagamento.contaId, pagamento.dataPagamento, pagamento.valorCentavos
+    )
+    db.exec('COMMIT')
+    return pagamento
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
 }
