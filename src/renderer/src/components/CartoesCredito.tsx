@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Plus, CalendarDays } from 'lucide-react'
+import { CreditCard, Plus } from 'lucide-react'
+import CentralPagamentos from './CentralPagamentos'
 
 interface Cartao {
   id: string
@@ -41,16 +42,6 @@ interface Fatura {
   dataPagamento: string | null
 }
 
-interface ParcelaPagamento {
-  id: string
-  compraId: string
-  cartaoId: string
-  descricao: string
-  competencia: string
-  numero: number
-  valorCentavos: number
-  paga: boolean
-}
 
 function moeda(centavos: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100)
@@ -74,13 +65,9 @@ export default function CartoesCredito(): React.JSX.Element {
   const [contas, setContas] = useState<Conta[]>([])
   const [compras, setCompras] = useState<Compra[]>([])
   const [faturas, setFaturas] = useState<Fatura[]>([])
-  const [parcelasPagamento, setParcelasPagamento] = useState<ParcelaPagamento[]>([])
-  const [selecionadas, setSelecionadas] = useState<string[]>([])
-  const [contaLote, setContaLote] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
-  const [contaPagamento, setContaPagamento] = useState<Record<string, string>>({})
 
   const [banco, setBanco] = useState('')
   const [nome, setNome] = useState('')
@@ -97,19 +84,16 @@ export default function CartoesCredito(): React.JSX.Element {
   const [data, setData] = useState(dataLocal)
 
   async function atualizar(): Promise<void> {
-    const [listaCartoes, listaContas, listaCompras, listaFaturas, listaParcelas] = await Promise.all([
+    const [listaCartoes, listaContas, listaCompras, listaFaturas] = await Promise.all([
       window.fincontrol.listarCartoes(),
       window.fincontrol.listarContas(),
       window.fincontrol.listarComprasCartao(),
-      window.fincontrol.listarFaturasPrevistas(),
-      window.fincontrol.listarParcelasPagamento()
+      window.fincontrol.listarFaturasPrevistas()
     ])
     setCartoes(listaCartoes)
     setContas(listaContas)
     setCompras(listaCompras)
     setFaturas(listaFaturas)
-    setParcelasPagamento(listaParcelas)
-    setSelecionadas([])
   }
 
   useEffect((): (() => void) => {
@@ -118,15 +102,13 @@ export default function CartoesCredito(): React.JSX.Element {
       window.fincontrol.listarCartoes(),
       window.fincontrol.listarContas(),
       window.fincontrol.listarComprasCartao(),
-      window.fincontrol.listarFaturasPrevistas(),
-      window.fincontrol.listarParcelasPagamento()
-    ]).then(([c, b, comprasCarregadas, faturasCarregadas, parcelasCarregadas]): void => {
+      window.fincontrol.listarFaturasPrevistas()
+    ]).then(([c, b, comprasCarregadas, faturasCarregadas]): void => {
       if (ativo) {
         setCartoes(c)
         setContas(b)
         setCompras(comprasCarregadas)
         setFaturas(faturasCarregadas)
-        setParcelasPagamento(parcelasCarregadas)
       }
     }).catch((falha: unknown): void => {
       console.error(falha)
@@ -187,62 +169,6 @@ export default function CartoesCredito(): React.JSX.Element {
       console.error(falha)
       alert('Não foi possível cadastrar a compra. Verifique o valor e a quantidade de parcelas.')
     } finally { setSalvando(false) }
-  }
-
-  async function confirmarPagamento(fatura: Fatura): Promise<void> {
-    if (salvando || fatura.paga) return
-    const chave = fatura.cartaoId + ':' + fatura.competencia
-    const cartao = cartoes.find((c) => c.id === fatura.cartaoId)
-    const contaIdPagamento = contaPagamento[chave] || cartao?.contaId || ''
-    if (!contaIdPagamento) {
-      alert('Selecione uma conta bancária para pagar a fatura.')
-      return
-    }
-    if (!window.confirm(
-      `Confirmar pagamento integral de ${moeda(fatura.totalCentavos)} com vencimento em ${fatura.vencimento}?`
-    )) return
-    try {
-      setSalvando(true)
-      await window.fincontrol.pagarFatura({
-        cartaoId: fatura.cartaoId,
-        competencia: fatura.competencia,
-        contaId: contaIdPagamento,
-        dataPagamento: dataLocal()
-      })
-      await atualizar()
-      alert('Fatura paga! O saldo da conta e o limite foram atualizados.')
-    } catch (falha) {
-      console.error(falha)
-      alert('Não foi possível pagar a fatura. Confirme o saldo e se ela já foi paga.')
-    } finally {
-      setSalvando(false)
-    }
-  }
-
-  async function pagarLote(): Promise<void> {
-    if (salvando || selecionadas.length === 0 || !contaLote) return
-    const total = parcelasPagamento.filter((p) => selecionadas.includes(p.id))
-      .reduce((soma, p) => soma + p.valorCentavos, 0)
-    if (!window.confirm(`Pagar ${selecionadas.length} parcela(s), total ${moeda(total)}, usando a conta selecionada?`)) return
-    try {
-      setSalvando(true)
-      await window.fincontrol.pagarParcelasSelecionadas({
-        parcelaIds: selecionadas,
-        contaId: contaLote,
-        dataPagamento: dataLocal()
-      })
-      await atualizar()
-      alert('Parcelas pagas. O saldo bancário e o limite do cartão foram atualizados.')
-    } catch (falha) {
-      console.error(falha)
-      alert(falha instanceof Error ? falha.message : 'Erro ao pagar parcelas.')
-    } finally {
-      setSalvando(false)
-    }
-  }
-
-  function marcarParcela(id: string, marcada: boolean): void {
-    setSelecionadas((prev) => marcada ? [...prev, id] : prev.filter((x) => x !== id))
   }
 
   const nomeCartao = (id: string): string => {
@@ -349,91 +275,7 @@ export default function CartoesCredito(): React.JSX.Element {
         </form>
       </section>
 
-      <section className="painel">
-        <div className="titulo-contas">
-          <div><h3>Faturas previstas</h3><p>Valores calculados automaticamente a partir das parcelas.</p></div>
-          <CalendarDays size={23} />
-        </div>
-        {faturas.length === 0 && <p className="vazio">Nenhuma fatura prevista.</p>}
-        {faturas.map((f) => {
-          const chave = `${f.cartaoId}:${f.competencia}`
-          const cartao = cartoes.find((c) => c.id === f.cartaoId)
-          const contaSelecionada = contaPagamento[chave] || cartao?.contaId || ''
-          return (
-            <div className="transacao fatura-linha" key={chave}>
-              <div className="transacao-info">
-                <strong>{nomeCartao(f.cartaoId)} · {f.competencia}</strong>
-                <span>Vencimento: {f.vencimento.split('-').reverse().join('/')} · {f.quantidadeParcelas} parcela(s)</span>
-                <span>{f.paga ? 'Paga' : f.valorPagoCentavos ? 'Parcialmente paga' : 'Em aberto'}</span>
-                <span>Pago: {moeda(f.valorPagoCentavos)} · Pendente: {moeda(f.saldoPendenteCentavos)}</span>
-              </div>
-              <strong>{moeda(f.totalCentavos)}</strong>
-              {!f.paga && f.valorPagoCentavos === 0 && (
-                <div className="pagamento-acoes">
-                  <label>
-                    Conta para pagamento
-                    <select
-                      value={contaSelecionada}
-                      aria-label={`Conta para fatura ${f.competencia}`}
-                      onChange={(e): void => setContaPagamento((prev) => ({
-                        ...prev, [chave]: e.target.value
-                      }))}
-                    >
-                      <option value="">Selecionar conta</option>
-                      {contas.map((c) => (
-                        <option value={c.id} key={c.id}>
-                          {c.banco} · {c.nome} ({moeda(c.saldoAtualCentavos)})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    className="botao-primario"
-                    disabled={salvando || !contaSelecionada}
-                    onClick={(): void => { void confirmarPagamento(f) }}
-                  >
-                    {salvando ? 'Processando...' : 'Pagar fatura'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )
-        })}
-        <p className="vazio">
-          Você pode pagar uma fatura integralmente ou selecionar várias parcelas abaixo.
-          Pagamentos não criam despesas duplicadas nos relatórios.
-        </p>
-      </section>
-
-      <section className="painel">
-        <h3>Selecionar parcelas para pagar</h3>
-        <p>Marque uma ou várias parcelas ainda não pagas, inclusive de faturas diferentes. Um pagamento abate o saldo da conta uma só vez.</p>
-        <div className="parcelas-selecionaveis">
-          {parcelasPagamento.filter((p) => !p.paga).map((p) => (
-            <label className="parcela-opcao" key={p.id}>
-              <input type="checkbox" checked={selecionadas.includes(p.id)}
-                onChange={(e): void => marcarParcela(p.id, e.target.checked)} />
-              <span>{nomeCartao(p.cartaoId)} · {p.descricao} · Fatura {p.competencia}</span>
-              <strong>{moeda(p.valorCentavos)}</strong>
-            </label>
-          ))}
-        </div>
-        {parcelasPagamento.every((p) => p.paga) && <p className="vazio">Não há parcelas em aberto.</p>}
-        <div className="pagamento-acoes">
-          <label>Conta que pagará as parcelas
-            <select value={contaLote} onChange={(e): void => setContaLote(e.target.value)}>
-              <option value="">Selecione a conta</option>
-              {contas.map((c) => <option value={c.id} key={c.id}>{c.banco} · {c.nome} ({moeda(c.saldoAtualCentavos)})</option>)}
-            </select>
-          </label>
-          <button type="button" className="botao-primario"
-            disabled={salvando || selecionadas.length === 0 || !contaLote}
-            onClick={(): void => { void pagarLote() }}>
-            Pagar {selecionadas.length} parcela(s) — {moeda(parcelasPagamento.filter((p) => selecionadas.includes(p.id)).reduce((soma, p) => soma + p.valorCentavos, 0))}
-          </button>
-        </div>
-      </section>
+      <CentralPagamentos onPagamento={atualizar} />
 
       <section className="painel">
         <h3>Compras registradas</h3>
