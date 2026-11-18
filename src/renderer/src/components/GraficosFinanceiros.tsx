@@ -24,6 +24,7 @@ interface TransacaoGrafico {
 
 interface Props {
   transacoes: TransacaoGrafico[]
+  compacto?: boolean
 }
 
 const cores = ['#16a34a', '#2563eb', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#64748b']
@@ -35,7 +36,7 @@ function moeda(valor: number): string {
   }).format(valor)
 }
 
-export default function GraficosFinanceiros({ transacoes }: Props): React.JSX.Element {
+export default function GraficosFinanceiros({ transacoes, compacto = false }: Props): React.JSX.Element {
   // Agrupamento mensal usando valores em centavos.
   const agrupamento = new Map<string, { receitas: number; despesas: number }>()
 
@@ -195,7 +196,7 @@ export default function GraficosFinanceiros({ transacoes }: Props): React.JSX.El
         )}
       </section>
 
-      <section className="grafico-card grafico-largo">
+      {!compacto && <section className="grafico-card grafico-largo">
         <h3>Evolução do saldo</h3>
         <p>Saldo acumulado das transações no período selecionado</p>
 
@@ -225,7 +226,7 @@ export default function GraficosFinanceiros({ transacoes }: Props): React.JSX.El
         ) : (
           <p className="grafico-vazio">Ainda não existem transações para o período.</p>
         )}
-      </section>
+      </section>}
     </div>
   )
 }

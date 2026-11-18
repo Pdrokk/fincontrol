@@ -39,7 +39,7 @@ import {
   pagarFatura
 } from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
-import { listarParcelasPagamento, pagarParcelasSelecionadas } from './cartoes'
+import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela } from './cartoes'
 
 function createWindow(): void {
   // Create the browser window.
@@ -85,12 +85,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle('cartoes:listar', () => listarCartoes())
   ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
+  ipcMain.handle('cartoes:atualizar', (_evento, id: string, dados: NovoCartao) => atualizarCartao(id, dados))
   ipcMain.handle('compras-cartao:listar', () => listarCompras())
   ipcMain.handle('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
   ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
   ipcMain.handle('parcelas-relatorios:listar', () => listarParcelasParaRelatorios())
   ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
   ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
+  ipcMain.handle('parcelas:arquivar', (_evento, id: string, arquivar: boolean) => definirArquivoParcela(id, arquivar))
   ipcMain.handle('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
     pagarParcelasSelecionadas(dados)
   )

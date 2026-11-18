@@ -65,6 +65,7 @@ export interface ParcelaPagamento {
   numero: number
   valorCentavos: number
   paga: boolean
+  arquivada: boolean
 }
 export interface NovoPagamentoParcelas {
   parcelaIds: string[]
@@ -133,6 +134,10 @@ export function criarTabelasCartoes(): void {
       conta_id TEXT NOT NULL REFERENCES contas(id),
       data_pagamento TEXT NOT NULL,
       valor_centavos INTEGER NOT NULL CHECK(valor_centavos > 0)
+    );
+    CREATE TABLE IF NOT EXISTS parcelas_arquivadas (
+      parcela_id TEXT PRIMARY KEY REFERENCES parcelas_cartao(id),
+      arquivada_em TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_pagamentos_parcelas_conta ON pagamentos_parcelas(conta_id);
 
@@ -234,6 +239,55 @@ function somarMeses(ano: number, mes: number, quantidade: number): string {
 function competenciaInicial(data: string, diaFechamento: number): string {
   const [ano, mes, dia] = data.split('-').map(Number)
   return somarMeses(ano, mes, dia > diaFechamento ? 1 : 0)
+}
+
+export function atualizarCartao(id: string, dados: NovoCartao): Cartao {
+  if (typeof id !== 'string' || !id.trim() || !dados || typeof dados !== 'object') {
+    throw new Error('Cartão inválido.')
+  }
+  if (typeof dados.banco !== 'string' || !dados.banco.trim() || dados.banco.length > 100 ||
+      typeof dados.nome !== 'string' || !dados.nome.trim() || dados.nome.length > 100) {
+    throw new Error('Informe banco e nome válidos.')
+  }
+  if (!Number.isSafeInteger(dados.limiteCentavos) || dados.limiteCentavos < 0)
+    throw new Error('Limite inválido.')
+  if (!Number.isInteger(dados.diaFechamento) || dados.diaFechamento < 1 || dados.diaFechamento > 28 ||
+      !Number.isInteger(dados.diaVencimento) || dados.diaVencimento < 1 || dados.diaVencimento > 28)
+    throw new Error('Fechamento e vencimento devem ser entre 1 e 28.')
+  const contaId = dados.contaId || null
+
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const atual = listarCartoes().find((cartao) => cartao.id === id)
+    if (!atual) throw new Error('Cartão não encontrado.')
+    if (contaId && !db.prepare('SELECT id FROM contas WHERE id = ?').get(contaId))
+      throw new Error('Conta bancária não encontrada.')
+    if (dados.limiteCentavos < atual.limiteUtilizadoCentavos)
+      throw new Error('Limite contratado não pode ser menor que o valor já utilizado.')
+
+    const possuiCompras = db.prepare('SELECT id FROM compras_cartao WHERE cartao_id = ? LIMIT 1').get(id)
+    if (possuiCompras && (dados.diaFechamento !== atual.diaFechamento ||
+        dados.diaVencimento !== atual.diaVencimento)) {
+      throw new Error('Não é possível mudar as datas com compras registradas, pois alteraria as faturas existentes.')
+    }
+
+    db.prepare(`
+      UPDATE cartoes SET banco = ?, nome = ?, conta_id = ?, limite_centavos = ?,
+        dia_fechamento = ?, dia_vencimento = ?
+      WHERE id = ?
+    `).run(
+      dados.banco.trim(), dados.nome.trim(), contaId, dados.limiteCentavos,
+      dados.diaFechamento, dados.diaVencimento, id
+    )
+    db.exec('COMMIT')
+    const atualizado = listarCartoes().find((cartao) => cartao.id === id)
+    if (!atualizado) throw new Error('Erro ao recuperar o cartão.')
+    return atualizado
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
 }
 
 export function cadastrarCompra(dados: NovaCompra): Compra {
@@ -403,13 +457,40 @@ export function listarParcelasPagamento(): ParcelaPagamento[] {
     SELECT p.id, p.compra_id AS compraId, p.cartao_id AS cartaoId,
       (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
       p.competencia, p.numero, p.valor_centavos AS valorCentavos,
-      CASE WHEN pf.id IS NOT NULL OR pp.id IS NOT NULL THEN 1 ELSE 0 END AS pago
+      CASE WHEN pf.id IS NOT NULL OR pp.id IS NOT NULL THEN 1 ELSE 0 END AS pago,
+      CASE WHEN pa.parcela_id IS NOT NULL THEN 1 ELSE 0 END AS arquivada
     FROM parcelas_cartao p
     JOIN compras_cartao c ON c.id = p.compra_id
     LEFT JOIN pagamentos_fatura pf
       ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
     LEFT JOIN pagamentos_parcelas pp ON pp.parcela_id = p.id
+    LEFT JOIN parcelas_arquivadas pa ON pa.parcela_id = p.id
     ORDER BY p.competencia ASC, p.numero ASC
+  `).all() as unknown as (Omit<ParcelaPagamento, 'paga' | 'arquivada'> & { pago: number; arquivada: number })[]
+  return registros.map((p) => ({ ...p, paga: p.pago === 1, arquivada: p.arquivada === 1 }))
+}
+
+export function definirArquivoParcela(id: string, arquivar: boolean): void {
+  if (typeof id !== 'string' || !id.trim() || typeof arquivar !== 'boolean') {
+    throw new Error('Parcela inválida.')
+  }
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const parcela = listarParcelasPagamento().find((p) => p.id === id)
+    if (!parcela) throw new Error('Parcela não encontrada.')
+    if (!parcela.paga) throw new Error('Só é possível arquivar parcelas pagas.')
+    if (arquivar) {
+      db.prepare('INSERT OR IGNORE INTO parcelas_arquivadas (parcela_id, arquivada_em) VALUES (?, ?)')
+        .run(id, new Date().toISOString())
+    } else {
+      db.prepare('DELETE FROM parcelas_arquivadas WHERE parcela_id = ?').run(id)
+    }
+    db.exec('COMMIT')
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
   `
     )
     .all() as unknown as (Omit<ParcelaPagamento, 'paga'> & { pago: number })[]

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Plus, CalendarDays } from 'lucide-react'
+import { CreditCard, Plus, Pencil } from 'lucide-react'
+import { gradienteBanco } from '../utils/coresBancos'
+import CentralPagamentos from './CentralPagamentos'
 
 interface Cartao {
   id: string
@@ -41,16 +43,6 @@ interface Fatura {
   dataPagamento: string | null
 }
 
-interface ParcelaPagamento {
-  id: string
-  compraId: string
-  cartaoId: string
-  descricao: string
-  competencia: string
-  numero: number
-  valorCentavos: number
-  paga: boolean
-}
 
 function moeda(centavos: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
@@ -76,13 +68,9 @@ export default function CartoesCredito(): React.JSX.Element {
   const [contas, setContas] = useState<Conta[]>([])
   const [compras, setCompras] = useState<Compra[]>([])
   const [faturas, setFaturas] = useState<Fatura[]>([])
-  const [parcelasPagamento, setParcelasPagamento] = useState<ParcelaPagamento[]>([])
-  const [selecionadas, setSelecionadas] = useState<string[]>([])
-  const [contaLote, setContaLote] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
-  const [contaPagamento, setContaPagamento] = useState<Record<string, string>>({})
 
   const [banco, setBanco] = useState('')
   const [nome, setNome] = useState('')
@@ -90,6 +78,7 @@ export default function CartoesCredito(): React.JSX.Element {
   const [limite, setLimite] = useState('0')
   const [fechamento, setFechamento] = useState('25')
   const [vencimento, setVencimento] = useState('5')
+  const [cartaoEditandoId, setCartaoEditandoId] = useState<string | null>(null)
 
   const [cartaoId, setCartaoId] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -111,8 +100,6 @@ export default function CartoesCredito(): React.JSX.Element {
     setContas(listaContas)
     setCompras(listaCompras)
     setFaturas(listaFaturas)
-    setParcelasPagamento(listaParcelas)
-    setSelecionadas([])
   }
 
   useEffect((): (() => void) => {
@@ -121,29 +108,41 @@ export default function CartoesCredito(): React.JSX.Element {
       window.fincontrol.listarCartoes(),
       window.fincontrol.listarContas(),
       window.fincontrol.listarComprasCartao(),
-      window.fincontrol.listarFaturasPrevistas(),
-      window.fincontrol.listarParcelasPagamento()
-    ])
-      .then(([c, b, comprasCarregadas, faturasCarregadas, parcelasCarregadas]): void => {
-        if (ativo) {
-          setCartoes(c)
-          setContas(b)
-          setCompras(comprasCarregadas)
-          setFaturas(faturasCarregadas)
-          setParcelasPagamento(parcelasCarregadas)
-        }
-      })
-      .catch((falha: unknown): void => {
-        console.error(falha)
-        if (ativo) setErro('Não foi possível carregar cartões ou faturas.')
-      })
-      .finally((): void => {
-        if (ativo) setCarregando(false)
-      })
-    return (): void => {
-      ativo = false
-    }
+      window.fincontrol.listarFaturasPrevistas()
+    ]).then(([c, b, comprasCarregadas, faturasCarregadas]): void => {
+      if (ativo) {
+        setCartoes(c)
+        setContas(b)
+        setCompras(comprasCarregadas)
+        setFaturas(faturasCarregadas)
+      }
+    }).catch((falha: unknown): void => {
+      console.error(falha)
+      if (ativo) setErro('Não foi possível carregar cartões ou faturas.')
+    }).finally((): void => { if (ativo) setCarregando(false) })
+    return (): void => { ativo = false }
   }, [])
+
+  function iniciarEdicaoCartao(cartao: Cartao): void {
+    setCartaoEditandoId(cartao.id)
+    setBanco(cartao.banco)
+    setNome(cartao.nome)
+    setContaId(cartao.contaId || '')
+    setLimite((cartao.limiteCentavos / 100).toFixed(2).replace('.', ','))
+    setFechamento(String(cartao.diaFechamento))
+    setVencimento(String(cartao.diaVencimento))
+    document.getElementById('formulario-cartao')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function limparFormularioCartao(): void {
+    setCartaoEditandoId(null)
+    setBanco('')
+    setNome('')
+    setContaId('')
+    setLimite('0')
+    setFechamento('25')
+    setVencimento('5')
+  }
 
   async function salvarCartao(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
@@ -155,19 +154,13 @@ export default function CartoesCredito(): React.JSX.Element {
     }
     try {
       setSalvando(true)
-      await window.fincontrol.cadastrarCartao({
-        nome: nome.trim(),
-        banco: banco.trim(),
-        contaId: contaId || null,
-        limiteCentavos,
-        diaFechamento: Number(fechamento),
-        diaVencimento: Number(vencimento)
-      })
+      if (cartaoEditandoId) {
+        await window.fincontrol.atualizarCartao(cartaoEditandoId, dados)
+      } else {
+        await window.fincontrol.cadastrarCartao(dados)
+      }
       await atualizar()
-      setBanco('')
-      setNome('')
-      setContaId('')
-      setLimite('0')
+      limparFormularioCartao()
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível cadastrar o cartão.')
@@ -402,6 +395,10 @@ export default function CartoesCredito(): React.JSX.Element {
           >
             <Plus size={17} /> Cadastrar cartão
           </button>
+          {cartaoEditandoId && (
+            <button type="button" className="botao-cancelar"
+              onClick={limparFormularioCartao}>Cancelar edição</button>
+          )}
         </form>
       </section>
 

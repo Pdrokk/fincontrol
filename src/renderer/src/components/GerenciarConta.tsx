@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Save, SlidersHorizontal, CirclePlus, X } from 'lucide-react'
+import { corBanco } from '../utils/coresBancos'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 interface Conta {
@@ -53,7 +54,6 @@ export default function GerenciarConta({
   const [banco, setBanco] = useState(conta.banco)
   const [nome, setNome] = useState(conta.nome)
   const [tipo, setTipo] = useState<TipoConta>(conta.tipo)
-  const [cor, setCor] = useState(conta.cor)
   const [valor, setValor] = useState('')
   const [motivo, setMotivo] = useState('')
   const [data, setData] = useState(hoje)

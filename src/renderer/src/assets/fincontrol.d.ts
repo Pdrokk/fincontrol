@@ -104,6 +104,7 @@ interface ParcelaPagamentoFinanceira {
   numero: number
   valorCentavos: number
   paga: boolean
+  arquivada: boolean
 }
 interface SalarioRecorrenteFinanceiro {
   id: string
@@ -125,6 +126,7 @@ declare global {
       ) => Promise<SalarioRecorrenteFinanceiro>
       desativarSalario: (id: string) => Promise<void>
       listarParcelasPagamento: () => Promise<ParcelaPagamentoFinanceira[]>
+      arquivarParcela: (id: string, arquivar: boolean) => Promise<void>
       pagarParcelasSelecionadas: (dados: {
         parcelaIds: string[]
         contaId: string

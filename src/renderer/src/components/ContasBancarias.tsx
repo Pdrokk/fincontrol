@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
 import SalarioRecorrente from './SalarioRecorrente'
+import { corBanco, gradienteBanco } from '../utils/coresBancos'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 interface Conta {
@@ -69,7 +70,6 @@ export default function ContasBancarias(): React.JSX.Element {
   const [nome, setNome] = useState('')
   const [tipo, setTipo] = useState<TipoConta>('corrente')
   const [saldo, setSaldo] = useState('0')
-  const [cor, setCor] = useState('#2563eb')
   const [origemId, setOrigemId] = useState('')
   const [destinoId, setDestinoId] = useState('')
   const [valorTransferencia, setValorTransferencia] = useState('')
@@ -125,7 +125,7 @@ export default function ContasBancarias(): React.JSX.Element {
         banco: banco.trim(),
         nome: nome.trim(),
         tipo,
-        cor,
+        cor: corBanco(banco),
         saldoInicialCentavos
       })
       await recarregar()
@@ -133,7 +133,6 @@ export default function ContasBancarias(): React.JSX.Element {
       setNome('')
       setSaldo('0')
       setTipo('corrente')
-      setCor('#2563eb')
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível cadastrar a conta.')
