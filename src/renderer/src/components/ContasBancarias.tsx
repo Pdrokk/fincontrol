@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
+import SalarioRecorrente from './SalarioRecorrente'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 interface Conta {
@@ -8,6 +9,7 @@ interface Conta {
   banco: string
   nome: string
   tipo: TipoConta
+  cor: string
   saldoInicialCentavos: number
   saldoAtualCentavos: number
 }
@@ -58,6 +60,7 @@ export default function ContasBancarias(): React.JSX.Element {
   const [nome, setNome] = useState('')
   const [tipo, setTipo] = useState<TipoConta>('corrente')
   const [saldo, setSaldo] = useState('0')
+  const [cor, setCor] = useState('#2563eb')
   const [origemId, setOrigemId] = useState('')
   const [destinoId, setDestinoId] = useState('')
   const [valorTransferencia, setValorTransferencia] = useState('')
@@ -113,6 +116,7 @@ export default function ContasBancarias(): React.JSX.Element {
         banco: banco.trim(),
         nome: nome.trim(),
         tipo,
+        cor,
         saldoInicialCentavos
       })
       await recarregar()
@@ -120,6 +124,7 @@ export default function ContasBancarias(): React.JSX.Element {
       setNome('')
       setSaldo('0')
       setTipo('corrente')
+      setCor('#2563eb')
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível cadastrar a conta.')
@@ -161,6 +166,19 @@ export default function ContasBancarias(): React.JSX.Element {
     setModoGerenciar(modo)
   }
 
+  async function removerConta(conta: Conta): Promise<void> {
+    if (!window.confirm(
+      `Excluir a conta "${conta.banco} · ${conta.nome}"? Apenas contas sem histórico, cartões ou salários vinculados podem ser excluídas.`
+    )) return
+    try {
+      await window.fincontrol.excluirConta(conta.id)
+      if (contaSelecionadaId === conta.id) setContaSelecionadaId('')
+      await recarregar()
+    } catch (falha) {
+      alert(falha instanceof Error ? falha.message : 'Esta conta possui vínculos e não pode ser excluída.')
+    }
+  }
+
   const total = contas.reduce((soma, conta) => soma + conta.saldoAtualCentavos, 0)
   const nomeConta = (id: string): string => {
     const conta = contas.find((item) => item.id === id)
@@ -186,7 +204,7 @@ export default function ContasBancarias(): React.JSX.Element {
         {erro && <p role="alert">{erro}</p>}
         <div className="grade-contas">
           {contas.map((conta) => (
-            <article className="cartao-conta" key={conta.id}>
+            <article className="cartao-conta" key={conta.id} style={{ background: `linear-gradient(135deg, ${conta.cor}, #101827)` }}>
               <div className="cartao-conta-topo">
                 <Wallet size={24} />
                 <strong>{conta.banco}</strong>
@@ -206,6 +224,9 @@ export default function ContasBancarias(): React.JSX.Element {
                 </button>
                 <button type="button" onClick={(): void => abrirGerenciar(conta.id, 'ajuste')}>
                   <SlidersHorizontal size={15} /> Corrigir saldo
+                </button>
+                <button type="button" onClick={(): void => { void removerConta(conta) }}>
+                  <Trash2 size={15} /> Excluir
                 </button>
               </div>
             </article>
@@ -264,6 +285,9 @@ export default function ContasBancarias(): React.JSX.Element {
               ))}
             </select>
           </label>
+          <label>Cor da conta
+            <input type="color" value={cor} onChange={(e): void => setCor(e.target.value)} />
+          </label>
           <label>
             Saldo inicial (R$)
             <input
@@ -283,6 +307,8 @@ export default function ContasBancarias(): React.JSX.Element {
           </button>
         </form>
       </section>
+
+      <SalarioRecorrente contas={contas} onAtualizar={recarregar} />
 
       <section className="painel">
         <h3>Transferir entre contas</h3>
