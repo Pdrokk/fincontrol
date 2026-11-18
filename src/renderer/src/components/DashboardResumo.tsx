@@ -22,6 +22,7 @@ interface Props {
   receitasCentavos: number
   despesasCentavos: number
   transacoes: Transacao[]
+  previsoes: Transacao[]
   transacoesRecentes: Transacao[]
   faturas: Fatura[]
   onPagamentos: () => void
@@ -34,7 +35,7 @@ const moeda = (centavos: number): string =>
 const dataBR = (data: string): string => data.split('-').reverse().join('/')
 
 export default function DashboardResumo({
-  saldoContasCentavos, receitasCentavos, despesasCentavos, transacoes,
+  saldoContasCentavos, receitasCentavos, despesasCentavos, transacoes, previsoes,
   transacoesRecentes, faturas, onPagamentos, onTransacoes
 }: Props): React.JSX.Element {
   const emAberto = faturas.filter((f) => !f.paga && f.saldoPendenteCentavos > 0)
@@ -57,7 +58,7 @@ export default function DashboardResumo({
         <article className="dashboard-kpi">
           <div className="dashboard-kpi-top"><span>Despesas do período</span><TrendingDown size={18}/></div>
           <strong>{moeda(despesasCentavos)}</strong>
-          <small>Inclui parcelas por competência</small>
+          <small>Inclui parcelas efetivamente pagas</small>
         </article>
         <article className="dashboard-kpi">
           <div className="dashboard-kpi-top"><span>Faturas em aberto</span><CreditCard size={18}/></div>
@@ -69,10 +70,10 @@ export default function DashboardResumo({
       <div className="dashboard-secao-titulo">
         <div>
           <h3>Visão financeira</h3>
-          <p>Receitas e despesas do período selecionado.</p>
+          <p>Realizado e previsto em visões separadas, por janelas de seis meses.</p>
         </div>
       </div>
-      <GraficosFinanceiros transacoes={transacoes} compacto />
+      <GraficosFinanceiros transacoes={transacoes} previsoes={previsoes} compacto />
 
       <div className="dashboard-duas-colunas">
         <section className="painel dashboard-lista">
