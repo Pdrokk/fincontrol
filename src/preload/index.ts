@@ -119,6 +119,7 @@ const fincontrolAPI = {
   }): Promise<unknown> => ipcRenderer.invoke('compras-cartao:cadastrar', dados),
   listarFaturasPrevistas: (): Promise<unknown> => ipcRenderer.invoke('faturas-previstas:listar'),
   listarParcelasRelatorio: (): Promise<unknown> => ipcRenderer.invoke('parcelas-relatorios:listar'),
+  listarDespesasCartaoRealizadas: (): Promise<unknown> => ipcRenderer.invoke('cartoes:despesas-realizadas'),
   pagarFatura: (dados: {
     cartaoId: string
     competencia: string

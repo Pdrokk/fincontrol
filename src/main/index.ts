@@ -22,7 +22,7 @@ import { criarTabelaSalarios, listarSalarios, cadastrarSalario, desativarSalario
 import type { NovoSalarioRecorrente } from './salarios'
 
 import type { NovaTransacao } from './database'
-import { criarTabelasCartoes, listarCartoes, cadastrarCartao, atualizarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, pagarFatura } from './cartoes'
+import { criarTabelasCartoes, listarCartoes, cadastrarCartao, atualizarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, listarDespesasCartaoRealizadas, pagarFatura } from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
 import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela } from './cartoes'
 
@@ -75,6 +75,7 @@ app.whenReady().then(() => {
   ipcMain.handle('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
   ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
   ipcMain.handle('parcelas-relatorios:listar', () => listarParcelasParaRelatorios())
+  ipcMain.handle('cartoes:despesas-realizadas', () => listarDespesasCartaoRealizadas())
   ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
   ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
   ipcMain.handle('parcelas:arquivar', (_evento, id: string, arquivar: boolean) => definirArquivoParcela(id, arquivar))

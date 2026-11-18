@@ -100,6 +100,8 @@ function App(): React.JSX.Element {
   const [contaId, setContaId] = useState('')
   const [faturasPrevistas, setFaturasPrevistas] = useState<FaturaResumo[]>([])
   const [parcelasCartao, setParcelasCartao] = useState<ParcelaCartaoRelatorio[]>([])
+  const [parcelasPendentesIds, setParcelasPendentesIds] = useState<string[]>([])
+  const [despesasCartaoPagas, setDespesasCartaoPagas] = useState<Transacao[]>([])
 
   const [mesFiltro, setMesFiltro] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
   const [anoFiltro, setAnoFiltro] = useState(() => String(new Date().getFullYear()))
@@ -173,11 +175,15 @@ function App(): React.JSX.Element {
     let ativo = true
     Promise.all([
       window.fincontrol.listarFaturasPrevistas(),
-      window.fincontrol.listarParcelasRelatorio()
-    ]).then(([listaFaturas, listaParcelas]): void => {
+      window.fincontrol.listarParcelasRelatorio(),
+      window.fincontrol.listarParcelasPagamento(),
+      window.fincontrol.listarDespesasCartaoRealizadas()
+    ]).then(([listaFaturas, listaParcelas, listaPagamentos, listaRealizadas]): void => {
       if (ativo) {
         setFaturasPrevistas(listaFaturas)
         setParcelasCartao(listaParcelas)
+        setParcelasPendentesIds(listaPagamentos.filter((p) => !p.paga).map((p) => p.id))
+        setDespesasCartaoPagas(listaRealizadas)
       }
     }).catch((erro: unknown): void => {
       console.error('Erro ao carregar faturas e parcelas:', erro)
@@ -214,9 +220,18 @@ function App(): React.JSX.Element {
     'Dezembro'
   ]
 
-  // Receitas/despesas bancárias e parcelas do cartão são fontes distintas.
-  // O pagamento da fatura NÃO entra como despesa novamente.
-  const transacoesContabeis: Transacao[] = [...transacoes, ...parcelasCartao]
+  // Fluxo efetivo: transações bancárias + parcelas que já foram pagas.
+  // Parcelas ainda em aberto ficam apenas na previsão, sem reduzir os resultados reais.
+  const hoje = (() => {
+    const d = new Date()
+    return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0')].join('-')
+  })()
+  const transacoesRealizadas: Transacao[] = [...transacoes, ...despesasCartaoPagas]
+    .filter((t) => t.data <= hoje)
+  const pendentes = new Set(parcelasPendentesIds)
+  const transacoesPrevistas: Transacao[] = parcelasCartao.filter((t) => pendentes.has(t.id))
+  const transacoesContabeis = transacoesRealizadas
   const anosDisponiveis = Array.from(
     new Set([String(new Date().getFullYear()), ...transacoesContabeis.map((t) => t.data.slice(0, 4))])
   ).sort((a, b) => b.localeCompare(a))
@@ -237,8 +252,6 @@ function App(): React.JSX.Element {
   const totalDespesas = transacoesPeriodo
     .filter((t) => t.tipo === 'despesa')
     .reduce((soma, t) => soma + t.valorCentavos, 0)
-
-  const saldo = totalReceitas - totalDespesas
 
   const transacoesFiltradas = transacoesBancariasPeriodo.filter((t) => {
     const correspondeTipo = tipoFiltro === 'todos' || t.tipo === tipoFiltro
@@ -530,7 +543,8 @@ function App(): React.JSX.Element {
             saldoContasCentavos={contas.reduce((total, conta) => total + conta.saldoAtualCentavos, 0)}
             receitasCentavos={totalReceitas}
             despesasCentavos={totalDespesas}
-            transacoes={transacoesPeriodo}
+            transacoes={transacoesRealizadas}
+            previsoes={transacoesPrevistas}
             transacoesRecentes={[...transacoesBancariasPeriodo]
               .sort((a, b) => b.data.localeCompare(a.data))
               .slice(0, 5)}
@@ -710,7 +724,7 @@ function App(): React.JSX.Element {
 
         {pagina === 'relatorios' && (
           <>
-            <GraficosFinanceiros transacoes={transacoesPeriodo} />
+            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} />
 
             <section className="painel">
               <h3>Resumo financeiro por competência</h3>
