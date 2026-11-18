@@ -19,6 +19,25 @@ export interface NovaConta {
   saldoInicialCentavos: number
 }
 
+export type AlteracaoConta = Pick<Conta, 'banco' | 'nome' | 'tipo'>
+
+export interface AjusteSaldo {
+  id: string
+  contaId: string
+  diferencaCentavos: number
+  saldoAnteriorCentavos: number
+  saldoDesejadoCentavos: number
+  motivo: string
+  data: string
+}
+
+export interface NovoAjusteSaldo {
+  contaId: string
+  saldoDesejadoCentavos: number
+  motivo: string
+  data: string
+}
+
 export interface Transferencia {
   id: string
   origemId: string
@@ -85,6 +104,17 @@ export function criarTabelaContas(): void {
     CREATE INDEX IF NOT EXISTS idx_transferencias_origem ON transferencias(origem_id);
     CREATE INDEX IF NOT EXISTS idx_transferencias_destino ON transferencias(destino_id);
     CREATE INDEX IF NOT EXISTS idx_transacoes_conta ON transacoes(conta_id);
+    CREATE TABLE IF NOT EXISTS ajustes_saldo (
+      id TEXT PRIMARY KEY,
+      conta_id TEXT NOT NULL REFERENCES contas(id),
+      diferenca_centavos INTEGER NOT NULL,
+      saldo_anterior_centavos INTEGER NOT NULL,
+      saldo_desejado_centavos INTEGER NOT NULL,
+      motivo TEXT NOT NULL,
+      data TEXT NOT NULL,
+      criado_em TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ajustes_saldo_conta ON ajustes_saldo(conta_id);
   `)
 }
 
@@ -101,6 +131,7 @@ export function listarContas(): Conta[] {
       + COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE destino_id = c.id), 0)
       - COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE origem_id = c.id), 0)
       - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_fatura WHERE conta_id = c.id), 0)
+      + COALESCE((SELECT SUM(diferenca_centavos) FROM ajustes_saldo WHERE conta_id = c.id), 0)
         AS saldoAtualCentavos
     FROM contas c ORDER BY c.criado_em DESC
   `
@@ -145,6 +176,85 @@ export function cadastrarConta(dados: NovaConta): Conta {
       new Date().toISOString()
     )
   return conta
+}
+
+export function editarConta(id: string, dados: AlteracaoConta): Conta {
+  if (typeof id !== 'string' || !id.trim()) throw new Error('Conta inválida.')
+  if (!dados || typeof dados !== 'object') throw new Error('Dados inválidos.')
+  if (typeof dados.banco !== 'string' || !dados.banco.trim() || dados.banco.length > 100)
+    throw new Error('Informe um banco válido.')
+  if (typeof dados.nome !== 'string' || !dados.nome.trim() || dados.nome.length > 100)
+    throw new Error('Informe um nome válido.')
+  const tipos: TipoConta[] = ['corrente', 'poupanca', 'salario', 'dinheiro', 'outra']
+  if (!tipos.includes(dados.tipo)) throw new Error('Tipo de conta inválido.')
+
+  const db = obterBanco()
+  const resultado = db.prepare('UPDATE contas SET banco = ?, nome = ?, tipo = ? WHERE id = ?')
+    .run(dados.banco.trim(), dados.nome.trim(), dados.tipo, id)
+  if (resultado.changes !== 1) throw new Error('Conta não encontrada.')
+  const conta = listarContas().find((c) => c.id === id)
+  if (!conta) throw new Error('Conta não encontrada.')
+  return conta
+}
+
+function validarDataAjuste(data: string): void {
+  if (typeof data !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(data) ||
+      Number.isNaN(Date.parse(data)) || new Date(data).toISOString().slice(0, 10) !== data)
+    throw new Error('Data inválida.')
+}
+
+export function ajustarSaldo(dados: NovoAjusteSaldo): AjusteSaldo {
+  if (!dados || typeof dados !== 'object') throw new Error('Ajuste inválido.')
+  if (typeof dados.contaId !== 'string' || !dados.contaId)
+    throw new Error('Selecione uma conta.')
+  if (!Number.isSafeInteger(dados.saldoDesejadoCentavos) || dados.saldoDesejadoCentavos < 0)
+    throw new Error('Saldo desejado inválido.')
+  if (typeof dados.motivo !== 'string' || dados.motivo.trim().length < 3 ||
+      dados.motivo.length > 200) throw new Error('Informe o motivo do ajuste.')
+  validarDataAjuste(dados.data)
+
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const conta = listarContas().find((c) => c.id === dados.contaId)
+    if (!conta) throw new Error('Conta não encontrada.')
+    const diferenca = dados.saldoDesejadoCentavos - conta.saldoAtualCentavos
+    if (!Number.isSafeInteger(diferenca) || diferenca === 0)
+      throw new Error('Informe um saldo diferente do saldo atual.')
+
+    const ajuste: AjusteSaldo = {
+      id: randomUUID(),
+      contaId: conta.id,
+      diferencaCentavos: diferenca,
+      saldoAnteriorCentavos: conta.saldoAtualCentavos,
+      saldoDesejadoCentavos: dados.saldoDesejadoCentavos,
+      motivo: dados.motivo.trim(),
+      data: dados.data
+    }
+    db.prepare(`
+      INSERT INTO ajustes_saldo (
+        id, conta_id, diferenca_centavos, saldo_anterior_centavos,
+        saldo_desejado_centavos, motivo, data, criado_em
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(ajuste.id, ajuste.contaId, ajuste.diferencaCentavos,
+      ajuste.saldoAnteriorCentavos, ajuste.saldoDesejadoCentavos,
+      ajuste.motivo, ajuste.data, new Date().toISOString())
+    db.exec('COMMIT')
+    return ajuste
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
+}
+
+export function listarAjustesSaldo(): AjusteSaldo[] {
+  return obterBanco().prepare(`
+    SELECT id, conta_id AS contaId, diferenca_centavos AS diferencaCentavos,
+      saldo_anterior_centavos AS saldoAnteriorCentavos,
+      saldo_desejado_centavos AS saldoDesejadoCentavos, motivo, data
+    FROM ajustes_saldo
+    ORDER BY criado_em DESC, rowid DESC
+  `).all() as unknown as AjusteSaldo[]
 }
 
 export function listarTransferencias(): Transferencia[] {
