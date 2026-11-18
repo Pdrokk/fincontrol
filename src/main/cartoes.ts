@@ -464,6 +464,43 @@ export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): { valor
   }
 }
 
+export interface DespesaCartaoRealizada {
+  id: string
+  descricao: string
+  valorCentavos: number
+  tipo: 'despesa'
+  categoria: string
+  data: string
+  contaId: null
+  origem: 'cartao-pago'
+}
+
+/**
+ * Para fluxo realizado, a despesa do cartão aparece na data de pagamento.
+ * Cada parcela tem no máximo um pagamento: integral da fatura OU individual.
+ * Não registra o pagamento novamente como despesa bancária.
+ */
+export function listarDespesasCartaoRealizadas(): DespesaCartaoRealizada[] {
+  const registros = obterBanco().prepare(`
+    SELECT p.id, (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
+      p.valor_centavos AS valorCentavos, c.categoria,
+      COALESCE(pp.data_pagamento, pf.data_pagamento) AS data
+    FROM parcelas_cartao p
+    JOIN compras_cartao c ON c.id = p.compra_id
+    LEFT JOIN pagamentos_parcelas pp ON pp.parcela_id = p.id
+    LEFT JOIN pagamentos_fatura pf
+      ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
+    WHERE pp.id IS NOT NULL OR pf.id IS NOT NULL
+    ORDER BY data DESC, p.competencia DESC
+  `).all() as unknown as Omit<DespesaCartaoRealizada, 'tipo' | 'contaId' | 'origem'>[]
+  return registros.map((r) => ({
+    ...r,
+    tipo: 'despesa',
+    contaId: null,
+    origem: 'cartao-pago'
+  }))
+}
+
 export function listarParcelasParaRelatorios(): ParcelaRelatorio[] {
   const registros = obterBanco().prepare(`
     SELECT p.id, (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
