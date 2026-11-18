@@ -167,7 +167,9 @@ export function removerTransacao(id: string): void {
 
   const db = obterBanco()
   if (db.prepare('SELECT 1 FROM salarios_lancamentos WHERE transacao_id = ?').get(id)) {
-    throw new Error('Este lançamento pertence a um salário recorrente. Desative a programação para interromper os próximos recebimentos.')
+    throw new Error(
+      'Este lançamento pertence a um salário recorrente. Desative a programação para interromper os próximos recebimentos.'
+    )
   }
   db.prepare('DELETE FROM transacoes WHERE id = ?').run(id)
 }

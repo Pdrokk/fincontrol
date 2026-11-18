@@ -206,7 +206,8 @@ export function editarConta(id: string, dados: AlteracaoConta): Conta {
 
   const db = obterBanco()
   const cor = validarCor(dados.cor)
-  const resultado = db.prepare('UPDATE contas SET banco = ?, nome = ?, tipo = ?, cor = ? WHERE id = ?')
+  const resultado = db
+    .prepare('UPDATE contas SET banco = ?, nome = ?, tipo = ?, cor = ? WHERE id = ?')
     .run(dados.banco.trim(), dados.nome.trim(), dados.tipo, cor, id)
   if (resultado.changes !== 1) throw new Error('Conta não encontrada.')
   const conta = listarContas().find((c) => c.id === id)
@@ -215,19 +216,26 @@ export function editarConta(id: string, dados: AlteracaoConta): Conta {
 }
 
 function validarDataAjuste(data: string): void {
-  if (typeof data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data) ||
-      Number.isNaN(Date.parse(data)) || new Date(data).toISOString().slice(0, 10) !== data)
+  if (
+    typeof data !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(data) ||
+    Number.isNaN(Date.parse(data)) ||
+    new Date(data).toISOString().slice(0, 10) !== data
+  )
     throw new Error('Data inválida.')
 }
 
 export function ajustarSaldo(dados: NovoAjusteSaldo): AjusteSaldo {
   if (!dados || typeof dados !== 'object') throw new Error('Ajuste inválido.')
-  if (typeof dados.contaId !== 'string' || !dados.contaId)
-    throw new Error('Selecione uma conta.')
+  if (typeof dados.contaId !== 'string' || !dados.contaId) throw new Error('Selecione uma conta.')
   if (!Number.isSafeInteger(dados.saldoDesejadoCentavos) || dados.saldoDesejadoCentavos < 0)
     throw new Error('Saldo desejado inválido.')
-  if (typeof dados.motivo !== 'string' || dados.motivo.trim().length < 3 ||
-      dados.motivo.length > 200) throw new Error('Informe o motivo do ajuste.')
+  if (
+    typeof dados.motivo !== 'string' ||
+    dados.motivo.trim().length < 3 ||
+    dados.motivo.length > 200
+  )
+    throw new Error('Informe o motivo do ajuste.')
   validarDataAjuste(dados.data)
 
   const db = obterBanco()
@@ -248,14 +256,23 @@ export function ajustarSaldo(dados: NovoAjusteSaldo): AjusteSaldo {
       motivo: dados.motivo.trim(),
       data: dados.data
     }
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO ajustes_saldo (
         id, conta_id, diferenca_centavos, saldo_anterior_centavos,
         saldo_desejado_centavos, motivo, data, criado_em
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(ajuste.id, ajuste.contaId, ajuste.diferencaCentavos,
-      ajuste.saldoAnteriorCentavos, ajuste.saldoDesejadoCentavos,
-      ajuste.motivo, ajuste.data, new Date().toISOString())
+    `
+    ).run(
+      ajuste.id,
+      ajuste.contaId,
+      ajuste.diferencaCentavos,
+      ajuste.saldoAnteriorCentavos,
+      ajuste.saldoDesejadoCentavos,
+      ajuste.motivo,
+      ajuste.data,
+      new Date().toISOString()
+    )
     db.exec('COMMIT')
     return ajuste
   } catch (erro) {
@@ -265,13 +282,17 @@ export function ajustarSaldo(dados: NovoAjusteSaldo): AjusteSaldo {
 }
 
 export function listarAjustesSaldo(): AjusteSaldo[] {
-  return obterBanco().prepare(`
+  return obterBanco()
+    .prepare(
+      `
     SELECT id, conta_id AS contaId, diferenca_centavos AS diferencaCentavos,
       saldo_anterior_centavos AS saldoAnteriorCentavos,
       saldo_desejado_centavos AS saldoDesejadoCentavos, motivo, data
     FROM ajustes_saldo
     ORDER BY criado_em DESC, rowid DESC
-  `).all() as unknown as AjusteSaldo[]
+  `
+    )
+    .all() as unknown as AjusteSaldo[]
 }
 
 export function excluirConta(id: string): void {
@@ -292,9 +313,13 @@ export function excluirConta(id: string): void {
       ['salarios_recorrentes', 'conta_id']
     ] as const
     for (const [tabela, coluna] of dependencias) {
-      const quantidade = db.prepare(`SELECT COUNT(*) AS n FROM ${tabela} WHERE ${coluna} = ?`).get(id) as {n: number}
+      const quantidade = db
+        .prepare(`SELECT COUNT(*) AS n FROM ${tabela} WHERE ${coluna} = ?`)
+        .get(id) as { n: number }
       if (quantidade.n > 0) {
-        throw new Error('Esta conta possui histórico ou vínculos. Para preservar pagamentos e transações, remova os vínculos antes de excluir.')
+        throw new Error(
+          'Esta conta possui histórico ou vínculos. Para preservar pagamentos e transações, remova os vínculos antes de excluir.'
+        )
       }
     }
     db.prepare('DELETE FROM contas WHERE id = ?').run(id)

@@ -51,7 +51,10 @@ export interface PagamentoFatura {
   valorCentavos: number
 }
 
-export type NovoPagamentoFatura = Pick<PagamentoFatura, 'cartaoId' | 'competencia' | 'contaId' | 'dataPagamento'>
+export type NovoPagamentoFatura = Pick<
+  PagamentoFatura,
+  'cartaoId' | 'competencia' | 'contaId' | 'dataPagamento'
+>
 
 export interface ParcelaPagamento {
   id: string
@@ -141,7 +144,9 @@ export function criarTabelasCartoes(): void {
 }
 
 export function listarCartoes(): Cartao[] {
-  const registros = obterBanco().prepare(`
+  const registros = obterBanco()
+    .prepare(
+      `
     SELECT c.id, c.conta_id AS contaId, c.nome, c.banco,
       c.limite_centavos AS limiteCentavos,
       c.dia_fechamento AS diaFechamento,
@@ -154,7 +159,9 @@ export function listarCartoes(): Cartao[] {
                   JOIN parcelas_cartao p ON p.id = pp.parcela_id
                   WHERE p.cartao_id = c.id), 0) AS limiteUtilizadoCentavos
     FROM cartoes c ORDER BY c.criado_em DESC
-  `).all() as unknown as Omit<Cartao, 'limiteDisponivelCentavos'>[]
+  `
+    )
+    .all() as unknown as Omit<Cartao, 'limiteDisponivelCentavos'>[]
   return registros.map((c) => ({
     ...c,
     limiteDisponivelCentavos: c.limiteCentavos - c.limiteUtilizadoCentavos
@@ -187,18 +194,34 @@ export function cadastrarCartao(dados: NovoCartao): Cartao {
     diaFechamento: dados.diaFechamento,
     diaVencimento: dados.diaVencimento
   }
-  obterBanco().prepare(`
+  obterBanco()
+    .prepare(
+      `
     INSERT INTO cartoes
       (id, conta_id, nome, banco, limite_centavos, dia_fechamento, dia_vencimento, criado_em)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(cartao.id, cartao.contaId, cartao.nome, cartao.banco, cartao.limiteCentavos,
-    cartao.diaFechamento, cartao.diaVencimento, new Date().toISOString())
+  `
+    )
+    .run(
+      cartao.id,
+      cartao.contaId,
+      cartao.nome,
+      cartao.banco,
+      cartao.limiteCentavos,
+      cartao.diaFechamento,
+      cartao.diaVencimento,
+      new Date().toISOString()
+    )
   return cartao
 }
 
 function validarData(data: string): void {
-  if (typeof data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data) ||
-      Number.isNaN(Date.parse(data)) || new Date(data).toISOString().slice(0, 10) !== data) {
+  if (
+    typeof data !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(data) ||
+    Number.isNaN(Date.parse(data)) ||
+    new Date(data).toISOString().slice(0, 10) !== data
+  ) {
     throw new Error('Data inválida.')
   }
 }
@@ -215,22 +238,33 @@ function competenciaInicial(data: string, diaFechamento: number): string {
 
 export function cadastrarCompra(dados: NovaCompra): Compra {
   if (!dados || typeof dados !== 'object') throw new Error('Compra inválida.')
-  if (typeof dados.cartaoId !== 'string' || !dados.cartaoId)
-    throw new Error('Selecione um cartão.')
-  if (typeof dados.descricao !== 'string' || !dados.descricao.trim() || dados.descricao.length > 200)
+  if (typeof dados.cartaoId !== 'string' || !dados.cartaoId) throw new Error('Selecione um cartão.')
+  if (
+    typeof dados.descricao !== 'string' ||
+    !dados.descricao.trim() ||
+    dados.descricao.length > 200
+  )
     throw new Error('Descrição inválida.')
-  if (typeof dados.categoria !== 'string' || !dados.categoria.trim() || dados.categoria.length > 100)
+  if (
+    typeof dados.categoria !== 'string' ||
+    !dados.categoria.trim() ||
+    dados.categoria.length > 100
+  )
     throw new Error('Categoria inválida.')
   validarData(dados.data)
   if (!Number.isSafeInteger(dados.valorCentavos) || dados.valorCentavos <= 0)
     throw new Error('Valor inválido.')
-  if (!Number.isInteger(dados.numeroParcelas) || dados.numeroParcelas < 1 ||
-      dados.numeroParcelas > 120 || dados.numeroParcelas > dados.valorCentavos)
+  if (
+    !Number.isInteger(dados.numeroParcelas) ||
+    dados.numeroParcelas < 1 ||
+    dados.numeroParcelas > 120 ||
+    dados.numeroParcelas > dados.valorCentavos
+  )
     throw new Error('Quantidade de parcelas inválida.')
 
   const db = obterBanco()
   const cartao = db.prepare('SELECT * FROM cartoes WHERE id = ?').get(dados.cartaoId) as
-    | { dia_fechamento: number } | undefined
+    { dia_fechamento: number } | undefined
   if (!cartao) throw new Error('Cartão não encontrado.')
 
   const compra: Compra = {
@@ -258,19 +292,36 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
     )
     for (let i = 0; i < compra.numeroParcelas; i++) {
       const competencia = somarMeses(ano, mes, i)
-      if (verificarQuitacao.get(compra.cartaoId, competencia) ||
-        db.prepare(`SELECT 1 FROM pagamentos_parcelas pp JOIN parcelas_cartao p
-          ON p.id = pp.parcela_id WHERE p.cartao_id = ? AND p.competencia = ? LIMIT 1`)
-          .get(compra.cartaoId, competencia)) {
-        throw new Error('Já existe fatura paga neste período. Não é possível incluir novas parcelas.')
+      if (
+        verificarQuitacao.get(compra.cartaoId, competencia) ||
+        db
+          .prepare(
+            `SELECT 1 FROM pagamentos_parcelas pp JOIN parcelas_cartao p
+          ON p.id = pp.parcela_id WHERE p.cartao_id = ? AND p.competencia = ? LIMIT 1`
+          )
+          .get(compra.cartaoId, competencia)
+      ) {
+        throw new Error(
+          'Já existe fatura paga neste período. Não é possível incluir novas parcelas.'
+        )
       }
     }
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO compras_cartao
         (id, cartao_id, descricao, categoria, data, valor_centavos, numero_parcelas, criado_em)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(compra.id, compra.cartaoId, compra.descricao, compra.categoria,
-      compra.data, compra.valorCentavos, compra.numeroParcelas, new Date().toISOString())
+    `
+    ).run(
+      compra.id,
+      compra.cartaoId,
+      compra.descricao,
+      compra.categoria,
+      compra.data,
+      compra.valorCentavos,
+      compra.numeroParcelas,
+      new Date().toISOString()
+    )
 
     const inserirParcela = db.prepare(`
       INSERT INTO parcelas_cartao (id, compra_id, cartao_id, numero, competencia, valor_centavos)
@@ -278,8 +329,14 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
     `)
     for (let i = 0; i < compra.numeroParcelas; i++) {
       const centavos = base + (i < resto ? 1 : 0)
-      inserirParcela.run(randomUUID(), compra.id, compra.cartaoId, i + 1,
-        somarMeses(ano, mes, i), centavos)
+      inserirParcela.run(
+        randomUUID(),
+        compra.id,
+        compra.cartaoId,
+        i + 1,
+        somarMeses(ano, mes, i),
+        centavos
+      )
     }
     db.exec('COMMIT')
     return compra
@@ -290,11 +347,15 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
 }
 
 export function listarCompras(): Compra[] {
-  return obterBanco().prepare(`
+  return obterBanco()
+    .prepare(
+      `
     SELECT id, cartao_id AS cartaoId, descricao, categoria, data,
       valor_centavos AS valorCentavos, numero_parcelas AS numeroParcelas
     FROM compras_cartao ORDER BY data DESC, criado_em DESC
-  `).all() as unknown as Compra[]
+  `
+    )
+    .all() as unknown as Compra[]
 }
 
 function vencimentoFatura(competencia: string, fechamento: number, vencimento: number): string {
@@ -305,7 +366,9 @@ function vencimentoFatura(competencia: string, fechamento: number, vencimento: n
 
 export function listarFaturasPrevistas(): FaturaPrevista[] {
   const cartoes = listarCartoes()
-  const registros = obterBanco().prepare(`
+  const registros = obterBanco()
+    .prepare(
+      `
     SELECT p.cartao_id AS cartaoId, p.competencia,
       SUM(p.valor_centavos) AS totalCentavos, COUNT(*) AS quantidadeParcelas,
       SUM(CASE WHEN pf.id IS NOT NULL OR pp.id IS NOT NULL THEN p.valor_centavos ELSE 0 END)
@@ -318,7 +381,9 @@ export function listarFaturasPrevistas(): FaturaPrevista[] {
     LEFT JOIN pagamentos_parcelas pp ON pp.parcela_id = p.id
     GROUP BY p.cartao_id, p.competencia, pf.id, pf.conta_id, pf.data_pagamento
     ORDER BY p.competencia ASC
-  `).all() as unknown as Omit<FaturaPrevista, 'vencimento' | 'paga' | 'saldoPendenteCentavos'>[]
+  `
+    )
+    .all() as unknown as Omit<FaturaPrevista, 'vencimento' | 'paga' | 'saldoPendenteCentavos'>[]
   return registros.map((p) => {
     const c = cartoes.find((x) => x.id === p.cartaoId)
     if (!c) throw new Error('Cartão da fatura não encontrado.')
@@ -332,7 +397,9 @@ export function listarFaturasPrevistas(): FaturaPrevista[] {
 }
 
 export function listarParcelasPagamento(): ParcelaPagamento[] {
-  const registros = obterBanco().prepare(`
+  const registros = obterBanco()
+    .prepare(
+      `
     SELECT p.id, p.compra_id AS compraId, p.cartao_id AS cartaoId,
       (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
       p.competencia, p.numero, p.valor_centavos AS valorCentavos,
@@ -343,16 +410,27 @@ export function listarParcelasPagamento(): ParcelaPagamento[] {
       ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
     LEFT JOIN pagamentos_parcelas pp ON pp.parcela_id = p.id
     ORDER BY p.competencia ASC, p.numero ASC
-  `).all() as unknown as (Omit<ParcelaPagamento, 'paga'> & { pago: number })[]
+  `
+    )
+    .all() as unknown as (Omit<ParcelaPagamento, 'paga'> & { pago: number })[]
   return registros.map((p) => ({ ...p, paga: p.pago === 1 }))
 }
 
-export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): { valorCentavos: number; parcelasPagas: number } {
-  if (!dados || typeof dados !== 'object' ||
-      typeof dados.contaId !== 'string' || !dados.contaId ||
-      !Array.isArray(dados.parcelaIds) || dados.parcelaIds.length < 1 ||
-      dados.parcelaIds.length > 120 || new Set(dados.parcelaIds).size !== dados.parcelaIds.length ||
-      dados.parcelaIds.some((id) => typeof id !== 'string' || !id)) {
+export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): {
+  valorCentavos: number
+  parcelasPagas: number
+} {
+  if (
+    !dados ||
+    typeof dados !== 'object' ||
+    typeof dados.contaId !== 'string' ||
+    !dados.contaId ||
+    !Array.isArray(dados.parcelaIds) ||
+    dados.parcelaIds.length < 1 ||
+    dados.parcelaIds.length > 120 ||
+    new Set(dados.parcelaIds).size !== dados.parcelaIds.length ||
+    dados.parcelaIds.some((id) => typeof id !== 'string' || !id)
+  ) {
     throw new Error('Selecione parcelas válidas e a conta para pagamento.')
   }
   validarData(dados.dataPagamento)
@@ -368,7 +446,8 @@ export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): { valor
     if (!Number.isSafeInteger(total) || total <= 0) throw new Error('Valor inválido.')
     const conta = listarContas().find((c) => c.id === dados.contaId)
     if (!conta) throw new Error('Conta não encontrada.')
-    if (conta.saldoAtualCentavos < total) throw new Error('Saldo insuficiente para as parcelas escolhidas.')
+    if (conta.saldoAtualCentavos < total)
+      throw new Error('Saldo insuficiente para as parcelas escolhidas.')
     const inserir = db.prepare(`
       INSERT INTO pagamentos_parcelas (id, parcela_id, conta_id, data_pagamento, valor_centavos)
       VALUES (?, ?, ?, ?, ?)
@@ -386,13 +465,17 @@ export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): { valor
 }
 
 export function listarParcelasParaRelatorios(): ParcelaRelatorio[] {
-  const registros = obterBanco().prepare(`
+  const registros = obterBanco()
+    .prepare(
+      `
     SELECT p.id, (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
       p.valor_centavos AS valorCentavos, c.categoria, p.competencia
     FROM parcelas_cartao p
     JOIN compras_cartao c ON c.id = p.compra_id
     ORDER BY p.competencia ASC, p.numero ASC
-  `).all() as unknown as {
+  `
+    )
+    .all() as unknown as {
     id: string
     descricao: string
     valorCentavos: number
@@ -413,12 +496,15 @@ export function listarParcelasParaRelatorios(): ParcelaRelatorio[] {
 
 export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
   if (!dados || typeof dados !== 'object') throw new Error('Pagamento inválido.')
-  if (typeof dados.cartaoId !== 'string' || !dados.cartaoId ||
-      typeof dados.contaId !== 'string' || !dados.contaId) {
+  if (
+    typeof dados.cartaoId !== 'string' ||
+    !dados.cartaoId ||
+    typeof dados.contaId !== 'string' ||
+    !dados.contaId
+  ) {
     throw new Error('Selecione um cartão e uma conta.')
   }
-  if (typeof dados.competencia !== 'string' ||
-      !/^\d{4}-(0[1-9]|1[0-2])$/.test(dados.competencia)) {
+  if (typeof dados.competencia !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(dados.competencia)) {
     throw new Error('Competência inválida.')
   }
   validarData(dados.dataPagamento)
@@ -429,25 +515,38 @@ export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
     const cartao = db.prepare('SELECT id FROM cartoes WHERE id = ?').get(dados.cartaoId)
     if (!cartao) throw new Error('Cartão não encontrado.')
 
-    const fatura = db.prepare(`
+    const fatura = db
+      .prepare(
+        `
       SELECT SUM(valor_centavos) AS total
       FROM parcelas_cartao
       WHERE cartao_id = ? AND competencia = ?
-    `).get(dados.cartaoId, dados.competencia) as { total: number | null } | undefined
+    `
+      )
+      .get(dados.cartaoId, dados.competencia) as { total: number | null } | undefined
     const total = fatura?.total
     if (!total || !Number.isSafeInteger(total) || total <= 0) {
       throw new Error('Fatura inexistente ou inválida.')
     }
 
-    const anterior = db.prepare(`
+    const anterior = db
+      .prepare(
+        `
       SELECT id FROM pagamentos_fatura WHERE cartao_id = ? AND competencia = ?
-    `).get(dados.cartaoId, dados.competencia)
+    `
+      )
+      .get(dados.cartaoId, dados.competencia)
     if (anterior) throw new Error('Fatura já paga.')
-    const pagamentosParciais = db.prepare(`
+    const pagamentosParciais = db
+      .prepare(
+        `
       SELECT 1 FROM pagamentos_parcelas pp JOIN parcelas_cartao p ON p.id = pp.parcela_id
       WHERE p.cartao_id = ? AND p.competencia = ? LIMIT 1
-    `).get(dados.cartaoId, dados.competencia)
-    if (pagamentosParciais) throw new Error('Fatura com parcelas já pagas: utilize seleção de parcelas.')
+    `
+      )
+      .get(dados.cartaoId, dados.competencia)
+    if (pagamentosParciais)
+      throw new Error('Fatura com parcelas já pagas: utilize seleção de parcelas.')
 
     // Contas são recalculadas dentro da transação de gravação.
     const conta = listarContas().find((c) => c.id === dados.contaId)
@@ -462,13 +561,19 @@ export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
       dataPagamento: dados.dataPagamento,
       valorCentavos: total
     }
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO pagamentos_fatura
         (id, cartao_id, competencia, conta_id, data_pagamento, valor_centavos)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      pagamento.id, pagamento.cartaoId, pagamento.competencia,
-      pagamento.contaId, pagamento.dataPagamento, pagamento.valorCentavos
+    `
+    ).run(
+      pagamento.id,
+      pagamento.cartaoId,
+      pagamento.competencia,
+      pagamento.contaId,
+      pagamento.dataPagamento,
+      pagamento.valorCentavos
     )
     db.exec('COMMIT')
     return pagamento

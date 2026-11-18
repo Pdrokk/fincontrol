@@ -53,7 +53,9 @@ interface ParcelaPagamento {
 }
 
 function moeda(centavos: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavos / 100)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    centavos / 100
+  )
 }
 
 function paraCentavos(texto: string): number | null {
@@ -97,13 +99,14 @@ export default function CartoesCredito(): React.JSX.Element {
   const [data, setData] = useState(dataLocal)
 
   async function atualizar(): Promise<void> {
-    const [listaCartoes, listaContas, listaCompras, listaFaturas, listaParcelas] = await Promise.all([
-      window.fincontrol.listarCartoes(),
-      window.fincontrol.listarContas(),
-      window.fincontrol.listarComprasCartao(),
-      window.fincontrol.listarFaturasPrevistas(),
-      window.fincontrol.listarParcelasPagamento()
-    ])
+    const [listaCartoes, listaContas, listaCompras, listaFaturas, listaParcelas] =
+      await Promise.all([
+        window.fincontrol.listarCartoes(),
+        window.fincontrol.listarContas(),
+        window.fincontrol.listarComprasCartao(),
+        window.fincontrol.listarFaturasPrevistas(),
+        window.fincontrol.listarParcelasPagamento()
+      ])
     setCartoes(listaCartoes)
     setContas(listaContas)
     setCompras(listaCompras)
@@ -120,26 +123,36 @@ export default function CartoesCredito(): React.JSX.Element {
       window.fincontrol.listarComprasCartao(),
       window.fincontrol.listarFaturasPrevistas(),
       window.fincontrol.listarParcelasPagamento()
-    ]).then(([c, b, comprasCarregadas, faturasCarregadas, parcelasCarregadas]): void => {
-      if (ativo) {
-        setCartoes(c)
-        setContas(b)
-        setCompras(comprasCarregadas)
-        setFaturas(faturasCarregadas)
-        setParcelasPagamento(parcelasCarregadas)
-      }
-    }).catch((falha: unknown): void => {
-      console.error(falha)
-      if (ativo) setErro('Não foi possível carregar cartões ou faturas.')
-    }).finally((): void => { if (ativo) setCarregando(false) })
-    return (): void => { ativo = false }
+    ])
+      .then(([c, b, comprasCarregadas, faturasCarregadas, parcelasCarregadas]): void => {
+        if (ativo) {
+          setCartoes(c)
+          setContas(b)
+          setCompras(comprasCarregadas)
+          setFaturas(faturasCarregadas)
+          setParcelasPagamento(parcelasCarregadas)
+        }
+      })
+      .catch((falha: unknown): void => {
+        console.error(falha)
+        if (ativo) setErro('Não foi possível carregar cartões ou faturas.')
+      })
+      .finally((): void => {
+        if (ativo) setCarregando(false)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [])
 
   async function salvarCartao(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (salvando || carregando || erro) return
     const limiteCentavos = paraCentavos(limite)
-    if (limiteCentavos === null) { alert('Limite inválido.'); return }
+    if (limiteCentavos === null) {
+      alert('Limite inválido.')
+      return
+    }
     try {
       setSalvando(true)
       await window.fincontrol.cadastrarCartao({
@@ -158,7 +171,9 @@ export default function CartoesCredito(): React.JSX.Element {
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível cadastrar o cartão.')
-    } finally { setSalvando(false) }
+    } finally {
+      setSalvando(false)
+    }
   }
 
   async function salvarCompra(e: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -186,7 +201,9 @@ export default function CartoesCredito(): React.JSX.Element {
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível cadastrar a compra. Verifique o valor e a quantidade de parcelas.')
-    } finally { setSalvando(false) }
+    } finally {
+      setSalvando(false)
+    }
   }
 
   async function confirmarPagamento(fatura: Fatura): Promise<void> {
@@ -198,9 +215,12 @@ export default function CartoesCredito(): React.JSX.Element {
       alert('Selecione uma conta bancária para pagar a fatura.')
       return
     }
-    if (!window.confirm(
-      `Confirmar pagamento integral de ${moeda(fatura.totalCentavos)} com vencimento em ${fatura.vencimento}?`
-    )) return
+    if (
+      !window.confirm(
+        `Confirmar pagamento integral de ${moeda(fatura.totalCentavos)} com vencimento em ${fatura.vencimento}?`
+      )
+    )
+      return
     try {
       setSalvando(true)
       await window.fincontrol.pagarFatura({
@@ -221,9 +241,15 @@ export default function CartoesCredito(): React.JSX.Element {
 
   async function pagarLote(): Promise<void> {
     if (salvando || selecionadas.length === 0 || !contaLote) return
-    const total = parcelasPagamento.filter((p) => selecionadas.includes(p.id))
+    const total = parcelasPagamento
+      .filter((p) => selecionadas.includes(p.id))
       .reduce((soma, p) => soma + p.valorCentavos, 0)
-    if (!window.confirm(`Pagar ${selecionadas.length} parcela(s), total ${moeda(total)}, usando a conta selecionada?`)) return
+    if (
+      !window.confirm(
+        `Pagar ${selecionadas.length} parcela(s), total ${moeda(total)}, usando a conta selecionada?`
+      )
+    )
+      return
     try {
       setSalvando(true)
       await window.fincontrol.pagarParcelasSelecionadas({
@@ -242,14 +268,15 @@ export default function CartoesCredito(): React.JSX.Element {
   }
 
   function marcarParcela(id: string, marcada: boolean): void {
-    setSelecionadas((prev) => marcada ? [...prev, id] : prev.filter((x) => x !== id))
+    setSelecionadas((prev) => (marcada ? [...prev, id] : prev.filter((x) => x !== id)))
   }
 
   const nomeCartao = (id: string): string => {
     const c = cartoes.find((item) => item.id === id)
     return c ? `${c.banco} · ${c.nome}` : 'Cartão não encontrado'
   }
-  const totalAberto = faturas.filter((f) => !f.paga)
+  const totalAberto = faturas
+    .filter((f) => !f.paga)
     .reduce((soma, fatura) => soma + fatura.saldoPendenteCentavos, 0)
 
   return (
@@ -266,7 +293,9 @@ export default function CartoesCredito(): React.JSX.Element {
         <div className="resumo-contas">
           <span>Total de faturas em aberto</span>
           <strong>{moeda(totalAberto)}</strong>
-          <small>Pagamentos são registrados na conta escolhida e não geram despesas duplicadas.</small>
+          <small>
+            Pagamentos são registrados na conta escolhida e não geram despesas duplicadas.
+          </small>
         </div>
 
         {carregando && <p>Carregando dados...</p>}
@@ -275,13 +304,22 @@ export default function CartoesCredito(): React.JSX.Element {
         <div className="grade-contas">
           {cartoes.map((c) => (
             <article className="cartao-conta" key={c.id}>
-              <div className="cartao-conta-topo"><CreditCard size={24} /><strong>{c.banco}</strong></div>
+              <div className="cartao-conta-topo">
+                <CreditCard size={24} />
+                <strong>{c.banco}</strong>
+              </div>
               <span>{c.nome}</span>
               <h3>Disponível: {moeda(c.limiteDisponivelCentavos)}</h3>
               <p>Limite contratado: {moeda(c.limiteCentavos)}</p>
               <p>Utilizado: {moeda(c.limiteUtilizadoCentavos)}</p>
-              <p>Fechamento: dia {c.diaFechamento} · Vencimento: dia {c.diaVencimento}</p>
-              <small>{c.contaId ? 'Conta: ' + (contas.find((x) => x.id === c.contaId)?.nome ?? 'Vinculada') : 'Sem conta para pagamento definida'}</small>
+              <p>
+                Fechamento: dia {c.diaFechamento} · Vencimento: dia {c.diaVencimento}
+              </p>
+              <small>
+                {c.contaId
+                  ? 'Conta: ' + (contas.find((x) => x.id === c.contaId)?.nome ?? 'Vinculada')
+                  : 'Sem conta para pagamento definida'}
+              </small>
             </article>
           ))}
         </div>
@@ -289,29 +327,79 @@ export default function CartoesCredito(): React.JSX.Element {
 
       <section className="painel">
         <h3>Cadastrar cartão</h3>
-        <form className="formulario" onSubmit={(e): void => { void salvarCartao(e) }}>
-          <label>Banco ou instituição
-            <input value={banco} maxLength={100} onChange={(e): void => setBanco(e.target.value)} required placeholder="Ex: Nubank" />
+        <form
+          className="formulario"
+          onSubmit={(e): void => {
+            void salvarCartao(e)
+          }}
+        >
+          <label>
+            Banco ou instituição
+            <input
+              value={banco}
+              maxLength={100}
+              onChange={(e): void => setBanco(e.target.value)}
+              required
+              placeholder="Ex: Nubank"
+            />
           </label>
-          <label>Nome do cartão
-            <input value={nome} maxLength={100} onChange={(e): void => setNome(e.target.value)} required placeholder="Ex: Cartão principal" />
+          <label>
+            Nome do cartão
+            <input
+              value={nome}
+              maxLength={100}
+              onChange={(e): void => setNome(e.target.value)}
+              required
+              placeholder="Ex: Cartão principal"
+            />
           </label>
-          <label>Conta associada (opcional)
+          <label>
+            Conta associada (opcional)
             <select value={contaId} onChange={(e): void => setContaId(e.target.value)}>
               <option value="">Nenhuma</option>
-              {contas.map((c) => <option key={c.id} value={c.id}>{c.banco} · {c.nome}</option>)}
+              {contas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.banco} · {c.nome}
+                </option>
+              ))}
             </select>
           </label>
-          <label>Limite contratado (R$)
-            <input value={limite} inputMode="decimal" onChange={(e): void => setLimite(e.target.value)} required />
+          <label>
+            Limite contratado (R$)
+            <input
+              value={limite}
+              inputMode="decimal"
+              onChange={(e): void => setLimite(e.target.value)}
+              required
+            />
           </label>
-          <label>Dia de fechamento (1–28)
-            <input type="number" min="1" max="28" value={fechamento} onChange={(e): void => setFechamento(e.target.value)} required />
+          <label>
+            Dia de fechamento (1–28)
+            <input
+              type="number"
+              min="1"
+              max="28"
+              value={fechamento}
+              onChange={(e): void => setFechamento(e.target.value)}
+              required
+            />
           </label>
-          <label>Dia de vencimento (1–28)
-            <input type="number" min="1" max="28" value={vencimento} onChange={(e): void => setVencimento(e.target.value)} required />
+          <label>
+            Dia de vencimento (1–28)
+            <input
+              type="number"
+              min="1"
+              max="28"
+              value={vencimento}
+              onChange={(e): void => setVencimento(e.target.value)}
+              required
+            />
           </label>
-          <button type="submit" className="botao-primario" disabled={salvando || carregando || Boolean(erro)}>
+          <button
+            type="submit"
+            className="botao-primario"
+            disabled={salvando || carregando || Boolean(erro)}
+          >
             <Plus size={17} /> Cadastrar cartão
           </button>
         </form>
@@ -319,31 +407,78 @@ export default function CartoesCredito(): React.JSX.Element {
 
       <section className="painel">
         <h3>Registrar compra no cartão</h3>
-        <form className="formulario" onSubmit={(e): void => { void salvarCompra(e) }}>
-          <label>Cartão utilizado
+        <form
+          className="formulario"
+          onSubmit={(e): void => {
+            void salvarCompra(e)
+          }}
+        >
+          <label>
+            Cartão utilizado
             <select value={cartaoId} onChange={(e): void => setCartaoId(e.target.value)} required>
               <option value="">Selecione</option>
-              {cartoes.map((c) => <option key={c.id} value={c.id}>{c.banco} · {c.nome}</option>)}
+              {cartoes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.banco} · {c.nome}
+                </option>
+              ))}
             </select>
           </label>
-          <label>Descrição
-            <input value={descricao} maxLength={200} onChange={(e): void => setDescricao(e.target.value)} required placeholder="Ex: Notebook" />
+          <label>
+            Descrição
+            <input
+              value={descricao}
+              maxLength={200}
+              onChange={(e): void => setDescricao(e.target.value)}
+              required
+              placeholder="Ex: Notebook"
+            />
           </label>
-          <label>Categoria
+          <label>
+            Categoria
             <select value={categoria} onChange={(e): void => setCategoria(e.target.value)}>
-              {['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Outros'].map((c) => <option key={c}>{c}</option>)}
+              {['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Outros'].map(
+                (c) => (
+                  <option key={c}>{c}</option>
+                )
+              )}
             </select>
           </label>
-          <label>Valor total (R$)
-            <input value={valor} inputMode="decimal" onChange={(e): void => setValor(e.target.value)} required placeholder="3600,00" />
+          <label>
+            Valor total (R$)
+            <input
+              value={valor}
+              inputMode="decimal"
+              onChange={(e): void => setValor(e.target.value)}
+              required
+              placeholder="3600,00"
+            />
           </label>
-          <label>Quantidade de parcelas
-            <input type="number" min="1" max="120" value={parcelas} onChange={(e): void => setParcelas(e.target.value)} required />
+          <label>
+            Quantidade de parcelas
+            <input
+              type="number"
+              min="1"
+              max="120"
+              value={parcelas}
+              onChange={(e): void => setParcelas(e.target.value)}
+              required
+            />
           </label>
-          <label>Data da compra
-            <input type="date" value={data} onChange={(e): void => setData(e.target.value)} required />
+          <label>
+            Data da compra
+            <input
+              type="date"
+              value={data}
+              onChange={(e): void => setData(e.target.value)}
+              required
+            />
           </label>
-          <button className="botao-primario" type="submit" disabled={salvando || carregando || Boolean(erro) || cartoes.length === 0}>
+          <button
+            className="botao-primario"
+            type="submit"
+            disabled={salvando || carregando || Boolean(erro) || cartoes.length === 0}
+          >
             <Plus size={17} /> Registrar compra e gerar parcelas
           </button>
         </form>
@@ -351,7 +486,10 @@ export default function CartoesCredito(): React.JSX.Element {
 
       <section className="painel">
         <div className="titulo-contas">
-          <div><h3>Faturas previstas</h3><p>Valores calculados automaticamente a partir das parcelas.</p></div>
+          <div>
+            <h3>Faturas previstas</h3>
+            <p>Valores calculados automaticamente a partir das parcelas.</p>
+          </div>
           <CalendarDays size={23} />
         </div>
         {faturas.length === 0 && <p className="vazio">Nenhuma fatura prevista.</p>}
@@ -362,10 +500,19 @@ export default function CartoesCredito(): React.JSX.Element {
           return (
             <div className="transacao fatura-linha" key={chave}>
               <div className="transacao-info">
-                <strong>{nomeCartao(f.cartaoId)} · {f.competencia}</strong>
-                <span>Vencimento: {f.vencimento.split('-').reverse().join('/')} · {f.quantidadeParcelas} parcela(s)</span>
-                <span>{f.paga ? 'Paga' : f.valorPagoCentavos ? 'Parcialmente paga' : 'Em aberto'}</span>
-                <span>Pago: {moeda(f.valorPagoCentavos)} · Pendente: {moeda(f.saldoPendenteCentavos)}</span>
+                <strong>
+                  {nomeCartao(f.cartaoId)} · {f.competencia}
+                </strong>
+                <span>
+                  Vencimento: {f.vencimento.split('-').reverse().join('/')} · {f.quantidadeParcelas}{' '}
+                  parcela(s)
+                </span>
+                <span>
+                  {f.paga ? 'Paga' : f.valorPagoCentavos ? 'Parcialmente paga' : 'Em aberto'}
+                </span>
+                <span>
+                  Pago: {moeda(f.valorPagoCentavos)} · Pendente: {moeda(f.saldoPendenteCentavos)}
+                </span>
               </div>
               <strong>{moeda(f.totalCentavos)}</strong>
               {!f.paga && f.valorPagoCentavos === 0 && (
@@ -375,9 +522,12 @@ export default function CartoesCredito(): React.JSX.Element {
                     <select
                       value={contaSelecionada}
                       aria-label={`Conta para fatura ${f.competencia}`}
-                      onChange={(e): void => setContaPagamento((prev) => ({
-                        ...prev, [chave]: e.target.value
-                      }))}
+                      onChange={(e): void =>
+                        setContaPagamento((prev) => ({
+                          ...prev,
+                          [chave]: e.target.value
+                        }))
+                      }
                     >
                       <option value="">Selecionar conta</option>
                       {contas.map((c) => (
@@ -391,7 +541,9 @@ export default function CartoesCredito(): React.JSX.Element {
                     type="button"
                     className="botao-primario"
                     disabled={salvando || !contaSelecionada}
-                    onClick={(): void => { void confirmarPagamento(f) }}
+                    onClick={(): void => {
+                      void confirmarPagamento(f)
+                    }}
                   >
                     {salvando ? 'Processando...' : 'Pagar fatura'}
                   </button>
@@ -401,36 +553,63 @@ export default function CartoesCredito(): React.JSX.Element {
           )
         })}
         <p className="vazio">
-          Você pode pagar uma fatura integralmente ou selecionar várias parcelas abaixo.
-          Pagamentos não criam despesas duplicadas nos relatórios.
+          Você pode pagar uma fatura integralmente ou selecionar várias parcelas abaixo. Pagamentos
+          não criam despesas duplicadas nos relatórios.
         </p>
       </section>
 
       <section className="painel">
         <h3>Selecionar parcelas para pagar</h3>
-        <p>Marque uma ou várias parcelas ainda não pagas, inclusive de faturas diferentes. Um pagamento abate o saldo da conta uma só vez.</p>
+        <p>
+          Marque uma ou várias parcelas ainda não pagas, inclusive de faturas diferentes. Um
+          pagamento abate o saldo da conta uma só vez.
+        </p>
         <div className="parcelas-selecionaveis">
-          {parcelasPagamento.filter((p) => !p.paga).map((p) => (
-            <label className="parcela-opcao" key={p.id}>
-              <input type="checkbox" checked={selecionadas.includes(p.id)}
-                onChange={(e): void => marcarParcela(p.id, e.target.checked)} />
-              <span>{nomeCartao(p.cartaoId)} · {p.descricao} · Fatura {p.competencia}</span>
-              <strong>{moeda(p.valorCentavos)}</strong>
-            </label>
-          ))}
+          {parcelasPagamento
+            .filter((p) => !p.paga)
+            .map((p) => (
+              <label className="parcela-opcao" key={p.id}>
+                <input
+                  type="checkbox"
+                  checked={selecionadas.includes(p.id)}
+                  onChange={(e): void => marcarParcela(p.id, e.target.checked)}
+                />
+                <span>
+                  {nomeCartao(p.cartaoId)} · {p.descricao} · Fatura {p.competencia}
+                </span>
+                <strong>{moeda(p.valorCentavos)}</strong>
+              </label>
+            ))}
         </div>
-        {parcelasPagamento.every((p) => p.paga) && <p className="vazio">Não há parcelas em aberto.</p>}
+        {parcelasPagamento.every((p) => p.paga) && (
+          <p className="vazio">Não há parcelas em aberto.</p>
+        )}
         <div className="pagamento-acoes">
-          <label>Conta que pagará as parcelas
+          <label>
+            Conta que pagará as parcelas
             <select value={contaLote} onChange={(e): void => setContaLote(e.target.value)}>
               <option value="">Selecione a conta</option>
-              {contas.map((c) => <option value={c.id} key={c.id}>{c.banco} · {c.nome} ({moeda(c.saldoAtualCentavos)})</option>)}
+              {contas.map((c) => (
+                <option value={c.id} key={c.id}>
+                  {c.banco} · {c.nome} ({moeda(c.saldoAtualCentavos)})
+                </option>
+              ))}
             </select>
           </label>
-          <button type="button" className="botao-primario"
+          <button
+            type="button"
+            className="botao-primario"
             disabled={salvando || selecionadas.length === 0 || !contaLote}
-            onClick={(): void => { void pagarLote() }}>
-            Pagar {selecionadas.length} parcela(s) — {moeda(parcelasPagamento.filter((p) => selecionadas.includes(p.id)).reduce((soma, p) => soma + p.valorCentavos, 0))}
+            onClick={(): void => {
+              void pagarLote()
+            }}
+          >
+            Pagar {selecionadas.length} parcela(s) —{' '}
+            {moeda(
+              parcelasPagamento
+                .filter((p) => selecionadas.includes(p.id))
+                .reduce((soma, p) => soma + p.valorCentavos, 0)
+            )}
           </button>
         </div>
       </section>
@@ -442,7 +621,10 @@ export default function CartoesCredito(): React.JSX.Element {
           <div className="transacao" key={c.id}>
             <div className="transacao-info">
               <strong>{c.descricao}</strong>
-              <span>{nomeCartao(c.cartaoId)} · {c.categoria} · {c.data.split('-').reverse().join('/')} · {c.numeroParcelas}x</span>
+              <span>
+                {nomeCartao(c.cartaoId)} · {c.categoria} · {c.data.split('-').reverse().join('/')} ·{' '}
+                {c.numeroParcelas}x
+              </span>
             </div>
             <strong>{moeda(c.valorCentavos)}</strong>
           </div>

@@ -17,7 +17,8 @@ import CartoesCredito from './components/CartoesCredito'
 
 type Tipo = 'receita' | 'despesa'
 
-type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'cartoes' | 'configuracoes'
+type Pagina =
+  'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'cartoes' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -172,15 +173,19 @@ function App(): React.JSX.Element {
     Promise.all([
       window.fincontrol.listarFaturasPrevistas(),
       window.fincontrol.listarParcelasRelatorio()
-    ]).then(([listaFaturas, listaParcelas]): void => {
-      if (ativo) {
-        setFaturasPrevistas(listaFaturas)
-        setParcelasCartao(listaParcelas)
-      }
-    }).catch((erro: unknown): void => {
-      console.error('Erro ao carregar faturas e parcelas:', erro)
-    })
-    return (): void => { ativo = false }
+    ])
+      .then(([listaFaturas, listaParcelas]): void => {
+        if (ativo) {
+          setFaturasPrevistas(listaFaturas)
+          setParcelasCartao(listaParcelas)
+        }
+      })
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar faturas e parcelas:', erro)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [pagina])
 
   const [descricao, setDescricao] = useState('')
@@ -222,8 +227,9 @@ function App(): React.JSX.Element {
   function pertencePeriodo(t: Transacao): boolean {
     const ano = t.data.slice(0, 4)
     const mes = t.data.slice(5, 7)
-    return (anoFiltro === 'todos' || ano === anoFiltro) &&
-      (mesFiltro === 'todos' || mes === mesFiltro)
+    return (
+      (anoFiltro === 'todos' || ano === anoFiltro) && (mesFiltro === 'todos' || mes === mesFiltro)
+    )
   }
 
   const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
@@ -569,20 +575,37 @@ function App(): React.JSX.Element {
 
             <section className="painel">
               <h3>Cartões e faturas</h3>
-              <p>Parcelas por competência: {formatarMoeda(totalParcelasCartao)} no período selecionado. O pagamento da fatura só altera o saldo bancário.</p>
               <p>
-                Faturas em aberto: <strong>{formatarMoeda(faturasPrevistas.filter((f) => !f.paga).reduce((total, f) => total + f.totalCentavos, 0))}</strong>
+                Parcelas por competência: {formatarMoeda(totalParcelasCartao)} no período
+                selecionado. O pagamento da fatura só altera o saldo bancário.
               </p>
-              {faturasPrevistas.filter((f) => !f.paga).slice(0, 3).map((f) => (
-                <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
-                  <div className="transacao-info">
-                    <strong>Fatura {f.competencia}</strong>
-                    <span>Vencimento: {f.vencimento.split('-').reverse().join('/')}</span>
+              <p>
+                Faturas em aberto:{' '}
+                <strong>
+                  {formatarMoeda(
+                    faturasPrevistas
+                      .filter((f) => !f.paga)
+                      .reduce((total, f) => total + f.totalCentavos, 0)
+                  )}
+                </strong>
+              </p>
+              {faturasPrevistas
+                .filter((f) => !f.paga)
+                .slice(0, 3)
+                .map((f) => (
+                  <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
+                    <div className="transacao-info">
+                      <strong>Fatura {f.competencia}</strong>
+                      <span>Vencimento: {f.vencimento.split('-').reverse().join('/')}</span>
+                    </div>
+                    <strong>{formatarMoeda(f.totalCentavos)}</strong>
                   </div>
-                  <strong>{formatarMoeda(f.totalCentavos)}</strong>
-                </div>
-              ))}
-              <button type="button" className="botao-editar" onClick={(): void => setPagina('cartoes')}>
+                ))}
+              <button
+                type="button"
+                className="botao-editar"
+                onClick={(): void => setPagina('cartoes')}
+              >
                 Ver cartões e faturas
               </button>
             </section>
@@ -592,7 +615,9 @@ function App(): React.JSX.Element {
               <h3>Últimas Transações Bancárias</h3>
 
               {listaTransacoes(
-                [...transacoesBancariasPeriodo].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5)
+                [...transacoesBancariasPeriodo]
+                  .sort((a, b) => b.data.localeCompare(a.data))
+                  .slice(0, 5)
               )}
             </section>
           </>

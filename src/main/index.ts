@@ -18,11 +18,26 @@ import {
 } from './contas'
 
 import type { NovaConta, NovaTransferencia, AlteracaoConta, NovoAjusteSaldo } from './contas'
-import { criarTabelaSalarios, listarSalarios, cadastrarSalario, desativarSalario, processarSalariosVencidos } from './salarios'
+import {
+  criarTabelaSalarios,
+  listarSalarios,
+  cadastrarSalario,
+  desativarSalario,
+  processarSalariosVencidos
+} from './salarios'
 import type { NovoSalarioRecorrente } from './salarios'
 
 import type { NovaTransacao } from './database'
-import { criarTabelasCartoes, listarCartoes, cadastrarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, pagarFatura } from './cartoes'
+import {
+  criarTabelasCartoes,
+  listarCartoes,
+  cadastrarCartao,
+  cadastrarCompra,
+  listarCompras,
+  listarFaturasPrevistas,
+  listarParcelasParaRelatorios,
+  pagarFatura
+} from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
 import { listarParcelasPagamento, pagarParcelasSelecionadas } from './cartoes'
 
@@ -77,10 +92,12 @@ app.whenReady().then(() => {
   ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
   ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
   ipcMain.handle('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
-    pagarParcelasSelecionadas(dados))
+    pagarParcelasSelecionadas(dados)
+  )
   ipcMain.handle('salarios:listar', () => listarSalarios())
   ipcMain.handle('salarios:cadastrar', (_evento, dados: NovoSalarioRecorrente) =>
-    cadastrarSalario(dados))
+    cadastrarSalario(dados)
+  )
   ipcMain.handle('salarios:desativar', (_evento, id: string) => desativarSalario(id))
 
   ipcMain.handle('contas:listar', () => {
@@ -97,9 +114,9 @@ app.whenReady().then(() => {
     return true
   })
   ipcMain.handle('contas:editar', (_evento, id: string, dados: AlteracaoConta) =>
-    editarConta(id, dados))
-  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) =>
-    ajustarSaldo(dados))
+    editarConta(id, dados)
+  )
+  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) => ajustarSaldo(dados))
   ipcMain.handle('contas:listar-ajustes', () => listarAjustesSaldo())
 
   ipcMain.handle('transferencias:listar', () => listarTransferencias())
