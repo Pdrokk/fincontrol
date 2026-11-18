@@ -66,12 +66,15 @@ const fincontrolAPI = {
     contaId: string
     dataPagamento: string
   }): Promise<unknown> => ipcRenderer.invoke('parcelas:pagar-selecionadas', dados),
-  editarConta: (id: string, dados: {
-    banco: string
-    nome: string
-    tipo: 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
-    cor: string
-  }): Promise<unknown> => ipcRenderer.invoke('contas:editar', id, dados),
+  editarConta: (
+    id: string,
+    dados: {
+      banco: string
+      nome: string
+      tipo: 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
+      cor: string
+    }
+  ): Promise<unknown> => ipcRenderer.invoke('contas:editar', id, dados),
 
   ajustarSaldo: (dados: {
     contaId: string
@@ -81,7 +84,6 @@ const fincontrolAPI = {
   }): Promise<unknown> => ipcRenderer.invoke('contas:ajustar-saldo', dados),
 
   listarAjustesSaldo: (): Promise<unknown> => ipcRenderer.invoke('contas:listar-ajustes'),
-
 
   cadastrarConta: (dados: {
     banco: string

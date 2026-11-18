@@ -121,7 +121,9 @@ declare global {
     fincontrol: {
       excluirConta: (id: string) => Promise<boolean>
       listarSalarios: () => Promise<SalarioRecorrenteFinanceiro[]>
-      cadastrarSalario: (dados: Omit<SalarioRecorrenteFinanceiro, 'id' | 'ativo'>) => Promise<SalarioRecorrenteFinanceiro>
+      cadastrarSalario: (
+        dados: Omit<SalarioRecorrenteFinanceiro, 'id' | 'ativo'>
+      ) => Promise<SalarioRecorrenteFinanceiro>
       desativarSalario: (id: string) => Promise<void>
       listarParcelasPagamento: () => Promise<ParcelaPagamentoFinanceira[]>
       arquivarParcela: (id: string, arquivar: boolean) => Promise<void>
@@ -131,13 +133,18 @@ declare global {
         dataPagamento: string
       }) => Promise<{ valorCentavos: number; parcelasPagas: number }>
       listarCartoes: () => Promise<CartaoFinanceiro[]>
-      atualizarCartao: (id: string, dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
-      cadastrarCartao: (dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
+      cadastrarCartao: (
+        dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>
+      ) => Promise<CartaoFinanceiro>
       listarComprasCartao: () => Promise<CompraCartaoFinanceira[]>
-      cadastrarCompraCartao: (dados: Omit<CompraCartaoFinanceira, 'id'>) => Promise<CompraCartaoFinanceira>
+      cadastrarCompraCartao: (
+        dados: Omit<CompraCartaoFinanceira, 'id'>
+      ) => Promise<CompraCartaoFinanceira>
       listarFaturasPrevistas: () => Promise<FaturaPrevistaFinanceira[]>
       listarParcelasRelatorio: () => Promise<ParcelaRelatorioFinanceira[]>
-      pagarFatura: (dados: Omit<PagamentoFaturaFinanceiro, 'id' | 'valorCentavos'>) => Promise<PagamentoFaturaFinanceiro>
+      pagarFatura: (
+        dados: Omit<PagamentoFaturaFinanceiro, 'id' | 'valorCentavos'>
+      ) => Promise<PagamentoFaturaFinanceiro>
       listarTransacoes: () => Promise<TransacaoFinanceira[]>
 
       salvarTransacao: (dados: Omit<TransacaoFinanceira, 'id'>) => Promise<TransacaoFinanceira>
@@ -150,8 +157,13 @@ declare global {
       ) => Promise<TransacaoFinanceira>
 
       listarContas: () => Promise<ContaFinanceira[]>
-      editarConta: (id: string, dados: Pick<ContaFinanceira, 'banco' | 'nome' | 'tipo' | 'cor'>) => Promise<ContaFinanceira>
-      ajustarSaldo: (dados: Pick<AjusteSaldoFinanceiro, 'contaId' | 'saldoDesejadoCentavos' | 'motivo' | 'data'>) => Promise<AjusteSaldoFinanceiro>
+      editarConta: (
+        id: string,
+        dados: Pick<ContaFinanceira, 'banco' | 'nome' | 'tipo' | 'cor'>
+      ) => Promise<ContaFinanceira>
+      ajustarSaldo: (
+        dados: Pick<AjusteSaldoFinanceiro, 'contaId' | 'saldoDesejadoCentavos' | 'motivo' | 'data'>
+      ) => Promise<AjusteSaldoFinanceiro>
       listarAjustesSaldo: () => Promise<AjusteSaldoFinanceiro[]>
 
       cadastrarConta: (

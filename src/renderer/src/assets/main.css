@@ -1024,7 +1024,7 @@ button:disabled {
   color: #fff;
   cursor: pointer;
   font-size: 12px;
-  transition: background .15s ease;
+  transition: background 0.15s ease;
 }
 
 .fincontrol .acoes-conta button:hover {

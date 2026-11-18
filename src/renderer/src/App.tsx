@@ -174,15 +174,19 @@ function App(): React.JSX.Element {
     Promise.all([
       window.fincontrol.listarFaturasPrevistas(),
       window.fincontrol.listarParcelasRelatorio()
-    ]).then(([listaFaturas, listaParcelas]): void => {
-      if (ativo) {
-        setFaturasPrevistas(listaFaturas)
-        setParcelasCartao(listaParcelas)
-      }
-    }).catch((erro: unknown): void => {
-      console.error('Erro ao carregar faturas e parcelas:', erro)
-    })
-    return (): void => { ativo = false }
+    ])
+      .then(([listaFaturas, listaParcelas]): void => {
+        if (ativo) {
+          setFaturasPrevistas(listaFaturas)
+          setParcelasCartao(listaParcelas)
+        }
+      })
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar faturas e parcelas:', erro)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [pagina])
 
   const [descricao, setDescricao] = useState('')
@@ -224,8 +228,9 @@ function App(): React.JSX.Element {
   function pertencePeriodo(t: Transacao): boolean {
     const ano = t.data.slice(0, 4)
     const mes = t.data.slice(5, 7)
-    return (anoFiltro === 'todos' || ano === anoFiltro) &&
-      (mesFiltro === 'todos' || mes === mesFiltro)
+    return (
+      (anoFiltro === 'todos' || ano === anoFiltro) && (mesFiltro === 'todos' || mes === mesFiltro)
+    )
   }
 
   const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
