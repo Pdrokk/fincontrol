@@ -69,7 +69,7 @@ export default function GraficosFinanceiros({
   let resultadoAcumulado = 0
   const dados = visiveis.map((mes) => {
     const reg = mapa.get(mes) ?? { receitas: 0, despesas: 0 }
-    resultadoAcumulado += reg.receitas - reg.despesas
+    resultadoAcumulado += modo === 'previsto' ? reg.despesas : reg.receitas - reg.despesas
     return {
       mes: rotuloMes(mes),
       receitas: reg.receitas / 100,
@@ -99,7 +99,7 @@ export default function GraficosFinanceiros({
             onClick={(): void => { setModo('realizado'); setPagina(null) }}>Realizado</button>
           <button type="button" aria-pressed={modo === 'previsto'}
             className={modo === 'previsto' ? 'ativo' : ''}
-            onClick={(): void => { setModo('previsto'); setPagina(null) }}>Previsto</button>
+            onClick={(): void => { setModo('previsto'); setPagina(0) }}>Previsto</button>
         </div>
         <div className="graficos-paginacao">
           <button type="button" aria-label="Seis meses anteriores" title="Meses anteriores"
@@ -170,7 +170,7 @@ export default function GraficosFinanceiros({
             <h3>{modo === 'realizado' ? 'Resultado acumulado da janela' : 'Compromissos acumulados da janela'}</h3>
             <p>{modo === 'realizado'
               ? 'Receitas menos despesas realizadas, iniciando em zero nesta página; não é o saldo das contas.'
-              : 'Previsão acumulada de parcelas pendentes nesta página, sem considerar novas receitas.'}</p>
+              : 'Soma de parcelas pendentes nesta página, sem considerar receitas futuras.'}</p>
             {dados.length ? (
               <div className="grafico-area">
                 <ResponsiveContainer width="100%" height="100%">
@@ -180,7 +180,7 @@ export default function GraficosFinanceiros({
                     <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
                     <Tooltip formatter={(value): string => moeda(Number(value))} />
                     <Line type="monotone" dataKey="resultado"
-                      name={modo === 'realizado' ? 'Resultado' : 'Resultado previsto das parcelas'}
+                      name={modo === 'realizado' ? 'Resultado' : 'Parcelas pendentes acumuladas'}
                       stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
