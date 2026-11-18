@@ -34,6 +34,8 @@ export interface FaturaPrevista {
   vencimento: string
   totalCentavos: number
   quantidadeParcelas: number
+  valorPagoCentavos: number
+  saldoPendenteCentavos: number
   paga: boolean
   pagamentoId: string | null
   contaPagamentoId: string | null
@@ -50,6 +52,22 @@ export interface PagamentoFatura {
 }
 
 export type NovoPagamentoFatura = Pick<PagamentoFatura, 'cartaoId' | 'competencia' | 'contaId' | 'dataPagamento'>
+
+export interface ParcelaPagamento {
+  id: string
+  compraId: string
+  cartaoId: string
+  descricao: string
+  competencia: string
+  numero: number
+  valorCentavos: number
+  paga: boolean
+}
+export interface NovoPagamentoParcelas {
+  parcelaIds: string[]
+  contaId: string
+  dataPagamento: string
+}
 
 export interface ParcelaRelatorio {
   id: string
@@ -106,6 +124,15 @@ export function criarTabelasCartoes(): void {
       UNIQUE (cartao_id, competencia)
     );
 
+    CREATE TABLE IF NOT EXISTS pagamentos_parcelas (
+      id TEXT PRIMARY KEY,
+      parcela_id TEXT NOT NULL UNIQUE REFERENCES parcelas_cartao(id),
+      conta_id TEXT NOT NULL REFERENCES contas(id),
+      data_pagamento TEXT NOT NULL,
+      valor_centavos INTEGER NOT NULL CHECK(valor_centavos > 0)
+    );
+    CREATE INDEX IF NOT EXISTS idx_pagamentos_parcelas_conta ON pagamentos_parcelas(conta_id);
+
     CREATE INDEX IF NOT EXISTS idx_pagamentos_fatura_conta ON pagamentos_fatura(conta_id);
 
     CREATE INDEX IF NOT EXISTS idx_parcelas_cartao_mes
@@ -122,7 +149,10 @@ export function listarCartoes(): Cartao[] {
       COALESCE((SELECT SUM(p.valor_centavos) FROM parcelas_cartao p
                 WHERE p.cartao_id = c.id), 0)
       - COALESCE((SELECT SUM(pf.valor_centavos) FROM pagamentos_fatura pf
-                  WHERE pf.cartao_id = c.id), 0) AS limiteUtilizadoCentavos
+                  WHERE pf.cartao_id = c.id), 0)
+      - COALESCE((SELECT SUM(pp.valor_centavos) FROM pagamentos_parcelas pp
+                  JOIN parcelas_cartao p ON p.id = pp.parcela_id
+                  WHERE p.cartao_id = c.id), 0) AS limiteUtilizadoCentavos
     FROM cartoes c ORDER BY c.criado_em DESC
   `).all() as unknown as Omit<Cartao, 'limiteDisponivelCentavos'>[]
   return registros.map((c) => ({
@@ -228,7 +258,10 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
     )
     for (let i = 0; i < compra.numeroParcelas; i++) {
       const competencia = somarMeses(ano, mes, i)
-      if (verificarQuitacao.get(compra.cartaoId, competencia)) {
+      if (verificarQuitacao.get(compra.cartaoId, competencia) ||
+        db.prepare(`SELECT 1 FROM pagamentos_parcelas pp JOIN parcelas_cartao p
+          ON p.id = pp.parcela_id WHERE p.cartao_id = ? AND p.competencia = ? LIMIT 1`)
+          .get(compra.cartaoId, competencia)) {
         throw new Error('Já existe fatura paga neste período. Não é possível incluir novas parcelas.')
       }
     }
@@ -272,27 +305,84 @@ function vencimentoFatura(competencia: string, fechamento: number, vencimento: n
 
 export function listarFaturasPrevistas(): FaturaPrevista[] {
   const cartoes = listarCartoes()
-  const parcelas = obterBanco().prepare(`
+  const registros = obterBanco().prepare(`
     SELECT p.cartao_id AS cartaoId, p.competencia,
-      SUM(p.valor_centavos) AS totalCentavos,
-      COUNT(*) AS quantidadeParcelas,
+      SUM(p.valor_centavos) AS totalCentavos, COUNT(*) AS quantidadeParcelas,
+      SUM(CASE WHEN pf.id IS NOT NULL OR pp.id IS NOT NULL THEN p.valor_centavos ELSE 0 END)
+        AS valorPagoCentavos,
       pf.id AS pagamentoId, pf.conta_id AS contaPagamentoId,
       pf.data_pagamento AS dataPagamento
     FROM parcelas_cartao p
     LEFT JOIN pagamentos_fatura pf
       ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
+    LEFT JOIN pagamentos_parcelas pp ON pp.parcela_id = p.id
     GROUP BY p.cartao_id, p.competencia, pf.id, pf.conta_id, pf.data_pagamento
     ORDER BY p.competencia ASC
-  `).all() as unknown as Omit<FaturaPrevista, 'vencimento' | 'paga'>[]
-  return parcelas.map((p) => {
-    const cartao = cartoes.find((c) => c.id === p.cartaoId)
-    if (!cartao) throw new Error('Cartão de fatura não encontrado.')
+  `).all() as unknown as Omit<FaturaPrevista, 'vencimento' | 'paga' | 'saldoPendenteCentavos'>[]
+  return registros.map((p) => {
+    const c = cartoes.find((x) => x.id === p.cartaoId)
+    if (!c) throw new Error('Cartão da fatura não encontrado.')
     return {
       ...p,
-      paga: p.pagamentoId !== null,
-      vencimento: vencimentoFatura(p.competencia, cartao.diaFechamento, cartao.diaVencimento)
+      saldoPendenteCentavos: p.totalCentavos - p.valorPagoCentavos,
+      paga: p.totalCentavos === p.valorPagoCentavos,
+      vencimento: vencimentoFatura(p.competencia, c.diaFechamento, c.diaVencimento)
     }
   })
+}
+
+export function listarParcelasPagamento(): ParcelaPagamento[] {
+  const registros = obterBanco().prepare(`
+    SELECT p.id, p.compra_id AS compraId, p.cartao_id AS cartaoId,
+      (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
+      p.competencia, p.numero, p.valor_centavos AS valorCentavos,
+      CASE WHEN pf.id IS NOT NULL OR pp.id IS NOT NULL THEN 1 ELSE 0 END AS pago
+    FROM parcelas_cartao p
+    JOIN compras_cartao c ON c.id = p.compra_id
+    LEFT JOIN pagamentos_fatura pf
+      ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
+    LEFT JOIN pagamentos_parcelas pp ON pp.parcela_id = p.id
+    ORDER BY p.competencia ASC, p.numero ASC
+  `).all() as unknown as (Omit<ParcelaPagamento, 'paga'> & { pago: number })[]
+  return registros.map((p) => ({ ...p, paga: p.pago === 1 }))
+}
+
+export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): { valorCentavos: number; parcelasPagas: number } {
+  if (!dados || typeof dados !== 'object' ||
+      typeof dados.contaId !== 'string' || !dados.contaId ||
+      !Array.isArray(dados.parcelaIds) || dados.parcelaIds.length < 1 ||
+      dados.parcelaIds.length > 120 || new Set(dados.parcelaIds).size !== dados.parcelaIds.length ||
+      dados.parcelaIds.some((id) => typeof id !== 'string' || !id)) {
+    throw new Error('Selecione parcelas válidas e a conta para pagamento.')
+  }
+  validarData(dados.dataPagamento)
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const lista = listarParcelasPagamento()
+    const selecionadas = dados.parcelaIds.map((id) => lista.find((p) => p.id === id))
+    if (selecionadas.some((p) => !p || p.paga)) {
+      throw new Error('Alguma parcela não existe ou já foi paga.')
+    }
+    const total = selecionadas.reduce((n, p) => n + (p?.valorCentavos ?? 0), 0)
+    if (!Number.isSafeInteger(total) || total <= 0) throw new Error('Valor inválido.')
+    const conta = listarContas().find((c) => c.id === dados.contaId)
+    if (!conta) throw new Error('Conta não encontrada.')
+    if (conta.saldoAtualCentavos < total) throw new Error('Saldo insuficiente para as parcelas escolhidas.')
+    const inserir = db.prepare(`
+      INSERT INTO pagamentos_parcelas (id, parcela_id, conta_id, data_pagamento, valor_centavos)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    for (const p of selecionadas) {
+      if (!p) throw new Error('Parcela inválida.')
+      inserir.run(randomUUID(), p.id, dados.contaId, dados.dataPagamento, p.valorCentavos)
+    }
+    db.exec('COMMIT')
+    return { valorCentavos: total, parcelasPagas: selecionadas.length }
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
 }
 
 export function listarParcelasParaRelatorios(): ParcelaRelatorio[] {
@@ -353,6 +443,11 @@ export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
       SELECT id FROM pagamentos_fatura WHERE cartao_id = ? AND competencia = ?
     `).get(dados.cartaoId, dados.competencia)
     if (anterior) throw new Error('Fatura já paga.')
+    const pagamentosParciais = db.prepare(`
+      SELECT 1 FROM pagamentos_parcelas pp JOIN parcelas_cartao p ON p.id = pp.parcela_id
+      WHERE p.cartao_id = ? AND p.competencia = ? LIMIT 1
+    `).get(dados.cartaoId, dados.competencia)
+    if (pagamentosParciais) throw new Error('Fatura com parcelas já pagas: utilize seleção de parcelas.')
 
     // Contas são recalculadas dentro da transação de gravação.
     const conta = listarContas().find((c) => c.id === dados.contaId)
