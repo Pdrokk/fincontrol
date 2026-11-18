@@ -22,11 +22,9 @@ import {
   cadastrarCartao,
   cadastrarCompra,
   listarCompras,
-  listarFaturasPrevistas,
-  listarParcelasParaRelatorios,
-  pagarFatura
+  listarFaturasPrevistas
 } from './cartoes'
-import type { NovoCartao, NovaCompra, NovoPagamentoFatura } from './cartoes'
+import type { NovoCartao, NovaCompra } from './cartoes'
 
 function createWindow(): void {
   // Create the browser window.

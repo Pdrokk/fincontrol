@@ -170,18 +170,13 @@ function App(): React.JSX.Element {
 
   useEffect((): (() => void) => {
     let ativo = true
-    Promise.all([
-      window.fincontrol.listarFaturasPrevistas(),
-      window.fincontrol.listarParcelasRelatorio()
-    ])
-      .then(([listaFaturas, listaParcelas]): void => {
-        if (ativo) {
-          setFaturasPrevistas(listaFaturas)
-          setParcelasCartao(listaParcelas)
-        }
+    window.fincontrol
+      .listarFaturasPrevistas()
+      .then((lista): void => {
+        if (ativo) setFaturasPrevistas(lista)
       })
       .catch((erro: unknown): void => {
-        console.error('Erro ao carregar faturas e parcelas:', erro)
+        console.error('Erro ao carregar faturas:', erro)
       })
     return (): void => {
       ativo = false
@@ -574,10 +569,15 @@ function App(): React.JSX.Element {
             </section>
 
             <section className="painel">
-              <h3>Cartões e faturas</h3>
+              <h3>Cartões e faturas previstas</h3>
               <p>
-                Parcelas por competência: {formatarMoeda(totalParcelasCartao)} no período
-                selecionado. O pagamento da fatura só altera o saldo bancário.
+                Valores das parcelas cadastradas, sem impactar o saldo bancário até o pagamento.
+              </p>
+              <p>
+                Total previsto:{' '}
+                <strong>
+                  {formatarMoeda(faturasPrevistas.reduce((total, f) => total + f.totalCentavos, 0))}
+                </strong>
               </p>
               <p>
                 Faturas em aberto:{' '}
@@ -600,7 +600,9 @@ function App(): React.JSX.Element {
                     </div>
                     <strong>{formatarMoeda(f.totalCentavos)}</strong>
                   </div>
-                ))}
+                  <strong>{formatarMoeda(f.totalCentavos)}</strong>
+                </div>
+              ))}
               <button
                 type="button"
                 className="botao-editar"

@@ -184,39 +184,6 @@ export default function CartoesCredito(): React.JSX.Element {
     }
   }
 
-  async function confirmarPagamento(fatura: Fatura): Promise<void> {
-    if (salvando || fatura.paga) return
-    const chave = fatura.cartaoId + ':' + fatura.competencia
-    const cartao = cartoes.find((c) => c.id === fatura.cartaoId)
-    const contaIdPagamento = contaPagamento[chave] || cartao?.contaId || ''
-    if (!contaIdPagamento) {
-      alert('Selecione uma conta bancária para pagar a fatura.')
-      return
-    }
-    if (
-      !window.confirm(
-        `Confirmar pagamento integral de ${moeda(fatura.totalCentavos)} com vencimento em ${fatura.vencimento}?`
-      )
-    )
-      return
-    try {
-      setSalvando(true)
-      await window.fincontrol.pagarFatura({
-        cartaoId: fatura.cartaoId,
-        competencia: fatura.competencia,
-        contaId: contaIdPagamento,
-        dataPagamento: dataLocal()
-      })
-      await atualizar()
-      alert('Fatura paga! O saldo da conta e o limite foram atualizados.')
-    } catch (falha) {
-      console.error(falha)
-      alert('Não foi possível pagar a fatura. Confirme o saldo e se ela já foi paga.')
-    } finally {
-      setSalvando(false)
-    }
-  }
-
   const nomeCartao = (id: string): string => {
     const c = cartoes.find((item) => item.id === id)
     return c ? `${c.banco} · ${c.nome}` : 'Cartão não encontrado'
@@ -237,10 +204,10 @@ export default function CartoesCredito(): React.JSX.Element {
         </div>
 
         <div className="resumo-contas">
-          <span>Total de faturas em aberto</span>
-          <strong>{moeda(totalAberto)}</strong>
+          <span>Total das parcelas cadastradas (ainda sem pagamentos registrados)</span>
+          <strong>{moeda(totalPrevisto)}</strong>
           <small>
-            Pagamentos são registrados na conta escolhida e não geram despesas duplicadas.
+            Este valor é uma obrigação futura e não é abatido do saldo bancário nesta etapa.
           </small>
         </div>
 
@@ -255,9 +222,7 @@ export default function CartoesCredito(): React.JSX.Element {
                 <strong>{c.banco}</strong>
               </div>
               <span>{c.nome}</span>
-              <h3>Disponível: {moeda(c.limiteDisponivelCentavos)}</h3>
-              <p>Limite contratado: {moeda(c.limiteCentavos)}</p>
-              <p>Utilizado: {moeda(c.limiteUtilizadoCentavos)}</p>
+              <h3>Limite: {moeda(c.limiteCentavos)}</h3>
               <p>
                 Fechamento: dia {c.diaFechamento} · Vencimento: dia {c.diaVencimento}
               </p>
@@ -439,66 +404,20 @@ export default function CartoesCredito(): React.JSX.Element {
           <CalendarDays size={23} />
         </div>
         {faturas.length === 0 && <p className="vazio">Nenhuma fatura prevista.</p>}
-        {faturas.map((f) => {
-          const chave = `${f.cartaoId}:${f.competencia}`
-          const cartao = cartoes.find((c) => c.id === f.cartaoId)
-          const contaSelecionada = contaPagamento[chave] || cartao?.contaId || ''
-          return (
-            <div className="transacao fatura-linha" key={chave}>
-              <div className="transacao-info">
-                <strong>
-                  {nomeCartao(f.cartaoId)} · {f.competencia}
-                </strong>
-                <span>
-                  Vencimento: {f.vencimento.split('-').reverse().join('/')} · {f.quantidadeParcelas}{' '}
-                  parcela(s)
-                </span>
-                <span>
-                  {f.paga
-                    ? `Paga em ${f.dataPagamento?.split('-').reverse().join('/')}`
-                    : 'Em aberto'}
-                </span>
-              </div>
-              <strong>{moeda(f.totalCentavos)}</strong>
-              {!f.paga && (
-                <div className="pagamento-acoes">
-                  <label>
-                    Conta para pagamento
-                    <select
-                      value={contaSelecionada}
-                      aria-label={`Conta para fatura ${f.competencia}`}
-                      onChange={(e): void =>
-                        setContaPagamento((prev) => ({
-                          ...prev,
-                          [chave]: e.target.value
-                        }))
-                      }
-                    >
-                      <option value="">Selecionar conta</option>
-                      {contas.map((c) => (
-                        <option value={c.id} key={c.id}>
-                          {c.banco} · {c.nome} ({moeda(c.saldoAtualCentavos)})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    className="botao-primario"
-                    disabled={salvando || !contaSelecionada}
-                    onClick={(): void => {
-                      void confirmarPagamento(f)
-                    }}
-                  >
-                    {salvando ? 'Processando...' : 'Pagar fatura'}
-                  </button>
-                </div>
-              )}
+        {faturas.map((f) => (
+          <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
+            <div className="transacao-info">
+              <strong>{nomeCartao(f.cartaoId)}</strong>
+              <span>
+                Fechamento: {f.competencia} · Vencimento:{' '}
+                {f.vencimento.split('-').reverse().join('/')} · {f.quantidadeParcelas} parcela(s)
+              </span>
             </div>
-          )
-        })}
+            <strong>{moeda(f.totalCentavos)}</strong>
+          </div>
+        ))}
         <p className="vazio">
-          Pagamento integral nesta versão. O pagamento não gera uma nova despesa nos relatórios.
+          Faturas são previsões; o registro de pagamento será desenvolvido na etapa seguinte.
         </p>
       </section>
 

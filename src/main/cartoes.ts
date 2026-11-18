@@ -117,25 +117,17 @@ export function criarTabelasCartoes(): void {
 }
 
 export function listarCartoes(): Cartao[] {
-  const registros = obterBanco()
+  return obterBanco()
     .prepare(
       `
-    SELECT c.id, c.conta_id AS contaId, c.nome, c.banco,
-      c.limite_centavos AS limiteCentavos,
-      c.dia_fechamento AS diaFechamento,
-      c.dia_vencimento AS diaVencimento,
-      COALESCE((SELECT SUM(p.valor_centavos) FROM parcelas_cartao p
-                WHERE p.cartao_id = c.id), 0)
-      - COALESCE((SELECT SUM(pf.valor_centavos) FROM pagamentos_fatura pf
-                  WHERE pf.cartao_id = c.id), 0) AS limiteUtilizadoCentavos
-    FROM cartoes c ORDER BY c.criado_em DESC
+    SELECT id, conta_id AS contaId, nome, banco,
+      limite_centavos AS limiteCentavos,
+      dia_fechamento AS diaFechamento,
+      dia_vencimento AS diaVencimento
+    FROM cartoes ORDER BY criado_em DESC
   `
     )
-    .all() as unknown as Omit<Cartao, 'limiteDisponivelCentavos'>[]
-  return registros.map((c) => ({
-    ...c,
-    limiteDisponivelCentavos: c.limiteCentavos - c.limiteUtilizadoCentavos
-  }))
+    .all() as unknown as Cartao[]
 }
 
 export function cadastrarCartao(dados: NovoCartao): Cartao {
@@ -252,22 +244,6 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
 
   db.exec('BEGIN IMMEDIATE')
   try {
-    const cartaoAtual = listarCartoes().find((item) => item.id === compra.cartaoId)
-    if (!cartaoAtual || compra.valorCentavos > cartaoAtual.limiteDisponivelCentavos) {
-      throw new Error('Limite disponível insuficiente para esta compra.')
-    }
-    // Não alterar o valor de uma fatura já quitada.
-    const verificarQuitacao = db.prepare(
-      'SELECT id FROM pagamentos_fatura WHERE cartao_id = ? AND competencia = ?'
-    )
-    for (let i = 0; i < compra.numeroParcelas; i++) {
-      const competencia = somarMeses(ano, mes, i)
-      if (verificarQuitacao.get(compra.cartaoId, competencia)) {
-        throw new Error(
-          'Já existe fatura paga neste período. Não é possível incluir novas parcelas.'
-        )
-      }
-    }
     db.prepare(
       `
       INSERT INTO compras_cartao
@@ -331,19 +307,14 @@ export function listarFaturasPrevistas(): FaturaPrevista[] {
   const parcelas = obterBanco()
     .prepare(
       `
-    SELECT p.cartao_id AS cartaoId, p.competencia,
-      SUM(p.valor_centavos) AS totalCentavos,
-      COUNT(*) AS quantidadeParcelas,
-      pf.id AS pagamentoId, pf.conta_id AS contaPagamentoId,
-      pf.data_pagamento AS dataPagamento
-    FROM parcelas_cartao p
-    LEFT JOIN pagamentos_fatura pf
-      ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
-    GROUP BY p.cartao_id, p.competencia, pf.id, pf.conta_id, pf.data_pagamento
-    ORDER BY p.competencia ASC
+    SELECT cartao_id AS cartaoId, competencia,
+      SUM(valor_centavos) AS totalCentavos, COUNT(*) AS quantidadeParcelas
+    FROM parcelas_cartao
+    GROUP BY cartao_id, competencia
+    ORDER BY competencia ASC
   `
     )
-    .all() as unknown as Omit<FaturaPrevista, 'vencimento' | 'paga'>[]
+    .all() as unknown as Omit<FaturaPrevista, 'vencimento'>[]
   return parcelas.map((p) => {
     const cartao = cartoes.find((c) => c.id === p.cartaoId)
     if (!cartao) throw new Error('Cartão de fatura não encontrado.')
