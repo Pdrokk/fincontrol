@@ -1047,3 +1047,60 @@ button:disabled {
   gap: 8px;
   justify-content: center;
 }
+
+/* Etapa 12 — Contas personalizadas e parcelas selecionáveis */
+.fincontrol .pagina-contas .cartao-conta {
+  overflow: hidden;
+}
+
+.fincontrol .pagina-contas .cartao-conta .acoes-conta button {
+  color: #fff;
+}
+
+.fincontrol .parcelas-selecionaveis {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 18px 0;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.fincontrol .parcela-opcao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px;
+  cursor: pointer;
+}
+
+.fincontrol .parcela-opcao input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.fincontrol .parcela-opcao span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.fincontrol .parcela-opcao strong {
+  white-space: nowrap;
+}
+
+.fincontrol input[type='color'] {
+  width: 100%;
+  min-height: 42px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.fincontrol .pagina-contas .transacao .botao-excluir {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
