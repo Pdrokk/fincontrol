@@ -84,6 +84,16 @@ interface PagamentoFaturaFinanceiro {
   valorCentavos: number
 }
 
+interface DespesaCartaoRealizadaFinanceira {
+  id: string
+  descricao: string
+  valorCentavos: number
+  categoria: string
+  tipo: 'despesa'
+  data: string
+  contaId: null
+  origem: 'cartao-pago'
+}
 interface ParcelaRelatorioFinanceira {
   id: string
   descricao: string
@@ -137,7 +147,7 @@ declare global {
       cadastrarCompraCartao: (dados: Omit<CompraCartaoFinanceira, 'id'>) => Promise<CompraCartaoFinanceira>
       listarFaturasPrevistas: () => Promise<FaturaPrevistaFinanceira[]>
       listarParcelasRelatorio: () => Promise<ParcelaRelatorioFinanceira[]>
-      listarDespesasCartaoRealizadas: () => Promise<ParcelaRelatorioFinanceira[]>
+      listarDespesasCartaoRealizadas: () => Promise<DespesaCartaoRealizadaFinanceira[]>
       pagarFatura: (dados: Omit<PagamentoFaturaFinanceiro, 'id' | 'valorCentavos'>) => Promise<PagamentoFaturaFinanceiro>
       listarTransacoes: () => Promise<TransacaoFinanceira[]>
 
