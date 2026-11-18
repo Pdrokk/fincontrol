@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
+import DashboardResumo from './components/DashboardResumo'
+import ThemeToggle from './components/ThemeToggle'
 import './assets/main.css'
 import {
   LayoutDashboard,
@@ -35,6 +37,7 @@ interface FaturaResumo {
   vencimento: string
   totalCentavos: number
   quantidadeParcelas: number
+  saldoPendenteCentavos: number
   paga: boolean
   pagamentoId: string | null
   contaPagamentoId: string | null
@@ -99,8 +102,8 @@ function App(): React.JSX.Element {
   const [faturasPrevistas, setFaturasPrevistas] = useState<FaturaResumo[]>([])
   const [parcelasCartao, setParcelasCartao] = useState<ParcelaCartaoRelatorio[]>([])
 
-  const [mesFiltro, setMesFiltro] = useState('todos')
-  const [anoFiltro, setAnoFiltro] = useState('todos')
+  const [mesFiltro, setMesFiltro] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [anoFiltro, setAnoFiltro] = useState(() => String(new Date().getFullYear()))
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
   const [busca, setBusca] = useState('')
@@ -216,7 +219,7 @@ function App(): React.JSX.Element {
   // O pagamento da fatura NÃO entra como despesa novamente.
   const transacoesContabeis: Transacao[] = [...transacoes, ...parcelasCartao]
   const anosDisponiveis = Array.from(
-    new Set(transacoesContabeis.map((t) => t.data.slice(0, 4)))
+    new Set([String(new Date().getFullYear()), ...transacoesContabeis.map((t) => t.data.slice(0, 4))])
   ).sort((a, b) => b.localeCompare(a))
 
   function pertencePeriodo(t: Transacao): boolean {
@@ -228,10 +231,6 @@ function App(): React.JSX.Element {
 
   const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
   const transacoesBancariasPeriodo = transacoes.filter(pertencePeriodo)
-  const totalParcelasCartao = parcelasCartao
-    .filter(pertencePeriodo)
-    .reduce((total, t) => total + t.valorCentavos, 0)
-
   const totalReceitas = transacoesPeriodo
     .filter((t) => t.tipo === 'receita')
     .reduce((soma, t) => soma + t.valorCentavos, 0)
@@ -453,14 +452,7 @@ function App(): React.JSX.Element {
             <p>Organize seu dinheiro com praticidade.</p>
           </div>
 
-          <button
-            type="button"
-            className="botao-tema"
-            onClick={alternarTema}
-            aria-label={tema === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
-          >
-            {tema === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
-          </button>
+          <ThemeToggle tema={tema} onAlternar={alternarTema} />
 
           <button
             className="botao-primario"
@@ -529,73 +521,18 @@ function App(): React.JSX.Element {
         )}
 
         {pagina === 'dashboard' && (
-          <>
-            <section className="cards">
-              <div className="card">
-                <h3>Resultado do período</h3>
-                <strong>{formatarMoeda(saldo)}</strong>
-              </div>
-
-              <div className="card">
-                <h3>Receitas</h3>
-                <strong className="receita">{formatarMoeda(totalReceitas)}</strong>
-              </div>
-
-              <div className="card">
-                <h3>Despesas (incluindo parcelas)</h3>
-                <strong className="despesa">{formatarMoeda(totalDespesas)}</strong>
-              </div>
-            </section>
-
-            <section className="cards">
-              <div className="card">
-                <h3>Saldo nas contas bancárias</h3>
-                <strong>
-                  {formatarMoeda(
-                    contas.reduce((total, conta) => total + conta.saldoAtualCentavos, 0)
-                  )}
-                </strong>
-                <p>Considera somente as movimentações vinculadas às contas.</p>
-              </div>
-              <div className="card">
-                <h3>Contas cadastradas</h3>
-                <strong>{contas.length}</strong>
-              </div>
-              <div className="card">
-                <h3>Movimentações sem conta</h3>
-                <strong>{transacoes.filter((t) => !t.contaId).length}</strong>
-              </div>
-            </section>
-
-            <section className="painel">
-              <h3>Cartões e faturas</h3>
-              <p>Parcelas por competência: {formatarMoeda(totalParcelasCartao)} no período selecionado. O pagamento da fatura só altera o saldo bancário.</p>
-              <p>
-                Faturas em aberto: <strong>{formatarMoeda(faturasPrevistas.filter((f) => !f.paga).reduce((total, f) => total + f.totalCentavos, 0))}</strong>
-              </p>
-              {faturasPrevistas.filter((f) => !f.paga).slice(0, 3).map((f) => (
-                <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
-                  <div className="transacao-info">
-                    <strong>Fatura {f.competencia}</strong>
-                    <span>Vencimento: {f.vencimento.split('-').reverse().join('/')}</span>
-                  </div>
-                  <strong>{formatarMoeda(f.totalCentavos)}</strong>
-                </div>
-              ))}
-              <button type="button" className="botao-editar" onClick={(): void => setPagina('cartoes')}>
-                Ver cartões e faturas
-              </button>
-            </section>
-            <GraficosFinanceiros transacoes={transacoesPeriodo} />
-
-            <section className="painel">
-              <h3>Últimas Transações Bancárias</h3>
-
-              {listaTransacoes(
-                [...transacoesBancariasPeriodo].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5)
-              )}
-            </section>
-          </>
+          <DashboardResumo
+            saldoContasCentavos={contas.reduce((total, conta) => total + conta.saldoAtualCentavos, 0)}
+            receitasCentavos={totalReceitas}
+            despesasCentavos={totalDespesas}
+            transacoes={transacoesPeriodo}
+            transacoesRecentes={[...transacoesBancariasPeriodo]
+              .sort((a, b) => b.data.localeCompare(a.data))
+              .slice(0, 5)}
+            faturas={faturasPrevistas}
+            onPagamentos={(): void => setPagina('cartoes')}
+            onTransacoes={(): void => setPagina('transacoes')}
+          />
         )}
 
         {pagina === 'transacoes' && (
