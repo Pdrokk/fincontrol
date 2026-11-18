@@ -213,6 +213,8 @@ export default function CartoesCredito(): React.JSX.Element {
         </div>
       </section>
 
+      <CentralPagamentos onPagamento={atualizar} />
+
       <section className="painel">
         <h3>Cadastrar cartão</h3>
         <form className="formulario" onSubmit={(e): void => { void salvarCartao(e) }}>
@@ -274,8 +276,6 @@ export default function CartoesCredito(): React.JSX.Element {
           </button>
         </form>
       </section>
-
-      <CentralPagamentos onPagamento={atualizar} />
 
       <section className="painel">
         <h3>Compras registradas</h3>
