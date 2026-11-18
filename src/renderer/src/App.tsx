@@ -150,7 +150,7 @@ function App(): React.JSX.Element {
     return (): void => {
       ativo = false
     }
-  }, [])
+  }, [pagina])
 
   useEffect((): (() => void) => {
     let ativo = true
