@@ -218,6 +218,55 @@ function competenciaInicial(data: string, diaFechamento: number): string {
   return somarMeses(ano, mes, dia > diaFechamento ? 1 : 0)
 }
 
+export function atualizarCartao(id: string, dados: NovoCartao): Cartao {
+  if (typeof id !== 'string' || !id.trim() || !dados || typeof dados !== 'object') {
+    throw new Error('Cartão inválido.')
+  }
+  if (typeof dados.banco !== 'string' || !dados.banco.trim() || dados.banco.length > 100 ||
+      typeof dados.nome !== 'string' || !dados.nome.trim() || dados.nome.length > 100) {
+    throw new Error('Informe banco e nome válidos.')
+  }
+  if (!Number.isSafeInteger(dados.limiteCentavos) || dados.limiteCentavos < 0)
+    throw new Error('Limite inválido.')
+  if (!Number.isInteger(dados.diaFechamento) || dados.diaFechamento < 1 || dados.diaFechamento > 28 ||
+      !Number.isInteger(dados.diaVencimento) || dados.diaVencimento < 1 || dados.diaVencimento > 28)
+    throw new Error('Fechamento e vencimento devem ser entre 1 e 28.')
+  const contaId = dados.contaId || null
+
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const atual = listarCartoes().find((cartao) => cartao.id === id)
+    if (!atual) throw new Error('Cartão não encontrado.')
+    if (contaId && !db.prepare('SELECT id FROM contas WHERE id = ?').get(contaId))
+      throw new Error('Conta bancária não encontrada.')
+    if (dados.limiteCentavos < atual.limiteUtilizadoCentavos)
+      throw new Error('Limite contratado não pode ser menor que o valor já utilizado.')
+
+    const possuiCompras = db.prepare('SELECT id FROM compras_cartao WHERE cartao_id = ? LIMIT 1').get(id)
+    if (possuiCompras && (dados.diaFechamento !== atual.diaFechamento ||
+        dados.diaVencimento !== atual.diaVencimento)) {
+      throw new Error('Não é possível mudar as datas com compras registradas, pois alteraria as faturas existentes.')
+    }
+
+    db.prepare(`
+      UPDATE cartoes SET banco = ?, nome = ?, conta_id = ?, limite_centavos = ?,
+        dia_fechamento = ?, dia_vencimento = ?
+      WHERE id = ?
+    `).run(
+      dados.banco.trim(), dados.nome.trim(), contaId, dados.limiteCentavos,
+      dados.diaFechamento, dados.diaVencimento, id
+    )
+    db.exec('COMMIT')
+    const atualizado = listarCartoes().find((cartao) => cartao.id === id)
+    if (!atualizado) throw new Error('Erro ao recuperar o cartão.')
+    return atualizado
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
+}
+
 export function cadastrarCompra(dados: NovaCompra): Compra {
   if (!dados || typeof dados !== 'object') throw new Error('Compra inválida.')
   if (typeof dados.cartaoId !== 'string' || !dados.cartaoId)
