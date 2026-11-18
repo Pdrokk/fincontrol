@@ -24,7 +24,7 @@ import type { NovoSalarioRecorrente } from './salarios'
 import type { NovaTransacao } from './database'
 import { criarTabelasCartoes, listarCartoes, cadastrarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, pagarFatura } from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
-import { listarParcelasPagamento, pagarParcelasSelecionadas } from './cartoes'
+import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela } from './cartoes'
 
 function createWindow(): void {
   // Create the browser window.
@@ -76,6 +76,7 @@ app.whenReady().then(() => {
   ipcMain.handle('parcelas-relatorios:listar', () => listarParcelasParaRelatorios())
   ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
   ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
+  ipcMain.handle('parcelas:arquivar', (_evento, id: string, arquivar: boolean) => definirArquivoParcela(id, arquivar))
   ipcMain.handle('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
     pagarParcelasSelecionadas(dados))
   ipcMain.handle('salarios:listar', () => listarSalarios())
