@@ -62,6 +62,7 @@ export interface ParcelaPagamento {
   numero: number
   valorCentavos: number
   paga: boolean
+  arquivada: boolean
 }
 export interface NovoPagamentoParcelas {
   parcelaIds: string[]
@@ -130,6 +131,10 @@ export function criarTabelasCartoes(): void {
       conta_id TEXT NOT NULL REFERENCES contas(id),
       data_pagamento TEXT NOT NULL,
       valor_centavos INTEGER NOT NULL CHECK(valor_centavos > 0)
+    );
+    CREATE TABLE IF NOT EXISTS parcelas_arquivadas (
+      parcela_id TEXT PRIMARY KEY REFERENCES parcelas_cartao(id),
+      arquivada_em TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_pagamentos_parcelas_conta ON pagamentos_parcelas(conta_id);
 
@@ -336,15 +341,40 @@ export function listarParcelasPagamento(): ParcelaPagamento[] {
     SELECT p.id, p.compra_id AS compraId, p.cartao_id AS cartaoId,
       (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
       p.competencia, p.numero, p.valor_centavos AS valorCentavos,
-      CASE WHEN pf.id IS NOT NULL OR pp.id IS NOT NULL THEN 1 ELSE 0 END AS pago
+      CASE WHEN pf.id IS NOT NULL OR pp.id IS NOT NULL THEN 1 ELSE 0 END AS pago,
+      CASE WHEN pa.parcela_id IS NOT NULL THEN 1 ELSE 0 END AS arquivada
     FROM parcelas_cartao p
     JOIN compras_cartao c ON c.id = p.compra_id
     LEFT JOIN pagamentos_fatura pf
       ON pf.cartao_id = p.cartao_id AND pf.competencia = p.competencia
     LEFT JOIN pagamentos_parcelas pp ON pp.parcela_id = p.id
+    LEFT JOIN parcelas_arquivadas pa ON pa.parcela_id = p.id
     ORDER BY p.competencia ASC, p.numero ASC
-  `).all() as unknown as (Omit<ParcelaPagamento, 'paga'> & { pago: number })[]
-  return registros.map((p) => ({ ...p, paga: p.pago === 1 }))
+  `).all() as unknown as (Omit<ParcelaPagamento, 'paga' | 'arquivada'> & { pago: number; arquivada: number })[]
+  return registros.map((p) => ({ ...p, paga: p.pago === 1, arquivada: p.arquivada === 1 }))
+}
+
+export function definirArquivoParcela(id: string, arquivar: boolean): void {
+  if (typeof id !== 'string' || !id.trim() || typeof arquivar !== 'boolean') {
+    throw new Error('Parcela inválida.')
+  }
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const parcela = listarParcelasPagamento().find((p) => p.id === id)
+    if (!parcela) throw new Error('Parcela não encontrada.')
+    if (!parcela.paga) throw new Error('Só é possível arquivar parcelas pagas.')
+    if (arquivar) {
+      db.prepare('INSERT OR IGNORE INTO parcelas_arquivadas (parcela_id, arquivada_em) VALUES (?, ?)')
+        .run(id, new Date().toISOString())
+    } else {
+      db.prepare('DELETE FROM parcelas_arquivadas WHERE parcela_id = ?').run(id)
+    }
+    db.exec('COMMIT')
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
 }
 
 export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): { valorCentavos: number; parcelasPagas: number } {
