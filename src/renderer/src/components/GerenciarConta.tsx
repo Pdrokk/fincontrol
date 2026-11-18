@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Save, Wallet, SlidersHorizontal, CirclePlus, X } from 'lucide-react'
+import { Save, SlidersHorizontal, CirclePlus, X } from 'lucide-react'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 interface Conta {
