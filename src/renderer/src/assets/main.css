@@ -1104,3 +1104,480 @@ button:disabled {
   align-items: center;
   gap: 5px;
 }
+
+
+/* ============================
+   Etapa 13 — interface minimalista
+   ============================ */
+
+.fincontrol .content {
+  padding: clamp(18px, 2.5vw, 32px);
+}
+
+.fincontrol .cabecalho {
+  margin-bottom: 22px;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.fincontrol .cabecalho h2 {
+  font-size: clamp(21px, 2.4vw, 26px);
+  font-weight: 650;
+  letter-spacing: -0.5px;
+}
+
+.fincontrol .sidebar nav {
+  gap: 4px;
+}
+
+.fincontrol .sidebar nav button {
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.fincontrol .sidebar nav button.ativo {
+  background: rgba(96, 165, 250, 0.13);
+  color: #bfdbfe;
+}
+
+.fincontrol .sidebar nav button:hover:not(.ativo) {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.fincontrol .painel,
+.fincontrol .grafico-card {
+  box-shadow: none;
+  border-radius: 14px;
+}
+
+.fincontrol .botao-primario {
+  border-radius: 10px;
+  padding: 11px 16px;
+  box-shadow: none;
+}
+
+.fincontrol .theme-toggle {
+  display: inline-flex;
+  width: 74px;
+  height: 36px;
+  position: relative;
+  justify-content: space-around;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 7px;
+  flex-shrink: 0;
+}
+
+.fincontrol .theme-toggle-indicador {
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  transition: transform 0.18s ease, background 0.18s ease;
+  pointer-events: none;
+}
+
+.fincontrol[data-theme='dark'] .theme-toggle-indicador {
+  transform: translateX(36px);
+  background: #475569;
+  border-color: #64748b;
+}
+
+.fincontrol .theme-toggle svg {
+  position: relative;
+  z-index: 1;
+}
+
+.fincontrol .theme-toggle:focus-visible,
+.fincontrol .central-icone:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 3px;
+}
+
+/* Dashboard: quatro números, dois gráficos, duas listas. */
+.fincontrol .dashboard-minimal {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+}
+
+.fincontrol .dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fincontrol .dashboard-kpi {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--surface);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fincontrol .dashboard-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 13px;
+  gap: 12px;
+}
+
+.fincontrol .dashboard-kpi strong {
+  font-size: clamp(20px, 1.8vw, 28px);
+  letter-spacing: -0.6px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.fincontrol .dashboard-kpi small,
+.fincontrol .dashboard-secao-titulo p,
+.fincontrol .dashboard-item small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.fincontrol .dashboard-secao-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fincontrol .dashboard-secao-titulo h3 {
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+
+.fincontrol .dashboard-secao-titulo p {
+  margin: 0;
+}
+
+.fincontrol .dashboard-minimal .graficos-financeiros {
+  margin: 0;
+  gap: 12px;
+}
+
+.fincontrol .dashboard-minimal .grafico-card {
+  padding: 20px;
+}
+
+.fincontrol .dashboard-minimal .grafico-area {
+  height: 230px;
+}
+
+.fincontrol .dashboard-duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fincontrol .dashboard-lista {
+  margin: 0;
+  padding: 22px;
+}
+
+.fincontrol .dashboard-lista .dashboard-secao-titulo {
+  margin-bottom: 14px;
+}
+
+.fincontrol .dashboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  border-top: 1px solid var(--border-color);
+  padding: 13px 0;
+}
+
+.fincontrol .dashboard-item > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fincontrol .dashboard-item strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.fincontrol .dashboard-item > strong {
+  flex-shrink: 0;
+}
+
+.fincontrol .botao-texto {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  border: 0;
+  padding: 7px 0;
+  background: transparent;
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fincontrol[data-theme='dark'] .botao-texto {
+  color: #93c5fd;
+}
+
+/* Central de pagamentos — única área de baixa. */
+.fincontrol .central-pagamentos {
+  margin-top: 0;
+  padding: 22px;
+}
+
+.fincontrol .central-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fincontrol .central-cabecalho h3 {
+  margin: 0 0 5px;
+}
+
+.fincontrol .central-cabecalho p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 13px;
+}
+
+.fincontrol .central-resumo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 22px 0;
+}
+
+.fincontrol .central-resumo > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 11px;
+  padding: 15px;
+  background: var(--surface);
+}
+
+.fincontrol .central-resumo span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.fincontrol .central-resumo strong {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.fincontrol .central-abas {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+
+.fincontrol .central-abas button {
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 9px 15px;
+}
+
+.fincontrol .central-abas button.selecionada {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px #00000010;
+}
+
+.fincontrol .central-grupos {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.fincontrol .central-grupo {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.fincontrol .central-grupo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.fincontrol .central-grupo-titulo > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fincontrol .central-grupo-titulo small {
+  color: var(--muted);
+}
+
+.fincontrol .central-parcela {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.fincontrol .central-parcela span {
+  flex: 1;
+  min-width: 0;
+}
+
+.fincontrol .central-parcela strong {
+  white-space: nowrap;
+}
+
+.fincontrol .central-parcela.historico {
+  cursor: default;
+}
+
+.fincontrol .central-parcela.historico span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fincontrol .central-parcela.historico small {
+  color: var(--muted);
+}
+
+.fincontrol .central-parcela input,
+.fincontrol .central-grupo-titulo input,
+.fincontrol .central-arquivadas input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  accent-color: #2563eb;
+}
+
+.fincontrol .central-pagamento-form {
+  border-top: 1px solid var(--border-color);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+.fincontrol .central-pagamento-total {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.fincontrol .central-pagamento-campos {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.fincontrol .central-pagamento-campos label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.fincontrol .central-pagamento-campos select,
+.fincontrol .central-pagamento-campos input {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.fincontrol .central-pagamento-campos button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.fincontrol .central-icone {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.fincontrol .central-icone:hover {
+  background: var(--bg);
+}
+
+.fincontrol .central-arquivadas {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 0 12px;
+}
+
+.fincontrol .central-nota {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 18px;
+}
+
+@media (max-width: 1100px) {
+  .fincontrol .dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .fincontrol .dashboard-duas-colunas,
+  .fincontrol .central-resumo,
+  .fincontrol .central-pagamento-campos {
+    grid-template-columns: 1fr;
+  }
+
+  .fincontrol .dashboard-minimal .graficos-financeiros {
+    grid-template-columns: 1fr;
+  }
+
+  .fincontrol .central-parcela,
+  .fincontrol .central-grupo-titulo {
+    flex-wrap: wrap;
+  }
+}
