@@ -166,7 +166,9 @@ export function removerTransacao(id: string): void {
   }
 
   const db = obterBanco()
-
+  if (db.prepare('SELECT 1 FROM salarios_lancamentos WHERE transacao_id = ?').get(id)) {
+    throw new Error('Este lançamento pertence a um salário recorrente. Desative a programação para interromper os próximos recebimentos.')
+  }
   db.prepare('DELETE FROM transacoes WHERE id = ?').run(id)
 }
 
@@ -214,6 +216,9 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
 
   const contaId = validarContaId(dados.contaId)
   const banco = obterBanco()
+  if (banco.prepare('SELECT 1 FROM salarios_lancamentos WHERE transacao_id = ?').get(id)) {
+    throw new Error('Lançamentos de salário recorrente não podem ser editados individualmente.')
+  }
 
   const resultado = banco
     .prepare(
