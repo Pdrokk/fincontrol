@@ -96,12 +96,18 @@ declare global {
   interface Window {
     fincontrol: {
       listarCartoes: () => Promise<CartaoFinanceiro[]>
-      cadastrarCartao: (dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
+      cadastrarCartao: (
+        dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>
+      ) => Promise<CartaoFinanceiro>
       listarComprasCartao: () => Promise<CompraCartaoFinanceira[]>
-      cadastrarCompraCartao: (dados: Omit<CompraCartaoFinanceira, 'id'>) => Promise<CompraCartaoFinanceira>
+      cadastrarCompraCartao: (
+        dados: Omit<CompraCartaoFinanceira, 'id'>
+      ) => Promise<CompraCartaoFinanceira>
       listarFaturasPrevistas: () => Promise<FaturaPrevistaFinanceira[]>
       listarParcelasRelatorio: () => Promise<ParcelaRelatorioFinanceira[]>
-      pagarFatura: (dados: Omit<PagamentoFaturaFinanceiro, 'id' | 'valorCentavos'>) => Promise<PagamentoFaturaFinanceiro>
+      pagarFatura: (
+        dados: Omit<PagamentoFaturaFinanceiro, 'id' | 'valorCentavos'>
+      ) => Promise<PagamentoFaturaFinanceiro>
       listarTransacoes: () => Promise<TransacaoFinanceira[]>
 
       salvarTransacao: (dados: Omit<TransacaoFinanceira, 'id'>) => Promise<TransacaoFinanceira>
@@ -114,8 +120,13 @@ declare global {
       ) => Promise<TransacaoFinanceira>
 
       listarContas: () => Promise<ContaFinanceira[]>
-      editarConta: (id: string, dados: Pick<ContaFinanceira, 'banco' | 'nome' | 'tipo'>) => Promise<ContaFinanceira>
-      ajustarSaldo: (dados: Pick<AjusteSaldoFinanceiro, 'contaId' | 'saldoDesejadoCentavos' | 'motivo' | 'data'>) => Promise<AjusteSaldoFinanceiro>
+      editarConta: (
+        id: string,
+        dados: Pick<ContaFinanceira, 'banco' | 'nome' | 'tipo'>
+      ) => Promise<ContaFinanceira>
+      ajustarSaldo: (
+        dados: Pick<AjusteSaldoFinanceiro, 'contaId' | 'saldoDesejadoCentavos' | 'motivo' | 'data'>
+      ) => Promise<AjusteSaldoFinanceiro>
       listarAjustesSaldo: () => Promise<AjusteSaldoFinanceiro[]>
 
       cadastrarConta: (

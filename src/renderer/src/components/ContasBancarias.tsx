@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Landmark,
+  Plus,
+  Wallet,
+  Pencil,
+  CirclePlus,
+  SlidersHorizontal
+} from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
@@ -180,7 +188,10 @@ export default function ContasBancarias(): React.JSX.Element {
         <div className="resumo-contas">
           <span>Saldo total disponível nas contas</span>
           <strong>{formatarMoeda(total)}</strong>
-          <small>Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de saldo</small>
+          <small>
+            Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de
+            saldo
+          </small>
         </div>
         {carregando && <p>Carregando contas...</p>}
         {erro && <p role="alert">{erro}</p>}

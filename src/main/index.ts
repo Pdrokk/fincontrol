@@ -19,7 +19,16 @@ import {
 import type { NovaConta, NovaTransferencia, AlteracaoConta, NovoAjusteSaldo } from './contas'
 
 import type { NovaTransacao } from './database'
-import { criarTabelasCartoes, listarCartoes, cadastrarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, pagarFatura } from './cartoes'
+import {
+  criarTabelasCartoes,
+  listarCartoes,
+  cadastrarCartao,
+  cadastrarCompra,
+  listarCompras,
+  listarFaturasPrevistas,
+  listarParcelasParaRelatorios,
+  pagarFatura
+} from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura } from './cartoes'
 
 function createWindow(): void {
@@ -79,9 +88,9 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('contas:editar', (_evento, id: string, dados: AlteracaoConta) =>
-    editarConta(id, dados))
-  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) =>
-    ajustarSaldo(dados))
+    editarConta(id, dados)
+  )
+  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) => ajustarSaldo(dados))
   ipcMain.handle('contas:listar-ajustes', () => listarAjustesSaldo())
 
   ipcMain.handle('transferencias:listar', () => listarTransferencias())
