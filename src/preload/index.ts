@@ -48,10 +48,28 @@ const fincontrolAPI = {
   ): Promise<unknown> => ipcRenderer.invoke('transacoes:editar', id, dados),
 
   listarContas: (): Promise<unknown> => ipcRenderer.invoke('contas:listar'),
+  excluirConta: (id: string): Promise<boolean> => ipcRenderer.invoke('contas:excluir', id),
+  listarSalarios: (): Promise<unknown> => ipcRenderer.invoke('salarios:listar'),
+  cadastrarSalario: (dados: {
+    contaId: string
+    descricao: string
+    valorCentavos: number
+    dia: number
+    mesInicio: string
+    quantidadeMeses: number
+  }): Promise<unknown> => ipcRenderer.invoke('salarios:cadastrar', dados),
+  desativarSalario: (id: string): Promise<void> => ipcRenderer.invoke('salarios:desativar', id),
+  listarParcelasPagamento: (): Promise<unknown> => ipcRenderer.invoke('parcelas:listar'),
+  pagarParcelasSelecionadas: (dados: {
+    parcelaIds: string[]
+    contaId: string
+    dataPagamento: string
+  }): Promise<unknown> => ipcRenderer.invoke('parcelas:pagar-selecionadas', dados),
   editarConta: (id: string, dados: {
     banco: string
     nome: string
     tipo: 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
+    cor: string
   }): Promise<unknown> => ipcRenderer.invoke('contas:editar', id, dados),
 
   ajustarSaldo: (dados: {
@@ -69,6 +87,7 @@ const fincontrolAPI = {
     nome: string
     tipo: 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
     saldoInicialCentavos: number
+    cor: string
   }): Promise<unknown> => ipcRenderer.invoke('contas:cadastrar', dados),
 
   listarCartoes: (): Promise<unknown> => ipcRenderer.invoke('cartoes:listar'),
