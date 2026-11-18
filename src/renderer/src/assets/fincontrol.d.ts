@@ -131,6 +131,7 @@ declare global {
         dataPagamento: string
       }) => Promise<{ valorCentavos: number; parcelasPagas: number }>
       listarCartoes: () => Promise<CartaoFinanceiro[]>
+      atualizarCartao: (id: string, dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
       cadastrarCartao: (dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
       listarComprasCartao: () => Promise<CompraCartaoFinanceira[]>
       cadastrarCompraCartao: (dados: Omit<CompraCartaoFinanceira, 'id'>) => Promise<CompraCartaoFinanceira>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Plus } from 'lucide-react'
+import { CreditCard, Plus, Pencil } from 'lucide-react'
+import { gradienteBanco } from '../utils/coresBancos'
 import CentralPagamentos from './CentralPagamentos'
 
 interface Cartao {
@@ -75,6 +76,7 @@ export default function CartoesCredito(): React.JSX.Element {
   const [limite, setLimite] = useState('0')
   const [fechamento, setFechamento] = useState('25')
   const [vencimento, setVencimento] = useState('5')
+  const [cartaoEditandoId, setCartaoEditandoId] = useState<string | null>(null)
 
   const [cartaoId, setCartaoId] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -117,30 +119,58 @@ export default function CartoesCredito(): React.JSX.Element {
     return (): void => { ativo = false }
   }, [])
 
+  function iniciarEdicaoCartao(cartao: Cartao): void {
+    setCartaoEditandoId(cartao.id)
+    setBanco(cartao.banco)
+    setNome(cartao.nome)
+    setContaId(cartao.contaId || '')
+    setLimite((cartao.limiteCentavos / 100).toFixed(2).replace('.', ','))
+    setFechamento(String(cartao.diaFechamento))
+    setVencimento(String(cartao.diaVencimento))
+    document.getElementById('formulario-cartao')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function limparFormularioCartao(): void {
+    setCartaoEditandoId(null)
+    setBanco('')
+    setNome('')
+    setContaId('')
+    setLimite('0')
+    setFechamento('25')
+    setVencimento('5')
+  }
+
   async function salvarCartao(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (salvando || carregando || erro) return
     const limiteCentavos = paraCentavos(limite)
-    if (limiteCentavos === null) { alert('Limite inválido.'); return }
+    if (limiteCentavos === null) {
+      alert('Informe um limite válido.')
+      return
+    }
+    const dados = {
+      nome: nome.trim(),
+      banco: banco.trim(),
+      contaId: contaId || null,
+      limiteCentavos,
+      diaFechamento: Number(fechamento),
+      diaVencimento: Number(vencimento)
+    }
     try {
       setSalvando(true)
-      await window.fincontrol.cadastrarCartao({
-        nome: nome.trim(),
-        banco: banco.trim(),
-        contaId: contaId || null,
-        limiteCentavos,
-        diaFechamento: Number(fechamento),
-        diaVencimento: Number(vencimento)
-      })
+      if (cartaoEditandoId) {
+        await window.fincontrol.atualizarCartao(cartaoEditandoId, dados)
+      } else {
+        await window.fincontrol.cadastrarCartao(dados)
+      }
       await atualizar()
-      setBanco('')
-      setNome('')
-      setContaId('')
-      setLimite('0')
+      limparFormularioCartao()
     } catch (falha) {
       console.error(falha)
-      alert('Não foi possível cadastrar o cartão.')
-    } finally { setSalvando(false) }
+      alert(falha instanceof Error ? falha.message : 'Não foi possível salvar o cartão.')
+    } finally {
+      setSalvando(false)
+    }
   }
 
   async function salvarCompra(e: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -200,7 +230,7 @@ export default function CartoesCredito(): React.JSX.Element {
 
         <div className="grade-contas">
           {cartoes.map((c) => (
-            <article className="cartao-conta" key={c.id}>
+            <article className="cartao-conta" key={c.id} style={{ background: gradienteBanco(c.banco) }}>
               <div className="cartao-conta-topo"><CreditCard size={24} /><strong>{c.banco}</strong></div>
               <span>{c.nome}</span>
               <h3>Disponível: {moeda(c.limiteDisponivelCentavos)}</h3>
@@ -208,6 +238,11 @@ export default function CartoesCredito(): React.JSX.Element {
               <p>Utilizado: {moeda(c.limiteUtilizadoCentavos)}</p>
               <p>Fechamento: dia {c.diaFechamento} · Vencimento: dia {c.diaVencimento}</p>
               <small>{c.contaId ? 'Conta: ' + (contas.find((x) => x.id === c.contaId)?.nome ?? 'Vinculada') : 'Sem conta para pagamento definida'}</small>
+              <div className="acoes-conta">
+                <button type="button" onClick={(): void => iniciarEdicaoCartao(c)}>
+                  <Pencil size={15} /> Editar cartão
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -215,8 +250,8 @@ export default function CartoesCredito(): React.JSX.Element {
 
       <CentralPagamentos onPagamento={atualizar} />
 
-      <section className="painel">
-        <h3>Cadastrar cartão</h3>
+      <section id="formulario-cartao" className="painel">
+        <h3>{cartaoEditandoId ? "Editar cartão" : "Cadastrar cartão"}</h3>
         <form className="formulario" onSubmit={(e): void => { void salvarCartao(e) }}>
           <label>Banco ou instituição
             <input value={banco} maxLength={100} onChange={(e): void => setBanco(e.target.value)} required placeholder="Ex: Nubank" />
@@ -240,8 +275,13 @@ export default function CartoesCredito(): React.JSX.Element {
             <input type="number" min="1" max="28" value={vencimento} onChange={(e): void => setVencimento(e.target.value)} required />
           </label>
           <button type="submit" className="botao-primario" disabled={salvando || carregando || Boolean(erro)}>
-            <Plus size={17} /> Cadastrar cartão
+            {cartaoEditandoId ? <Pencil size={17} /> : <Plus size={17} />}
+            {salvando ? "Salvando..." : cartaoEditandoId ? "Salvar alterações" : "Cadastrar cartão"}
           </button>
+          {cartaoEditandoId && (
+            <button type="button" className="botao-cancelar"
+              onClick={limparFormularioCartao}>Cancelar edição</button>
+          )}
         </form>
       </section>
 

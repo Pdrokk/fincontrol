@@ -92,6 +92,14 @@ const fincontrolAPI = {
   }): Promise<unknown> => ipcRenderer.invoke('contas:cadastrar', dados),
 
   listarCartoes: (): Promise<unknown> => ipcRenderer.invoke('cartoes:listar'),
+  atualizarCartao: (id: string, dados: {
+    contaId: string | null
+    nome: string
+    banco: string
+    limiteCentavos: number
+    diaFechamento: number
+    diaVencimento: number
+  }): Promise<unknown> => ipcRenderer.invoke('cartoes:atualizar', id, dados),
   cadastrarCartao: (dados: {
     contaId: string | null
     nome: string
