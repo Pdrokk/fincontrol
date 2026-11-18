@@ -30,14 +30,18 @@ interface Props {
 }
 
 function moeda(valorCentavos: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
-    .format(valorCentavos / 100)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    valorCentavos / 100
+  )
 }
 
 function dataAtual(): string {
   const d = new Date()
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0')].join('-')
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0')
+  ].join('-')
 }
 
 export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Element {
@@ -71,18 +75,23 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
       window.fincontrol.listarParcelasPagamento(),
       window.fincontrol.listarContas(),
       window.fincontrol.listarCartoes()
-    ]).then(([p, c, b]): void => {
-      if (!ativo) return
-      setParcelas(p)
-      setContas(c)
-      setCartoes(b)
-    }).catch((falha: unknown): void => {
-      console.error(falha)
-      if (ativo) setErro('Não foi possível carregar os pagamentos.')
-    }).finally((): void => {
-      if (ativo) setCarregando(false)
-    })
-    return (): void => { ativo = false }
+    ])
+      .then(([p, c, b]): void => {
+        if (!ativo) return
+        setParcelas(p)
+        setContas(c)
+        setCartoes(b)
+      })
+      .catch((falha: unknown): void => {
+        console.error(falha)
+        if (ativo) setErro('Não foi possível carregar os pagamentos.')
+      })
+      .finally((): void => {
+        if (ativo) setCarregando(false)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [])
 
   const pendentes = parcelas.filter((p) => !p.paga)
@@ -103,15 +112,15 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
   }
 
   function marcar(id: string, ativo: boolean): void {
-    setSelecionadas((anterior) => ativo
-      ? [...new Set([...anterior, id])]
-      : anterior.filter((item) => item !== id))
+    setSelecionadas((anterior) =>
+      ativo ? [...new Set([...anterior, id])] : anterior.filter((item) => item !== id)
+    )
   }
 
   function marcarGrupo(ids: string[], ativo: boolean): void {
-    setSelecionadas((anterior) => ativo
-      ? [...new Set([...anterior, ...ids])]
-      : anterior.filter((item) => !ids.includes(item)))
+    setSelecionadas((anterior) =>
+      ativo ? [...new Set([...anterior, ...ids])] : anterior.filter((item) => !ids.includes(item))
+    )
   }
 
   async function pagarSelecionadas(): Promise<void> {
@@ -122,9 +131,12 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
       alert('Saldo insuficiente na conta escolhida.')
       return
     }
-    if (!window.confirm(
-      `Confirmar pagamento de ${escolhidas.length} parcela(s), total ${moeda(valorEscolhido)}, usando ${conta.nome}?`
-    )) return
+    if (
+      !window.confirm(
+        `Confirmar pagamento de ${escolhidas.length} parcela(s), total ${moeda(valorEscolhido)}, usando ${conta.nome}?`
+      )
+    )
+      return
     try {
       setSalvando(true)
       await window.fincontrol.pagarParcelasSelecionadas({
@@ -167,18 +179,37 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
       </div>
 
       <div className="central-resumo">
-        <div><span>Total em aberto</span><strong>{moeda(totalPendente)}</strong></div>
-        <div><span>Parcelas pendentes</span><strong>{pendentes.length}</strong></div>
-        <div><span>Parcelas pagas</span><strong>{parcelas.filter((p) => p.paga).length}</strong></div>
+        <div>
+          <span>Total em aberto</span>
+          <strong>{moeda(totalPendente)}</strong>
+        </div>
+        <div>
+          <span>Parcelas pendentes</span>
+          <strong>{pendentes.length}</strong>
+        </div>
+        <div>
+          <span>Parcelas pagas</span>
+          <strong>{parcelas.filter((p) => p.paga).length}</strong>
+        </div>
       </div>
 
       <div className="central-abas" role="group" aria-label="Filtrar pagamentos">
-        <button type="button" aria-pressed={aba === 'pendentes'}
+        <button
+          type="button"
+          aria-pressed={aba === 'pendentes'}
           className={aba === 'pendentes' ? 'selecionada' : ''}
-          onClick={(): void => setAba('pendentes')}>Em aberto</button>
-        <button type="button" aria-pressed={aba === 'historico'}
+          onClick={(): void => setAba('pendentes')}
+        >
+          Em aberto
+        </button>
+        <button
+          type="button"
+          aria-pressed={aba === 'historico'}
           className={aba === 'historico' ? 'selecionada' : ''}
-          onClick={(): void => setAba('historico')}>Histórico de pagos</button>
+          onClick={(): void => setAba('historico')}
+        >
+          Histórico de pagos
+        </button>
       </div>
 
       {carregando && <p>Carregando pagamentos...</p>}
@@ -186,7 +217,9 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
 
       {aba === 'pendentes' && (
         <>
-          {pendentes.length === 0 && !carregando && <p className="vazio">Tudo em dia! Nenhuma parcela pendente.</p>}
+          {pendentes.length === 0 && !carregando && (
+            <p className="vazio">Tudo em dia! Nenhuma parcela pendente.</p>
+          )}
           <div className="central-grupos">
             {[...agrupadas.entries()].map(([chave, itens]) => {
               const ids = itens.map((p) => p.id)
@@ -195,18 +228,26 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
               return (
                 <div className="central-grupo" key={chave}>
                   <label className="central-grupo-titulo">
-                    <input type="checkbox" checked={todas}
-                      onChange={(e): void => marcarGrupo(ids, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={todas}
+                      onChange={(e): void => marcarGrupo(ids, e.target.checked)}
+                    />
                     <span>
                       <strong>{nomeCartao(itens[0].cartaoId)}</strong>
-                      <small>Fatura {itens[0].competencia} · {itens.length} parcela(s)</small>
+                      <small>
+                        Fatura {itens[0].competencia} · {itens.length} parcela(s)
+                      </small>
                     </span>
                     <strong>{moeda(total)}</strong>
                   </label>
                   {itens.map((parcela) => (
                     <label className="central-parcela" key={parcela.id}>
-                      <input type="checkbox" checked={selecionadas.includes(parcela.id)}
-                        onChange={(e): void => marcar(parcela.id, e.target.checked)} />
+                      <input
+                        type="checkbox"
+                        checked={selecionadas.includes(parcela.id)}
+                        onChange={(e): void => marcar(parcela.id, e.target.checked)}
+                      />
                       <span>{parcela.descricao}</span>
                       <strong>{moeda(parcela.valorCentavos)}</strong>
                     </label>
@@ -221,7 +262,8 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
               <strong>{moeda(valorEscolhido)}</strong>
             </div>
             <div className="central-pagamento-campos">
-              <label>Conta pagadora
+              <label>
+                Conta pagadora
                 <select value={contaId} onChange={(e): void => setContaId(e.target.value)}>
                   <option value="">Selecione uma conta</option>
                   {contas.map((conta) => (
@@ -231,13 +273,22 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
                   ))}
                 </select>
               </label>
-              <label>Data do pagamento
-                <input type="date" value={dataPagamento}
-                  onChange={(e): void => setDataPagamento(e.target.value)} />
+              <label>
+                Data do pagamento
+                <input
+                  type="date"
+                  value={dataPagamento}
+                  onChange={(e): void => setDataPagamento(e.target.value)}
+                />
               </label>
-              <button type="button" className="botao-primario"
+              <button
+                type="button"
+                className="botao-primario"
                 disabled={salvando || !contaId || escolhidas.length === 0}
-                onClick={(): void => { void pagarSelecionadas() }}>
+                onClick={(): void => {
+                  void pagarSelecionadas()
+                }}
+              >
                 <CheckCircle2 size={17} /> {salvando ? 'Processando...' : 'Confirmar pagamento'}
               </button>
             </div>
@@ -248,28 +299,40 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
       {aba === 'historico' && (
         <div className="central-historico">
           <label className="central-arquivadas">
-            <input type="checkbox" checked={mostrarArquivadas}
-              onChange={(e): void => setMostrarArquivadas(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={mostrarArquivadas}
+              onChange={(e): void => setMostrarArquivadas(e.target.checked)}
+            />
             Mostrar parcelas arquivadas
           </label>
           {pagas.length === 0 && <p className="vazio">Nenhuma parcela paga para exibir.</p>}
           {pagas.map((parcela) => (
             <div className="central-parcela historico" key={parcela.id}>
               <CheckCircle2 size={17} color="#16a34a" />
-              <span>{nomeCartao(parcela.cartaoId)} · {parcela.descricao}
+              <span>
+                {nomeCartao(parcela.cartaoId)} · {parcela.descricao}
                 <small>Fatura {parcela.competencia}</small>
               </span>
               <strong>{moeda(parcela.valorCentavos)}</strong>
-              <button type="button" className="central-icone"
+              <button
+                type="button"
+                className="central-icone"
                 disabled={salvando}
                 title={parcela.arquivada ? 'Restaurar ao histórico' : 'Ocultar do histórico'}
                 aria-label={parcela.arquivada ? 'Restaurar parcela' : 'Arquivar parcela'}
-                onClick={(): void => { void alterarArquivo(parcela.id, !parcela.arquivada) }}>
+                onClick={(): void => {
+                  void alterarArquivo(parcela.id, !parcela.arquivada)
+                }}
+              >
                 {parcela.arquivada ? <RotateCcw size={17} /> : <Archive size={17} />}
               </button>
             </div>
           ))}
-          <p className="central-nota"><ArrowDownRight size={15} /> Arquivar apenas oculta a parcela desta lista. O pagamento e o histórico financeiro permanecem intactos.</p>
+          <p className="central-nota">
+            <ArrowDownRight size={15} /> Arquivar apenas oculta a parcela desta lista. O pagamento e
+            o histórico financeiro permanecem intactos.
+          </p>
         </div>
       )}
     </section>

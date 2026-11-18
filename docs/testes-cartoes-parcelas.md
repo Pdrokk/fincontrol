@@ -1,9 +1,11 @@
 # Etapa 9 — Testes de cartões, parcelamentos e faturas previstas
 
 ## Preparação
+
 - Feche o FinControl e faça uma cópia de `fincontrol.db` para local seguro fora do repositório.
 - Esta branch depende de `feature/contas-saldos-transferencias-salario`.
 - Execute:
+
 ```powershell
 npm.cmd run typecheck
 npm.cmd run lint
@@ -11,6 +13,7 @@ npm.cmd run dev
 ```
 
 ## Casos de teste
+
 1. Cadastre cartão "Cartão principal" com limite R$ 5.000, fechamento dia 25 e vencimento dia 5.
 2. Cadastre compra de R$ 3.600,00 em 12x, com data 17/11/2026.
    - Esperado: 12 parcelas de R$ 300,00.
@@ -26,7 +29,9 @@ npm.cmd run dev
 9. Confirme que os módulos anteriores (contas, transferências, receitas e despesas, gráficos, Light/Dark) continuam funcionando.
 
 ## Limitação prevista
+
 Neste MVP, **faturas são apenas previstas**. Não há cobrança real, importação bancária, pagamento, estorno ou cálculo de limite disponível. Não registre pagamentos manualmente como despesa comum + despesa de compra: a integração de pagamentos será implementada separadamente para não duplicar gastos.
 
 ## Segurança
+
 Nunca faça commit de `*.db`, `*.db-wal`, `*.db-shm` ou arquivos com dados financeiros reais.

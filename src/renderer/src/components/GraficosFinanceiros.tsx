@@ -36,7 +36,10 @@ function moeda(valor: number): string {
   }).format(valor)
 }
 
-export default function GraficosFinanceiros({ transacoes, compacto = false }: Props): React.JSX.Element {
+export default function GraficosFinanceiros({
+  transacoes,
+  compacto = false
+}: Props): React.JSX.Element {
   // Agrupamento mensal usando valores em centavos.
   const agrupamento = new Map<string, { receitas: number; despesas: number }>()
 
@@ -196,37 +199,39 @@ export default function GraficosFinanceiros({ transacoes, compacto = false }: Pr
         )}
       </section>
 
-      {!compacto && <section className="grafico-card grafico-largo">
-        <h3>Evolução do saldo</h3>
-        <p>Saldo acumulado das transações no período selecionado</p>
+      {!compacto && (
+        <section className="grafico-card grafico-largo">
+          <h3>Evolução do saldo</h3>
+          <p>Saldo acumulado das transações no período selecionado</p>
 
-        {temTransacoes ? (
-          <div className="grafico-area">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dadosMensais}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          {temTransacoes ? (
+            <div className="grafico-area">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dadosMensais}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                <XAxis dataKey="mes" />
+                  <XAxis dataKey="mes" />
 
-                <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
+                  <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
 
-                <Tooltip formatter={(value): string => moeda(Number(value))} />
+                  <Tooltip formatter={(value): string => moeda(Number(value))} />
 
-                <Line
-                  type="monotone"
-                  dataKey="saldo"
-                  name="Saldo acumulado"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="grafico-vazio">Ainda não existem transações para o período.</p>
-        )}
-      </section>}
+                  <Line
+                    type="monotone"
+                    dataKey="saldo"
+                    name="Saldo acumulado"
+                    stroke="#2563eb"
+                    strokeWidth={3}
+                    dot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="grafico-vazio">Ainda não existem transações para o período.</p>
+          )}
+        </section>
+      )}
     </div>
   )
 }

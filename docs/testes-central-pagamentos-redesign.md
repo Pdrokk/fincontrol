@@ -1,6 +1,7 @@
 # Etapa 13 — Central de pagamentos e redesign minimalista
 
 ## Antes de começar
+
 1. Feche o Electron.
 2. Faça backup do arquivo `fincontrol.db` (fora do GitHub).
 3. Confira a branch `feature/central-pagamentos-ui-minimalista`.
@@ -16,6 +17,7 @@ npm.cmd run dev
 Os testes e build precisam ser executados no Windows antes de integrar à branch principal.
 
 ## Central única de pagamentos
+
 - Abra **Cartões e faturas**: existe uma seção **Central de pagamentos**.
 - Faturas e parcelas não apresentam mais botões de pagamento separados em blocos duplicados.
 - Marcar o cabeçalho da fatura seleciona todas as parcelas pendentes daquela competência.
@@ -31,6 +33,7 @@ Os testes e build precisam ser executados no Windows antes de integrar à branch
 - A Central exibe apenas parcelas efetivamente pendentes para pagamento.
 
 ## Dashboard minimalista
+
 - Quatro indicadores: saldo nas contas, receitas, despesas e faturas em aberto.
 - Dois gráficos no Dashboard: receitas x despesas e despesas por categoria. O relatório completo continua com gráfico de evolução do saldo.
 - Abaixo: próximos três vencimentos e até cinco movimentações bancárias.
@@ -39,6 +42,7 @@ Os testes e build precisam ser executados no Windows antes de integrar à branch
 - Abrir **Ver todos** da lista de faturas vai para a página Cartões e faturas; movimentações vai para Transações.
 
 ## Dark Mode e estilo
+
 - O antigo botão de texto foi trocado por um switch compacto com sol/lua.
 - Alternar tema mantém o esquema de cores e persiste após reinício.
 - Sidebar, painéis, cards e botões têm estilo mais discreto sem remover as cores configuradas pelo usuário nos bancos.
@@ -46,11 +50,13 @@ Os testes e build precisam ser executados no Windows antes de integrar à branch
 - Verifique visual e contraste nos dois temas.
 
 ## Regressão
+
 - Cadastrar cartão e compra parcelada, cadastrar contas, receitas, salários recorrentes, transferências, editar contas e corrigir saldos.
 - Parcelas já pagas no banco continuam intactas.
 - Conferir backup antes e depois da atualização.
 
 ## Limites
+
 - **Arquivar** é uma exclusão apenas da visualização, reversível. Não há exclusão física de pagamentos e parcelas quitadas.
 - Pagamento de uma parcela continua sendo sempre integral; a seleção múltipla permite quitar várias parcelas.
 - Nenhuma operação movimenta dinheiro real ou se conecta a instituições financeiras.

@@ -1024,7 +1024,7 @@ button:disabled {
   color: #fff;
   cursor: pointer;
   font-size: 12px;
-  transition: background .15s ease;
+  transition: background 0.15s ease;
 }
 
 .fincontrol .acoes-conta button:hover {
@@ -1105,7 +1105,6 @@ button:disabled {
   gap: 5px;
 }
 
-
 /* ============================
    Etapa 13 — interface minimalista
    ============================ */
@@ -1181,7 +1180,9 @@ button:disabled {
   border-radius: 50%;
   background: #e2e8f0;
   border: 1px solid #cbd5e1;
-  transition: transform 0.18s ease, background 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
   pointer-events: none;
 }
 
@@ -1602,7 +1603,9 @@ button:disabled {
   background: transparent;
   color: #94a3b8;
   cursor: pointer;
-  transition: color .15s ease, background .15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .fincontrol .botao-tema-lateral:hover {
@@ -1666,4 +1669,63 @@ button:disabled {
 
 .fincontrol .pagina-cartoes .cartao-conta .acoes-conta button:hover {
   background: #ffffff35;
+}
+
+/* ==================================
+   SCROLLBAR ADAPTATIVA — FINCONTROL
+   ================================== */
+
+/* Light Mode */
+.fincontrol[data-theme='light'] {
+  --scroll-track: #f8fafc;
+  --scroll-thumb: #94a3b8;
+  --scroll-hover: #64748b;
+}
+
+/* Dark Mode */
+.fincontrol[data-theme='dark'] {
+  --scroll-track: #0b1220;
+  --scroll-thumb: #475569;
+  --scroll-hover: #94a3b8;
+}
+
+/* Permite que a scrollbar principal siga o tema */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+html:has(.fincontrol[data-theme='light']) {
+  --scroll-track: #f8fafc;
+  --scroll-thumb: #94a3b8;
+  --scroll-hover: #64748b;
+}
+
+html:has(.fincontrol[data-theme='dark']) {
+  --scroll-track: #0b1220;
+  --scroll-thumb: #475569;
+  --scroll-hover: #94a3b8;
+}
+
+/* Electron / Chromium */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scroll-track);
 }

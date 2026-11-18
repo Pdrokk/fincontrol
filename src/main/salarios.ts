@@ -37,11 +37,15 @@ export function criarTabelaSalarios(): void {
 }
 
 export function listarSalarios(): SalarioRecorrente[] {
-  return obterBanco().prepare(`
+  return obterBanco()
+    .prepare(
+      `
     SELECT id, conta_id AS contaId, descricao, valor_centavos AS valorCentavos,
       dia, mes_inicio AS mesInicio, quantidade_meses AS quantidadeMeses, ativo
     FROM salarios_recorrentes ORDER BY criado_em DESC
-  `).all() as unknown as SalarioRecorrente[]
+  `
+    )
+    .all() as unknown as SalarioRecorrente[]
 }
 
 function mesAdicionar(inicio: string, offset: number): string {
@@ -52,9 +56,16 @@ function mesAdicionar(inicio: string, offset: number): string {
 
 export function cadastrarSalario(dados: NovoSalarioRecorrente): SalarioRecorrente {
   if (!dados || typeof dados !== 'object') throw new Error('Salário inválido.')
-  if (typeof dados.contaId !== 'string' || !obterBanco().prepare('SELECT id FROM contas WHERE id = ?').get(dados.contaId))
+  if (
+    typeof dados.contaId !== 'string' ||
+    !obterBanco().prepare('SELECT id FROM contas WHERE id = ?').get(dados.contaId)
+  )
     throw new Error('Selecione uma conta existente.')
-  if (typeof dados.descricao !== 'string' || dados.descricao.trim().length < 3 || dados.descricao.length > 200)
+  if (
+    typeof dados.descricao !== 'string' ||
+    dados.descricao.trim().length < 3 ||
+    dados.descricao.length > 200
+  )
     throw new Error('Descrição inválida.')
   if (!Number.isSafeInteger(dados.valorCentavos) || dados.valorCentavos <= 0)
     throw new Error('Valor inválido.')
@@ -62,15 +73,36 @@ export function cadastrarSalario(dados: NovoSalarioRecorrente): SalarioRecorrent
     throw new Error('Escolha um dia entre 1 e 28.')
   if (typeof dados.mesInicio !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(dados.mesInicio))
     throw new Error('Mês inicial inválido.')
-  if (!Number.isInteger(dados.quantidadeMeses) || dados.quantidadeMeses < 1 || dados.quantidadeMeses > 120)
+  if (
+    !Number.isInteger(dados.quantidadeMeses) ||
+    dados.quantidadeMeses < 1 ||
+    dados.quantidadeMeses > 120
+  )
     throw new Error('Escolha entre 1 e 120 meses.')
-  const salario: SalarioRecorrente = { ...dados, id: randomUUID(), descricao: dados.descricao.trim(), ativo: 1 }
-  obterBanco().prepare(`
+  const salario: SalarioRecorrente = {
+    ...dados,
+    id: randomUUID(),
+    descricao: dados.descricao.trim(),
+    ativo: 1
+  }
+  obterBanco()
+    .prepare(
+      `
     INSERT INTO salarios_recorrentes
       (id, conta_id, descricao, valor_centavos, dia, mes_inicio, quantidade_meses, ativo, criado_em)
     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
-  `).run(salario.id, salario.contaId, salario.descricao, salario.valorCentavos,
-    salario.dia, salario.mesInicio, salario.quantidadeMeses, new Date().toISOString())
+  `
+    )
+    .run(
+      salario.id,
+      salario.contaId,
+      salario.descricao,
+      salario.valorCentavos,
+      salario.dia,
+      salario.mesInicio,
+      salario.quantidadeMeses,
+      new Date().toISOString()
+    )
   processarSalariosVencidos()
   return salario
 }
@@ -93,21 +125,29 @@ export function processarSalariosVencidos(): void {
         const competencia = mesAdicionar(salario.mesInicio, i)
         const data = `${competencia}-${String(salario.dia).padStart(2, '0')}`
         if (data > hojeLocal) break
-        const existente = db.prepare(`
+        const existente = db
+          .prepare(
+            `
           SELECT transacao_id FROM salarios_lancamentos
           WHERE salario_id = ? AND competencia = ?
-        `).get(salario.id, competencia)
+        `
+          )
+          .get(salario.id, competencia)
         if (existente) continue
         const id = randomUUID()
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO transacoes
             (id, descricao, valor_centavos, tipo, categoria, data, conta_id)
           VALUES (?, ?, ?, 'receita', 'Salário', ?, ?)
-        `).run(id, salario.descricao, salario.valorCentavos, data, salario.contaId)
-        db.prepare(`
+        `
+        ).run(id, salario.descricao, salario.valorCentavos, data, salario.contaId)
+        db.prepare(
+          `
           INSERT INTO salarios_lancamentos (salario_id, competencia, transacao_id)
           VALUES (?, ?, ?)
-        `).run(salario.id, competencia, id)
+        `
+        ).run(salario.id, competencia, id)
       }
     }
     db.exec('COMMIT')
