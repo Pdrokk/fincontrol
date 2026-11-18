@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
@@ -90,18 +90,16 @@ export default function GraficosFinanceiros({
       nome, valor: centavos / 100, fill: cores[index % cores.length]
     }))
 
-  useEffect(() => { setPagina(null) }, [modo])
-
   return (
     <div className="graficos-relatorio">
       <div className="graficos-toolbar">
         <div className="graficos-abas" role="group" aria-label="Visão dos gráficos">
           <button type="button" aria-pressed={modo === 'realizado'}
             className={modo === 'realizado' ? 'ativo' : ''}
-            onClick={(): void => setModo('realizado')}>Realizado</button>
+            onClick={(): void => { setModo('realizado'); setPagina(null) }}>Realizado</button>
           <button type="button" aria-pressed={modo === 'previsto'}
             className={modo === 'previsto' ? 'ativo' : ''}
-            onClick={(): void => setModo('previsto')}>Previsto</button>
+            onClick={(): void => { setModo('previsto'); setPagina(null) }}>Previsto</button>
         </div>
         <div className="graficos-paginacao">
           <button type="button" aria-label="Seis meses anteriores" title="Meses anteriores"
