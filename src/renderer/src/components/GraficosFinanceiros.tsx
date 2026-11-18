@@ -26,7 +26,7 @@ const moeda = (reais: number): string =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(reais)
 
 const rotuloMes = (mes: string): string => {
-  const [ano, numero] = mes.split('-')
+  const ano = mes.slice(0, 4)
   const nome = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
     .format(new Date(`${mes}-01T12:00:00Z`))
   return `${nome}/${ano.slice(2)}`
