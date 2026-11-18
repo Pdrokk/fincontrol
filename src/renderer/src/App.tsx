@@ -727,13 +727,13 @@ function App(): React.JSX.Element {
             <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} />
 
             <section className="painel">
-              <h3>Resumo financeiro por competência</h3>
+              <h3>Resumo financeiro realizado do período</h3>
 
               <p>Receitas: {formatarMoeda(totalReceitas)}</p>
 
               <p>Despesas: {formatarMoeda(totalDespesas)}</p>
 
-              <p>Saldo: {formatarMoeda(saldo)}</p>
+              <p>Resultado (receitas − despesas): {formatarMoeda(totalReceitas - totalDespesas)}</p>
 
               <h3 className="subtitulo">Despesas por categoria</h3>
 
