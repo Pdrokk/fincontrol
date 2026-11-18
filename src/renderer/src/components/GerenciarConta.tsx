@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Save, SlidersHorizontal, CirclePlus, X } from 'lucide-react'
+import { corBanco } from '../utils/coresBancos'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 interface Conta {
@@ -44,7 +45,6 @@ export default function GerenciarConta({ conta, modo, onFechar, onAtualizar }: P
   const [banco, setBanco] = useState(conta.banco)
   const [nome, setNome] = useState(conta.nome)
   const [tipo, setTipo] = useState<TipoConta>(conta.tipo)
-  const [cor, setCor] = useState(conta.cor)
   const [valor, setValor] = useState('')
   const [motivo, setMotivo] = useState('')
   const [data, setData] = useState(hoje)
@@ -58,7 +58,7 @@ export default function GerenciarConta({ conta, modo, onFechar, onAtualizar }: P
       setOcupado(true)
       if (modo === 'editar') {
         await window.fincontrol.editarConta(conta.id, {
-          banco: banco.trim(), nome: nome.trim(), tipo, cor
+          banco: banco.trim(), nome: nome.trim(), tipo, cor: corBanco(banco)
         })
       } else if (modo === 'entrada') {
         const valorCentavos = centavos(valor)
@@ -120,9 +120,6 @@ export default function GerenciarConta({ conta, modo, onFechar, onAtualizar }: P
               <select value={tipo} onChange={(e): void => setTipo(e.target.value as TipoConta)}>
                 {Object.entries(tipos).map(([id, rotulo]) => <option value={id} key={id}>{rotulo}</option>)}
               </select>
-            </label>
-            <label>Cor do cartão bancário
-              <input type="color" value={cor} onChange={(e): void => setCor(e.target.value)} />
             </label>
             <p>O saldo inicial é mantido para preservar o histórico. Use Corrigir saldo para reconciliar o valor atual.</p>
           </>
