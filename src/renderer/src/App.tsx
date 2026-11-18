@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
 import DashboardResumo from './components/DashboardResumo'
-import ThemeToggle from './components/ThemeToggle'
 import './assets/main.css'
 import {
   LayoutDashboard,
@@ -11,7 +10,9 @@ import {
   Settings,
   Wallet,
   Landmark,
-  CreditCard
+  CreditCard,
+  Sun,
+  Moon
 } from 'lucide-react'
 
 import ContasBancarias from './components/ContasBancarias'
@@ -19,7 +20,7 @@ import CartoesCredito from './components/CartoesCredito'
 
 type Tipo = 'receita' | 'despesa'
 
-type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'cartoes' | 'configuracoes'
+type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'contas' | 'cartoes' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -71,7 +72,6 @@ const nomesPaginas: Record<Pagina, string> = {
   dashboard: 'Visão Geral',
   transacoes: 'Transações',
   relatorios: 'Relatórios',
-  categorias: 'Categorias',
   contas: 'Minhas contas',
   cartoes: 'Cartões e faturas',
   configuracoes: 'Configurações'
@@ -81,7 +81,6 @@ const iconesPaginas = {
   dashboard: LayoutDashboard,
   transacoes: ArrowLeftRight,
   relatorios: ChartNoAxesCombined,
-  categorias: Tags,
   contas: Landmark,
   cartoes: CreditCard,
   configuracoes: Settings
@@ -434,8 +433,16 @@ function App(): React.JSX.Element {
           })}
         </nav>
 
-        <div className="sidebar-rodape" title="FinControl">
-          <Wallet size={19} />
+        <div className="sidebar-rodape">
+          <button
+            type="button"
+            className="botao-tema-lateral"
+            onClick={alternarTema}
+            title={tema === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+            aria-label={tema === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+          >
+            {tema === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
         </div>
       </aside>
 
@@ -451,8 +458,6 @@ function App(): React.JSX.Element {
             <h2>{nomesPaginas[pagina]}</h2>
             <p>Organize seu dinheiro com praticidade.</p>
           </div>
-
-          <ThemeToggle tema={tema} onAlternar={alternarTema} />
 
           <button
             className="botao-primario"
@@ -744,44 +749,37 @@ function App(): React.JSX.Element {
           </>
         )}
 
-        {pagina === 'categorias' && (
-          <section className="painel">
-            <h3>Categorias disponíveis</h3>
-
-            <h4 className="subtitulo">Receitas</h4>
-
-            <div className="etiquetas">
-              {categorias.receita.map((nome) => (
-                <span className="etiqueta" key={nome}>
-                  {nome}
-                </span>
-              ))}
-            </div>
-
-            <h4 className="subtitulo">Despesas</h4>
-
-            <div className="etiquetas">
-              {categorias.despesa.map((nome) => (
-                <span className="etiqueta" key={nome}>
-                  {nome}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
         {pagina === 'configuracoes' && (
-          <section className="painel">
-            <h3>Sobre o aplicativo</h3>
-
-            <p>FinControl — Controle Financeiro Pessoal</p>
-
-            <p>Versão de desenvolvimento: 0.1.0</p>
-
-            <p>Moeda: Real brasileiro (BRL)</p>
-
-            <p>Armazenamento permanente: ainda não configurado.</p>
-          </section>
+          <div className="pagina-configuracoes">
+            <section className="painel">
+              <div className="configuracoes-titulo">
+                <Tags size={20} />
+                <div>
+                  <h3>Categorias financeiras</h3>
+                  <p>Consulte as categorias disponíveis para receitas e despesas.</p>
+                </div>
+              </div>
+              <h4 className="subtitulo">Receitas</h4>
+              <div className="etiquetas">
+                {categorias.receita.map((nome) => (
+                  <span className="etiqueta" key={nome}>{nome}</span>
+                ))}
+              </div>
+              <h4 className="subtitulo">Despesas</h4>
+              <div className="etiquetas">
+                {categorias.despesa.map((nome) => (
+                  <span className="etiqueta" key={nome}>{nome}</span>
+                ))}
+              </div>
+            </section>
+            <section className="painel">
+              <h3>Sobre o aplicativo</h3>
+              <p>FinControl — Controle Financeiro Pessoal</p>
+              <p>Versão de desenvolvimento: 0.1.0</p>
+              <p>Moeda: Real brasileiro (BRL)</p>
+              <p>Armazenamento: banco SQLite local.</p>
+            </section>
+          </div>
         )}
       </main>
     </div>
