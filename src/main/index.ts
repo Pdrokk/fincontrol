@@ -12,15 +12,19 @@ import {
   editarConta,
   ajustarSaldo,
   listarAjustesSaldo,
+  excluirConta,
   listarTransferencias,
   transferirEntreContas
 } from './contas'
 
 import type { NovaConta, NovaTransferencia, AlteracaoConta, NovoAjusteSaldo } from './contas'
+import { criarTabelaSalarios, listarSalarios, cadastrarSalario, desativarSalario, processarSalariosVencidos } from './salarios'
+import type { NovoSalarioRecorrente } from './salarios'
 
 import type { NovaTransacao } from './database'
 import { criarTabelasCartoes, listarCartoes, cadastrarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, pagarFatura } from './cartoes'
-import type { NovoCartao, NovaCompra, NovoPagamentoFatura } from './cartoes'
+import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
+import { listarParcelasPagamento, pagarParcelasSelecionadas } from './cartoes'
 
 function createWindow(): void {
   // Create the browser window.
@@ -61,6 +65,8 @@ app.whenReady().then(() => {
   iniciarBanco()
   criarTabelaContas()
   criarTabelasCartoes()
+  criarTabelaSalarios()
+  processarSalariosVencidos()
 
   ipcMain.handle('cartoes:listar', () => listarCartoes())
   ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
@@ -69,8 +75,16 @@ app.whenReady().then(() => {
   ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
   ipcMain.handle('parcelas-relatorios:listar', () => listarParcelasParaRelatorios())
   ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
+  ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
+  ipcMain.handle('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
+    pagarParcelasSelecionadas(dados))
+  ipcMain.handle('salarios:listar', () => listarSalarios())
+  ipcMain.handle('salarios:cadastrar', (_evento, dados: NovoSalarioRecorrente) =>
+    cadastrarSalario(dados))
+  ipcMain.handle('salarios:desativar', (_evento, id: string) => desativarSalario(id))
 
   ipcMain.handle('contas:listar', () => {
+    processarSalariosVencidos()
     return listarContas()
   })
 
@@ -78,6 +92,10 @@ app.whenReady().then(() => {
     return cadastrarConta(dados)
   })
 
+  ipcMain.handle('contas:excluir', (_evento, id: string) => {
+    excluirConta(id)
+    return true
+  })
   ipcMain.handle('contas:editar', (_evento, id: string, dados: AlteracaoConta) =>
     editarConta(id, dados))
   ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) =>
@@ -91,6 +109,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('transacoes:listar', () => {
+    processarSalariosVencidos()
     return listarTransacoes()
   })
 
