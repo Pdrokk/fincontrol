@@ -60,6 +60,7 @@ const fincontrolAPI = {
   }): Promise<unknown> => ipcRenderer.invoke('salarios:cadastrar', dados),
   desativarSalario: (id: string): Promise<void> => ipcRenderer.invoke('salarios:desativar', id),
   listarParcelasPagamento: (): Promise<unknown> => ipcRenderer.invoke('parcelas:listar'),
+  arquivarParcela: (id: string, arquivar: boolean): Promise<void> => ipcRenderer.invoke('parcelas:arquivar', id, arquivar),
   pagarParcelasSelecionadas: (dados: {
     parcelaIds: string[]
     contaId: string
