@@ -1581,3 +1581,89 @@ button:disabled {
     flex-wrap: wrap;
   }
 }
+
+/* Etapa 14 - tema lateral, configuracoes e edicao de cartoes */
+
+.fincontrol .sidebar-rodape {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 0;
+}
+
+.fincontrol .botao-tema-lateral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+
+.fincontrol .botao-tema-lateral:hover {
+  background: #ffffff15;
+  color: #f8fafc;
+}
+
+.fincontrol .botao-tema-lateral:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.fincontrol .pagina-configuracoes {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fincontrol .pagina-configuracoes .painel {
+  margin-top: 0;
+}
+
+.fincontrol .configuracoes-titulo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.fincontrol .configuracoes-titulo h3 {
+  margin: 0 0 5px;
+}
+
+.fincontrol .configuracoes-titulo p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.fincontrol .pagina-cartoes .cartao-conta {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fincontrol .pagina-cartoes .cartao-conta .acoes-conta {
+  margin-top: auto;
+}
+
+.fincontrol .pagina-cartoes .cartao-conta .acoes-conta button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #fff;
+  border: 1px solid #ffffff50;
+  border-radius: 9px;
+  background: #ffffff1b;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+.fincontrol .pagina-cartoes .cartao-conta .acoes-conta button:hover {
+  background: #ffffff35;
+}
