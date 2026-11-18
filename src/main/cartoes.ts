@@ -73,13 +73,17 @@ export function criarTabelasCartoes(): void {
 }
 
 export function listarCartoes(): Cartao[] {
-  return obterBanco().prepare(`
+  return obterBanco()
+    .prepare(
+      `
     SELECT id, conta_id AS contaId, nome, banco,
       limite_centavos AS limiteCentavos,
       dia_fechamento AS diaFechamento,
       dia_vencimento AS diaVencimento
     FROM cartoes ORDER BY criado_em DESC
-  `).all() as unknown as Cartao[]
+  `
+    )
+    .all() as unknown as Cartao[]
 }
 
 export function cadastrarCartao(dados: NovoCartao): Cartao {
@@ -106,18 +110,34 @@ export function cadastrarCartao(dados: NovoCartao): Cartao {
     diaFechamento: dados.diaFechamento,
     diaVencimento: dados.diaVencimento
   }
-  obterBanco().prepare(`
+  obterBanco()
+    .prepare(
+      `
     INSERT INTO cartoes
       (id, conta_id, nome, banco, limite_centavos, dia_fechamento, dia_vencimento, criado_em)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(cartao.id, cartao.contaId, cartao.nome, cartao.banco, cartao.limiteCentavos,
-    cartao.diaFechamento, cartao.diaVencimento, new Date().toISOString())
+  `
+    )
+    .run(
+      cartao.id,
+      cartao.contaId,
+      cartao.nome,
+      cartao.banco,
+      cartao.limiteCentavos,
+      cartao.diaFechamento,
+      cartao.diaVencimento,
+      new Date().toISOString()
+    )
   return cartao
 }
 
 function validarData(data: string): void {
-  if (typeof data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data) ||
-      Number.isNaN(Date.parse(data)) || new Date(data).toISOString().slice(0, 10) !== data) {
+  if (
+    typeof data !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(data) ||
+    Number.isNaN(Date.parse(data)) ||
+    new Date(data).toISOString().slice(0, 10) !== data
+  ) {
     throw new Error('Data inválida.')
   }
 }
@@ -134,22 +154,33 @@ function competenciaInicial(data: string, diaFechamento: number): string {
 
 export function cadastrarCompra(dados: NovaCompra): Compra {
   if (!dados || typeof dados !== 'object') throw new Error('Compra inválida.')
-  if (typeof dados.cartaoId !== 'string' || !dados.cartaoId)
-    throw new Error('Selecione um cartão.')
-  if (typeof dados.descricao !== 'string' || !dados.descricao.trim() || dados.descricao.length > 200)
+  if (typeof dados.cartaoId !== 'string' || !dados.cartaoId) throw new Error('Selecione um cartão.')
+  if (
+    typeof dados.descricao !== 'string' ||
+    !dados.descricao.trim() ||
+    dados.descricao.length > 200
+  )
     throw new Error('Descrição inválida.')
-  if (typeof dados.categoria !== 'string' || !dados.categoria.trim() || dados.categoria.length > 100)
+  if (
+    typeof dados.categoria !== 'string' ||
+    !dados.categoria.trim() ||
+    dados.categoria.length > 100
+  )
     throw new Error('Categoria inválida.')
   validarData(dados.data)
   if (!Number.isSafeInteger(dados.valorCentavos) || dados.valorCentavos <= 0)
     throw new Error('Valor inválido.')
-  if (!Number.isInteger(dados.numeroParcelas) || dados.numeroParcelas < 1 ||
-      dados.numeroParcelas > 120 || dados.numeroParcelas > dados.valorCentavos)
+  if (
+    !Number.isInteger(dados.numeroParcelas) ||
+    dados.numeroParcelas < 1 ||
+    dados.numeroParcelas > 120 ||
+    dados.numeroParcelas > dados.valorCentavos
+  )
     throw new Error('Quantidade de parcelas inválida.')
 
   const db = obterBanco()
   const cartao = db.prepare('SELECT * FROM cartoes WHERE id = ?').get(dados.cartaoId) as
-    | { dia_fechamento: number } | undefined
+    { dia_fechamento: number } | undefined
   if (!cartao) throw new Error('Cartão não encontrado.')
 
   const compra: Compra = {
@@ -167,12 +198,22 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
 
   db.exec('BEGIN IMMEDIATE')
   try {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO compras_cartao
         (id, cartao_id, descricao, categoria, data, valor_centavos, numero_parcelas, criado_em)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(compra.id, compra.cartaoId, compra.descricao, compra.categoria,
-      compra.data, compra.valorCentavos, compra.numeroParcelas, new Date().toISOString())
+    `
+    ).run(
+      compra.id,
+      compra.cartaoId,
+      compra.descricao,
+      compra.categoria,
+      compra.data,
+      compra.valorCentavos,
+      compra.numeroParcelas,
+      new Date().toISOString()
+    )
 
     const inserirParcela = db.prepare(`
       INSERT INTO parcelas_cartao (id, compra_id, cartao_id, numero, competencia, valor_centavos)
@@ -180,8 +221,14 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
     `)
     for (let i = 0; i < compra.numeroParcelas; i++) {
       const centavos = base + (i < resto ? 1 : 0)
-      inserirParcela.run(randomUUID(), compra.id, compra.cartaoId, i + 1,
-        somarMeses(ano, mes, i), centavos)
+      inserirParcela.run(
+        randomUUID(),
+        compra.id,
+        compra.cartaoId,
+        i + 1,
+        somarMeses(ano, mes, i),
+        centavos
+      )
     }
     db.exec('COMMIT')
     return compra
@@ -192,11 +239,15 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
 }
 
 export function listarCompras(): Compra[] {
-  return obterBanco().prepare(`
+  return obterBanco()
+    .prepare(
+      `
     SELECT id, cartao_id AS cartaoId, descricao, categoria, data,
       valor_centavos AS valorCentavos, numero_parcelas AS numeroParcelas
     FROM compras_cartao ORDER BY data DESC, criado_em DESC
-  `).all() as unknown as Compra[]
+  `
+    )
+    .all() as unknown as Compra[]
 }
 
 function vencimentoFatura(competencia: string, fechamento: number, vencimento: number): string {
@@ -207,13 +258,17 @@ function vencimentoFatura(competencia: string, fechamento: number, vencimento: n
 
 export function listarFaturasPrevistas(): FaturaPrevista[] {
   const cartoes = listarCartoes()
-  const parcelas = obterBanco().prepare(`
+  const parcelas = obterBanco()
+    .prepare(
+      `
     SELECT cartao_id AS cartaoId, competencia,
       SUM(valor_centavos) AS totalCentavos, COUNT(*) AS quantidadeParcelas
     FROM parcelas_cartao
     GROUP BY cartao_id, competencia
     ORDER BY competencia ASC
-  `).all() as unknown as Omit<FaturaPrevista, 'vencimento'>[]
+  `
+    )
+    .all() as unknown as Omit<FaturaPrevista, 'vencimento'>[]
   return parcelas.map((p) => {
     const cartao = cartoes.find((c) => c.id === p.cartaoId)
     if (!cartao) throw new Error('Cartão de fatura não encontrado.')

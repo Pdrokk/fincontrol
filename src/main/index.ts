@@ -16,7 +16,14 @@ import {
 import type { NovaConta, NovaTransferencia } from './contas'
 
 import type { NovaTransacao } from './database'
-import { criarTabelasCartoes, listarCartoes, cadastrarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas } from './cartoes'
+import {
+  criarTabelasCartoes,
+  listarCartoes,
+  cadastrarCartao,
+  cadastrarCompra,
+  listarCompras,
+  listarFaturasPrevistas
+} from './cartoes'
 import type { NovoCartao, NovaCompra } from './cartoes'
 
 function createWindow(): void {

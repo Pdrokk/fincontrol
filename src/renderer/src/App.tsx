@@ -17,7 +17,8 @@ import CartoesCredito from './components/CartoesCredito'
 
 type Tipo = 'receita' | 'despesa'
 
-type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'cartoes' | 'configuracoes'
+type Pagina =
+  'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'cartoes' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -153,10 +154,17 @@ function App(): React.JSX.Element {
 
   useEffect((): (() => void) => {
     let ativo = true
-    window.fincontrol.listarFaturasPrevistas()
-      .then((lista): void => { if (ativo) setFaturasPrevistas(lista) })
-      .catch((erro: unknown): void => { console.error('Erro ao carregar faturas:', erro) })
-    return (): void => { ativo = false }
+    window.fincontrol
+      .listarFaturasPrevistas()
+      .then((lista): void => {
+        if (ativo) setFaturasPrevistas(lista)
+      })
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar faturas:', erro)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [pagina])
 
   const [descricao, setDescricao] = useState('')
@@ -540,9 +548,14 @@ function App(): React.JSX.Element {
 
             <section className="painel">
               <h3>Cartões e faturas previstas</h3>
-              <p>Valores das parcelas cadastradas, sem impactar o saldo bancário até o pagamento.</p>
               <p>
-                Total previsto: <strong>{formatarMoeda(faturasPrevistas.reduce((total, f) => total + f.totalCentavos, 0))}</strong>
+                Valores das parcelas cadastradas, sem impactar o saldo bancário até o pagamento.
+              </p>
+              <p>
+                Total previsto:{' '}
+                <strong>
+                  {formatarMoeda(faturasPrevistas.reduce((total, f) => total + f.totalCentavos, 0))}
+                </strong>
               </p>
               {faturasPrevistas.slice(0, 3).map((f) => (
                 <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
@@ -553,7 +566,11 @@ function App(): React.JSX.Element {
                   <strong>{formatarMoeda(f.totalCentavos)}</strong>
                 </div>
               ))}
-              <button type="button" className="botao-editar" onClick={(): void => setPagina('cartoes')}>
+              <button
+                type="button"
+                className="botao-editar"
+                onClick={(): void => setPagina('cartoes')}
+              >
                 Ver cartões e faturas
               </button>
             </section>
