@@ -198,7 +198,7 @@ export function editarConta(id: string, dados: AlteracaoConta): Conta {
 }
 
 function validarDataAjuste(data: string): void {
-  if (typeof data !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(data) ||
+  if (typeof data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data) ||
       Number.isNaN(Date.parse(data)) || new Date(data).toISOString().slice(0, 10) !== data)
     throw new Error('Data inválida.')
 }
