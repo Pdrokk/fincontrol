@@ -9,11 +9,14 @@ import {
   criarTabelaContas,
   listarContas,
   cadastrarConta,
+  editarConta,
+  ajustarSaldo,
+  listarAjustesSaldo,
   listarTransferencias,
   transferirEntreContas
 } from './contas'
 
-import type { NovaConta, NovaTransferencia } from './contas'
+import type { NovaConta, NovaTransferencia, AlteracaoConta, NovoAjusteSaldo } from './contas'
 
 import type { NovaTransacao } from './database'
 import {
@@ -81,6 +84,12 @@ app.whenReady().then(() => {
   ipcMain.handle('contas:cadastrar', (_evento, dados: NovaConta) => {
     return cadastrarConta(dados)
   })
+
+  ipcMain.handle('contas:editar', (_evento, id: string, dados: AlteracaoConta) =>
+    editarConta(id, dados))
+  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) =>
+    ajustarSaldo(dados))
+  ipcMain.handle('contas:listar-ajustes', () => listarAjustesSaldo())
 
   ipcMain.handle('transferencias:listar', () => listarTransferencias())
 

@@ -21,6 +21,16 @@ interface ContaFinanceira {
   saldoAtualCentavos: number
 }
 
+interface AjusteSaldoFinanceiro {
+  id: string
+  contaId: string
+  diferencaCentavos: number
+  saldoAnteriorCentavos: number
+  saldoDesejadoCentavos: number
+  motivo: string
+  data: string
+}
+
 interface TransferenciaFinanceira {
   id: string
   origemId: string
@@ -110,6 +120,9 @@ declare global {
       ) => Promise<TransacaoFinanceira>
 
       listarContas: () => Promise<ContaFinanceira[]>
+      editarConta: (id: string, dados: Pick<ContaFinanceira, 'banco' | 'nome' | 'tipo'>) => Promise<ContaFinanceira>
+      ajustarSaldo: (dados: Pick<AjusteSaldoFinanceiro, 'contaId' | 'saldoDesejadoCentavos' | 'motivo' | 'data'>) => Promise<AjusteSaldoFinanceiro>
+      listarAjustesSaldo: () => Promise<AjusteSaldoFinanceiro[]>
 
       cadastrarConta: (
         dados: Omit<ContaFinanceira, 'id' | 'saldoAtualCentavos'>

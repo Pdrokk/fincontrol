@@ -1002,3 +1002,48 @@ button:disabled {
 .fincontrol .pagamento-acoes button {
   min-height: 43px;
 }
+
+/* Gestao de contas: editar, adicionar receita e corrigir saldo */
+
+.fincontrol .acoes-conta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.fincontrol .acoes-conta button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid #ffffff66;
+  background: #ffffff18;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background .15s ease;
+}
+
+.fincontrol .acoes-conta button:hover {
+  background: #ffffff35;
+}
+
+.fincontrol .gerenciar-conta {
+  border: 1px solid #3b82f680;
+}
+
+.fincontrol .gerenciar-conta .titulo-contas button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fincontrol .gerenciar-conta .formulario button.botao-primario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
