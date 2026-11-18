@@ -8,6 +8,7 @@ export interface Conta {
   banco: string
   nome: string
   tipo: TipoConta
+  cor: string
   saldoInicialCentavos: number
   saldoAtualCentavos: number
 }
@@ -16,10 +17,11 @@ export interface NovaConta {
   banco: string
   nome: string
   tipo: TipoConta
+  cor: string
   saldoInicialCentavos: number
 }
 
-export type AlteracaoConta = Pick<Conta, 'banco' | 'nome' | 'tipo'>
+export type AlteracaoConta = Pick<Conta, 'banco' | 'nome' | 'tipo' | 'cor'>
 
 export interface AjusteSaldo {
   id: string
@@ -91,6 +93,11 @@ export function criarTabelaContas(): void {
     `)
   }
 
+  const colunasConta = db.prepare('PRAGMA table_info(contas)').all() as { name: string }[]
+  if (!colunasConta.some((c) => c.name === 'cor')) {
+    db.exec("ALTER TABLE contas ADD COLUMN cor TEXT NOT NULL DEFAULT '#2563eb'")
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS transferencias (
       id TEXT PRIMARY KEY,
@@ -123,7 +130,7 @@ export function listarContas(): Conta[] {
   const registros = db
     .prepare(
       `
-    SELECT c.id, c.banco, c.nome, c.tipo,
+    SELECT c.id, c.banco, c.nome, c.tipo, c.cor,
       c.saldo_inicial_centavos AS saldoInicialCentavos,
       c.saldo_inicial_centavos
       + COALESCE((SELECT SUM(CASE WHEN t.tipo = 'receita' THEN t.valor_centavos ELSE -t.valor_centavos END)
@@ -131,6 +138,7 @@ export function listarContas(): Conta[] {
       + COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE destino_id = c.id), 0)
       - COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE origem_id = c.id), 0)
       - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_fatura WHERE conta_id = c.id), 0)
+      - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_parcelas WHERE conta_id = c.id), 0)
       + COALESCE((SELECT SUM(diferenca_centavos) FROM ajustes_saldo WHERE conta_id = c.id), 0)
         AS saldoAtualCentavos
     FROM contas c ORDER BY c.criado_em DESC
@@ -138,6 +146,12 @@ export function listarContas(): Conta[] {
     )
     .all()
   return registros as unknown as Conta[]
+}
+
+function validarCor(cor: string): string {
+  if (typeof cor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(cor))
+    throw new Error('Cor hexadecimal inválida.')
+  return cor.toLowerCase()
 }
 
 export function cadastrarConta(dados: NovaConta): Conta {
@@ -154,6 +168,7 @@ export function cadastrarConta(dados: NovaConta): Conta {
 
   const conta: Conta = {
     id: randomUUID(),
+    cor: validarCor(dados.cor),
     banco: dados.banco.trim(),
     nome: dados.nome.trim(),
     tipo: dados.tipo,
@@ -163,8 +178,8 @@ export function cadastrarConta(dados: NovaConta): Conta {
   obterBanco()
     .prepare(
       `
-    INSERT INTO contas (id, banco, nome, tipo, saldo_inicial_centavos, criado_em)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO contas (id, banco, nome, tipo, cor, saldo_inicial_centavos, criado_em)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `
     )
     .run(
@@ -172,6 +187,7 @@ export function cadastrarConta(dados: NovaConta): Conta {
       conta.banco,
       conta.nome,
       conta.tipo,
+      conta.cor,
       conta.saldoInicialCentavos,
       new Date().toISOString()
     )
@@ -189,8 +205,9 @@ export function editarConta(id: string, dados: AlteracaoConta): Conta {
   if (!tipos.includes(dados.tipo)) throw new Error('Tipo de conta inválido.')
 
   const db = obterBanco()
-  const resultado = db.prepare('UPDATE contas SET banco = ?, nome = ?, tipo = ? WHERE id = ?')
-    .run(dados.banco.trim(), dados.nome.trim(), dados.tipo, id)
+  const cor = validarCor(dados.cor)
+  const resultado = db.prepare('UPDATE contas SET banco = ?, nome = ?, tipo = ?, cor = ? WHERE id = ?')
+    .run(dados.banco.trim(), dados.nome.trim(), dados.tipo, cor, id)
   if (resultado.changes !== 1) throw new Error('Conta não encontrada.')
   const conta = listarContas().find((c) => c.id === id)
   if (!conta) throw new Error('Conta não encontrada.')
@@ -255,6 +272,37 @@ export function listarAjustesSaldo(): AjusteSaldo[] {
     FROM ajustes_saldo
     ORDER BY criado_em DESC, rowid DESC
   `).all() as unknown as AjusteSaldo[]
+}
+
+export function excluirConta(id: string): void {
+  if (typeof id !== 'string' || !id.trim()) throw new Error('Conta inválida.')
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const existe = db.prepare('SELECT id FROM contas WHERE id = ?').get(id)
+    if (!existe) throw new Error('Conta não encontrada.')
+    const dependencias = [
+      ['transacoes', 'conta_id'],
+      ['transferencias', 'origem_id'],
+      ['transferencias', 'destino_id'],
+      ['pagamentos_fatura', 'conta_id'],
+      ['pagamentos_parcelas', 'conta_id'],
+      ['cartoes', 'conta_id'],
+      ['ajustes_saldo', 'conta_id'],
+      ['salarios_recorrentes', 'conta_id']
+    ] as const
+    for (const [tabela, coluna] of dependencias) {
+      const quantidade = db.prepare(`SELECT COUNT(*) AS n FROM ${tabela} WHERE ${coluna} = ?`).get(id) as {n: number}
+      if (quantidade.n > 0) {
+        throw new Error('Esta conta possui histórico ou vínculos. Para preservar pagamentos e transações, remova os vínculos antes de excluir.')
+      }
+    }
+    db.prepare('DELETE FROM contas WHERE id = ?').run(id)
+    db.exec('COMMIT')
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
 }
 
 export function listarTransferencias(): Transferencia[] {
