@@ -137,6 +137,7 @@ declare global {
       cadastrarCompraCartao: (dados: Omit<CompraCartaoFinanceira, 'id'>) => Promise<CompraCartaoFinanceira>
       listarFaturasPrevistas: () => Promise<FaturaPrevistaFinanceira[]>
       listarParcelasRelatorio: () => Promise<ParcelaRelatorioFinanceira[]>
+      listarDespesasCartaoRealizadas: () => Promise<ParcelaRelatorioFinanceira[]>
       pagarFatura: (dados: Omit<PagamentoFaturaFinanceiro, 'id' | 'valorCentavos'>) => Promise<PagamentoFaturaFinanceiro>
       listarTransacoes: () => Promise<TransacaoFinanceira[]>
 
