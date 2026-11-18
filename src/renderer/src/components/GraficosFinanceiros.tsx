@@ -1,17 +1,9 @@
+import { useEffect, useState } from 'react'
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
+  Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface TransacaoGrafico {
   id: string
@@ -24,209 +16,181 @@ interface TransacaoGrafico {
 
 interface Props {
   transacoes: TransacaoGrafico[]
+  previsoes?: TransacaoGrafico[]
   compacto?: boolean
 }
 
 const cores = ['#16a34a', '#2563eb', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#64748b']
+const mesesPagina = 6
+const moeda = (reais: number): string =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(reais)
 
-function moeda(valor: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(valor)
+const rotuloMes = (mes: string): string => {
+  const [ano, numero] = mes.split('-')
+  const nome = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+    .format(new Date(`${mes}-01T12:00:00Z`))
+  return `${nome}/${ano.slice(2)}`
 }
 
-export default function GraficosFinanceiros({ transacoes, compacto = false }: Props): React.JSX.Element {
-  // Agrupamento mensal usando valores em centavos.
-  const agrupamento = new Map<string, { receitas: number; despesas: number }>()
+export default function GraficosFinanceiros({
+  transacoes, previsoes = [], compacto = false
+}: Props): React.JSX.Element {
+  const [modo, setModo] = useState<'realizado' | 'previsto'>('realizado')
+  const [pagina, setPagina] = useState<number | null>(null)
+  const registros = modo === 'realizado' ? transacoes : previsoes
 
-  for (const transacao of transacoes) {
-    const mes = transacao.data.slice(0, 7)
-
-    const registro = agrupamento.get(mes) ?? {
-      receitas: 0,
-      despesas: 0
-    }
-
-    if (transacao.tipo === 'receita') {
-      registro.receitas += transacao.valorCentavos
-    } else {
-      registro.despesas += transacao.valorCentavos
-    }
-
-    agrupamento.set(mes, registro)
+  const mapa = new Map<string, { receitas: number; despesas: number }>()
+  for (const item of registros) {
+    const mes = item.data.slice(0, 7)
+    const atual = mapa.get(mes) ?? { receitas: 0, despesas: 0 }
+    if (item.tipo === 'receita') atual.receitas += item.valorCentavos
+    else atual.despesas += item.valorCentavos
+    mapa.set(mes, atual)
   }
 
-  const mesesOrdenados = [...agrupamento.keys()].sort()
-
-  const dadosMensais = mesesOrdenados.reduce<
-    {
-      mes: string
-      receitas: number
-      despesas: number
-      saldo: number
-      chave: string
-    }[]
-  >((acumulador, mes) => {
-    const registro = agrupamento.get(mes)
-
-    if (!registro) {
-      return acumulador
+  // Completa meses intermediários: assim o eixo não salta diretamente de janeiro a novembro.
+  const chaves = [...mapa.keys()].sort()
+  const meses: string[] = []
+  if (chaves.length) {
+    let [ano, mes] = chaves[0].split('-').map(Number)
+    const ultima = chaves[chaves.length - 1]
+    while (`${ano}-${String(mes).padStart(2, '0')}` <= ultima && meses.length < 1200) {
+      meses.push(`${ano}-${String(mes).padStart(2, '0')}`)
+      mes += 1
+      if (mes > 12) { mes = 1; ano += 1 }
     }
+  }
 
-    const saldoAnterior = acumulador.length > 0 ? acumulador[acumulador.length - 1].saldo : 0
+  const totalPaginas = Math.max(1, Math.ceil(meses.length / mesesPagina))
+  const paginaAtual = Math.max(0, Math.min(pagina ?? totalPaginas - 1, totalPaginas - 1))
+  const visiveis = meses.slice(paginaAtual * mesesPagina, (paginaAtual + 1) * mesesPagina)
 
-    const receitas = registro.receitas / 100
-    const despesas = registro.despesas / 100
+  // Resultado da janela, nunca rotulado como saldo bancário real.
+  let resultadoAcumulado = 0
+  const dados = visiveis.map((mes) => {
+    const reg = mapa.get(mes) ?? { receitas: 0, despesas: 0 }
+    resultadoAcumulado += reg.receitas - reg.despesas
+    return {
+      mes: rotuloMes(mes),
+      receitas: reg.receitas / 100,
+      despesas: reg.despesas / 100,
+      resultado: resultadoAcumulado / 100
+    }
+  })
 
-    const [ano, numeroMes] = mes.split('-')
-
-    const nomeMes = new Intl.DateTimeFormat('pt-BR', {
-      month: 'short',
-      timeZone: 'UTC'
-    }).format(new Date(`${mes}-01T12:00:00Z`))
-
-    return [
-      ...acumulador,
-      {
-        mes: `${nomeMes}/${ano.slice(2)}`,
-        receitas,
-        despesas,
-        saldo: saldoAnterior + receitas - despesas,
-        chave: `${ano}-${numeroMes}`
-      }
-    ]
-  }, [])
-
-  // Agrupamento das despesas por categoria.
   const categorias = new Map<string, number>()
-
-  for (const transacao of transacoes) {
-    if (transacao.tipo !== 'despesa') continue
-
-    const atual = categorias.get(transacao.categoria) ?? 0
-
-    categorias.set(transacao.categoria, atual + transacao.valorCentavos)
+  const mesesVisiveis = new Set(visiveis)
+  for (const item of registros) {
+    if (item.tipo !== 'despesa' || !mesesVisiveis.has(item.data.slice(0, 7))) continue
+    categorias.set(item.categoria, (categorias.get(item.categoria) ?? 0) + item.valorCentavos)
   }
 
-  const dadosCategorias = [...categorias.entries()]
-    .sort((a, b) => b[1] - a[1])
+  const dadosCategorias = [...categorias.entries()].sort((a, b) => b[1] - a[1])
     .map(([nome, centavos], index) => ({
-      nome,
-      valor: centavos / 100,
-      fill: cores[index % cores.length]
+      nome, valor: centavos / 100, fill: cores[index % cores.length]
     }))
 
-  const temTransacoes = transacoes.length > 0
-  const temDespesas = dadosCategorias.length > 0
+  useEffect(() => { setPagina(null) }, [modo])
 
   return (
-    <div className="graficos-financeiros">
-      <section className="grafico-card">
-        <h3>Receitas x Despesas</h3>
-        <p>Comparação dos valores por mês</p>
-
-        {temTransacoes ? (
-          <div className="grafico-area">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosMensais}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-
-                <XAxis dataKey="mes" />
-
-                <YAxis width={65} tickFormatter={(v: number): string => `R$ ${v}`} />
-
-                <Tooltip formatter={(value): string => moeda(Number(value))} />
-
-                <Legend />
-
-                <Bar dataKey="receitas" name="Receitas" fill="#16a34a" radius={[5, 5, 0, 0]} />
-
-                <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[5, 5, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="grafico-vazio">Cadastre transações para visualizar o gráfico.</p>
-        )}
-      </section>
-
-      <section className="grafico-card">
-        <h3>Despesas por categoria</h3>
-        <p>Distribuição dos gastos no período</p>
-
-        {temDespesas ? (
-          <>
+    <div className="graficos-relatorio">
+      <div className="graficos-toolbar">
+        <div className="graficos-abas" role="group" aria-label="Visão dos gráficos">
+          <button type="button" aria-pressed={modo === 'realizado'}
+            className={modo === 'realizado' ? 'ativo' : ''}
+            onClick={(): void => setModo('realizado')}>Realizado</button>
+          <button type="button" aria-pressed={modo === 'previsto'}
+            className={modo === 'previsto' ? 'ativo' : ''}
+            onClick={(): void => setModo('previsto')}>Previsto</button>
+        </div>
+        <div className="graficos-paginacao">
+          <button type="button" aria-label="Seis meses anteriores" title="Meses anteriores"
+            disabled={paginaAtual === 0}
+            onClick={(): void => setPagina(paginaAtual - 1)}><ChevronLeft size={17} /></button>
+          <span>{visiveis.length ? `${rotuloMes(visiveis[0])} – ${rotuloMes(visiveis[visiveis.length - 1])}` : 'Sem dados'}</span>
+          <button type="button" aria-label="Próximos seis meses" title="Próximos meses"
+            disabled={paginaAtual >= totalPaginas - 1}
+            onClick={(): void => setPagina(paginaAtual + 1)}><ChevronRight size={17} /></button>
+        </div>
+      </div>
+      <p className="graficos-explicacao">
+        {modo === 'realizado'
+          ? 'Somente receitas registradas e despesas efetivamente pagas. Parcelas futuras não entram neste resultado.'
+          : 'Somente parcelas de cartão em aberto, por mês de competência. Não reduz o saldo bancário atual.'}
+      </p>
+      <div className="graficos-financeiros">
+        <section className="grafico-card">
+          <h3>{modo === 'realizado' ? 'Receitas x despesas realizadas' : 'Despesas previstas'}</h3>
+          <p>Janela de até seis meses</p>
+          {dados.length ? (
             <div className="grafico-area">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dadosCategorias}
-                    dataKey="valor"
-                    nameKey="nome"
-                    innerRadius="52%"
-                    outerRadius="78%"
-                    paddingAngle={2}
-                  />
-
+                <BarChart data={dados}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="mes" />
+                  <YAxis width={65} tickFormatter={(v: number): string => `R$ ${v}`} />
                   <Tooltip formatter={(value): string => moeda(Number(value))} />
-                </PieChart>
+                  <Legend />
+                  {modo === 'realizado' && (
+                    <Bar dataKey="receitas" name="Receitas" fill="#16a34a" radius={[5, 5, 0, 0]} />
+                  )}
+                  <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[5, 5, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
+          ) : <p className="grafico-vazio">Não há lançamentos nesta visão.</p>}
+        </section>
+        <section className="grafico-card">
+          <h3>Despesas por categoria</h3>
+          <p>Referente aos meses exibidos acima</p>
+          {dadosCategorias.length ? (
+            <>
+              <div className="grafico-area">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={dadosCategorias} dataKey="valor" nameKey="nome"
+                      innerRadius="52%" outerRadius="78%" paddingAngle={2} />
+                    <Tooltip formatter={(value): string => moeda(Number(value))} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="legenda-categorias">
+                {dadosCategorias.map((item) => (
+                  <div className="legenda-item" key={item.nome}>
+                    <span className="legenda-cor" style={{ backgroundColor: item.fill }} />
+                    <span>{item.nome}</span>
+                    <strong>{moeda(item.valor)}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : <p className="grafico-vazio">Sem despesas nesta janela.</p>}
+        </section>
 
-            <div className="legenda-categorias">
-              {dadosCategorias.map((categoria) => (
-                <div className="legenda-item" key={categoria.nome}>
-                  <span
-                    className="legenda-cor"
-                    style={{
-                      backgroundColor: categoria.fill
-                    }}
-                  />
-
-                  <span>{categoria.nome}</span>
-
-                  <strong>{moeda(categoria.valor)}</strong>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="grafico-vazio">Nenhuma despesa encontrada neste período.</p>
+        {!compacto && (
+          <section className="grafico-card grafico-largo">
+            <h3>{modo === 'realizado' ? 'Resultado acumulado da janela' : 'Compromissos acumulados da janela'}</h3>
+            <p>{modo === 'realizado'
+              ? 'Receitas menos despesas realizadas, iniciando em zero nesta página; não é o saldo das contas.'
+              : 'Previsão acumulada de parcelas pendentes nesta página, sem considerar novas receitas.'}</p>
+            {dados.length ? (
+              <div className="grafico-area">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dados}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="mes" />
+                    <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
+                    <Tooltip formatter={(value): string => moeda(Number(value))} />
+                    <Line type="monotone" dataKey="resultado"
+                      name={modo === 'realizado' ? 'Resultado' : 'Resultado previsto das parcelas'}
+                      stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <p className="grafico-vazio">Sem dados nesta janela.</p>}
+          </section>
         )}
-      </section>
-
-      {!compacto && <section className="grafico-card grafico-largo">
-        <h3>Evolução do saldo</h3>
-        <p>Saldo acumulado das transações no período selecionado</p>
-
-        {temTransacoes ? (
-          <div className="grafico-area">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dadosMensais}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-
-                <XAxis dataKey="mes" />
-
-                <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
-
-                <Tooltip formatter={(value): string => moeda(Number(value))} />
-
-                <Line
-                  type="monotone"
-                  dataKey="saldo"
-                  name="Saldo acumulado"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="grafico-vazio">Ainda não existem transações para o período.</p>
-        )}
-      </section>}
+      </div>
     </div>
   )
 }
