@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeftRight, Landmark, Plus, Wallet } from 'lucide-react'
+import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal } from 'lucide-react'
+import GerenciarConta from './GerenciarConta'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 interface Conta {
@@ -65,6 +66,8 @@ export default function ContasBancarias(): React.JSX.Element {
   const [salvando, setSalvando] = useState(false)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [contaSelecionadaId, setContaSelecionadaId] = useState('')
+  const [modoGerenciar, setModoGerenciar] = useState<'editar' | 'entrada' | 'ajuste'>('editar')
 
   async function recarregar(): Promise<void> {
     const [novasContas, novasTransferencias] = await Promise.all([
@@ -152,6 +155,12 @@ export default function ContasBancarias(): React.JSX.Element {
     }
   }
 
+  const contaSelecionada = contas.find((c) => c.id === contaSelecionadaId)
+  function abrirGerenciar(id: string, modo: 'editar' | 'entrada' | 'ajuste'): void {
+    setContaSelecionadaId(id)
+    setModoGerenciar(modo)
+  }
+
   const total = contas.reduce((soma, conta) => soma + conta.saldoAtualCentavos, 0)
   const nomeConta = (id: string): string => {
     const conta = contas.find((item) => item.id === id)
@@ -171,7 +180,7 @@ export default function ContasBancarias(): React.JSX.Element {
         <div className="resumo-contas">
           <span>Saldo total disponível nas contas</span>
           <strong>{formatarMoeda(total)}</strong>
-          <small>Saldo inicial + receitas - despesas + transferências recebidas - enviadas</small>
+          <small>Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de saldo</small>
         </div>
         {carregando && <p>Carregando contas...</p>}
         {erro && <p role="alert">{erro}</p>}
@@ -188,6 +197,17 @@ export default function ContasBancarias(): React.JSX.Element {
               <small>
                 {nomesTipos[conta.tipo]} · Inicial: {formatarMoeda(conta.saldoInicialCentavos)}
               </small>
+              <div className="acoes-conta">
+                <button type="button" onClick={(): void => abrirGerenciar(conta.id, 'editar')}>
+                  <Pencil size={15} /> Editar
+                </button>
+                <button type="button" onClick={(): void => abrirGerenciar(conta.id, 'entrada')}>
+                  <CirclePlus size={15} /> Adicionar dinheiro
+                </button>
+                <button type="button" onClick={(): void => abrirGerenciar(conta.id, 'ajuste')}>
+                  <SlidersHorizontal size={15} /> Corrigir saldo
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -195,6 +215,16 @@ export default function ContasBancarias(): React.JSX.Element {
           <p className="vazio">Nenhuma conta cadastrada até o momento.</p>
         )}
       </section>
+
+      {contaSelecionada && (
+        <GerenciarConta
+          key={contaSelecionada.id + ':' + modoGerenciar}
+          conta={contaSelecionada}
+          modo={modoGerenciar}
+          onFechar={(): void => setContaSelecionadaId('')}
+          onAtualizar={recarregar}
+        />
+      )}
 
       <section className="painel">
         <h3>Cadastrar nova conta</h3>
