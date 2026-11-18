@@ -17,6 +17,7 @@ interface ContaFinanceira {
   banco: string
   nome: string
   tipo: 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
+  cor: string
   saldoInicialCentavos: number
   saldoAtualCentavos: number
 }
@@ -66,6 +67,8 @@ interface FaturaPrevistaFinanceira {
   vencimento: string
   totalCentavos: number
   quantidadeParcelas: number
+  valorPagoCentavos: number
+  saldoPendenteCentavos: number
   paga: boolean
   pagamentoId: string | null
   contaPagamentoId: string | null
@@ -92,9 +95,39 @@ interface ParcelaRelatorioFinanceira {
   origem: 'cartao'
 }
 
+interface ParcelaPagamentoFinanceira {
+  id: string
+  compraId: string
+  cartaoId: string
+  descricao: string
+  competencia: string
+  numero: number
+  valorCentavos: number
+  paga: boolean
+}
+interface SalarioRecorrenteFinanceiro {
+  id: string
+  contaId: string
+  descricao: string
+  valorCentavos: number
+  dia: number
+  mesInicio: string
+  quantidadeMeses: number
+  ativo: number
+}
 declare global {
   interface Window {
     fincontrol: {
+      excluirConta: (id: string) => Promise<boolean>
+      listarSalarios: () => Promise<SalarioRecorrenteFinanceiro[]>
+      cadastrarSalario: (dados: Omit<SalarioRecorrenteFinanceiro, 'id' | 'ativo'>) => Promise<SalarioRecorrenteFinanceiro>
+      desativarSalario: (id: string) => Promise<void>
+      listarParcelasPagamento: () => Promise<ParcelaPagamentoFinanceira[]>
+      pagarParcelasSelecionadas: (dados: {
+        parcelaIds: string[]
+        contaId: string
+        dataPagamento: string
+      }) => Promise<{ valorCentavos: number; parcelasPagas: number }>
       listarCartoes: () => Promise<CartaoFinanceiro[]>
       cadastrarCartao: (dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
       listarComprasCartao: () => Promise<CompraCartaoFinanceira[]>
@@ -114,7 +147,7 @@ declare global {
       ) => Promise<TransacaoFinanceira>
 
       listarContas: () => Promise<ContaFinanceira[]>
-      editarConta: (id: string, dados: Pick<ContaFinanceira, 'banco' | 'nome' | 'tipo'>) => Promise<ContaFinanceira>
+      editarConta: (id: string, dados: Pick<ContaFinanceira, 'banco' | 'nome' | 'tipo' | 'cor'>) => Promise<ContaFinanceira>
       ajustarSaldo: (dados: Pick<AjusteSaldoFinanceiro, 'contaId' | 'saldoDesejadoCentavos' | 'motivo' | 'data'>) => Promise<AjusteSaldoFinanceiro>
       listarAjustesSaldo: () => Promise<AjusteSaldoFinanceiro[]>
 
