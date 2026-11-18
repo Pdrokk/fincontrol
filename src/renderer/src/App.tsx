@@ -24,6 +24,14 @@ interface Transacao {
   tipo: Tipo
   categoria: string
   data: string
+  contaId: string | null
+}
+
+interface ContaResumo {
+  id: string
+  banco: string
+  nome: string
+  saldoAtualCentavos: number
 }
 
 const categorias: Record<Tipo, string[]> = {
@@ -59,6 +67,8 @@ function formatarMoeda(centavos: number): string {
 function App(): React.JSX.Element {
   const [pagina, setPagina] = useState<Pagina>('dashboard')
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
+  const [contas, setContas] = useState<ContaResumo[]>([])
+  const [contaId, setContaId] = useState('')
 
   const [mesFiltro, setMesFiltro] = useState('todos')
   const [anoFiltro, setAnoFiltro] = useState('todos')
@@ -112,6 +122,21 @@ function App(): React.JSX.Element {
       ativo = false
     }
   }, [])
+
+  useEffect((): (() => void) => {
+    let ativo = true
+    window.fincontrol
+      .listarContas()
+      .then((registros): void => {
+        if (ativo) setContas(registros)
+      })
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar contas:', erro)
+      })
+    return (): void => {
+      ativo = false
+    }
+  }, [pagina, transacoes])
 
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
@@ -198,6 +223,7 @@ function App(): React.JSX.Element {
     setTipo(transacao.tipo)
     setCategoria(transacao.categoria)
     setData(transacao.data)
+    setContaId(transacao.contaId ?? '')
     setPagina('transacoes')
 
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -209,6 +235,7 @@ function App(): React.JSX.Element {
     setValor('')
     setTipo('despesa')
     setCategoria('Alimentação')
+    setContaId('')
   }
 
   function alterarTipo(novoTipo: Tipo): void {
@@ -242,7 +269,8 @@ function App(): React.JSX.Element {
       valorCentavos: centavos,
       tipo,
       categoria,
-      data
+      data,
+      contaId: contaId || null
     }
 
     try {
@@ -298,7 +326,10 @@ function App(): React.JSX.Element {
               <strong>{t.descricao}</strong>
 
               <span>
-                {t.categoria} • {t.data.split('-').reverse().join('/')}
+                {t.categoria} • {t.data.split('-').reverse().join('/')} •{' '}
+                {t.contaId
+                  ? (contas.find((conta) => conta.id === t.contaId)?.nome ?? 'Conta vinculada')
+                  : 'Sem conta'}
               </span>
             </div>
 
@@ -361,7 +392,6 @@ function App(): React.JSX.Element {
 
       <main className="content">
         {carregando && <p role="status">Carregando dados financeiros...</p>}
-        {pagina === 'contas' && <ContasBancarias />}
         {erroBanco && (
           <p role="alert" style={{ color: '#dc2626' }}>
             {erroBanco}
@@ -393,6 +423,8 @@ function App(): React.JSX.Element {
             + Nova transação
           </button>
         </header>
+
+        {pagina === 'contas' && <ContasBancarias />}
 
         {(pagina === 'dashboard' || pagina === 'transacoes' || pagina === 'relatorios') && (
           <section className="filtros-periodo">
@@ -461,6 +493,26 @@ function App(): React.JSX.Element {
               <div className="card">
                 <h3>Despesas</h3>
                 <strong className="despesa">{formatarMoeda(totalDespesas)}</strong>
+              </div>
+            </section>
+
+            <section className="cards">
+              <div className="card">
+                <h3>Saldo nas contas bancárias</h3>
+                <strong>
+                  {formatarMoeda(
+                    contas.reduce((total, conta) => total + conta.saldoAtualCentavos, 0)
+                  )}
+                </strong>
+                <p>Considera somente as movimentações vinculadas às contas.</p>
+              </div>
+              <div className="card">
+                <h3>Contas cadastradas</h3>
+                <strong>{contas.length}</strong>
+              </div>
+              <div className="card">
+                <h3>Movimentações sem conta</h3>
+                <strong>{transacoes.filter((t) => !t.contaId).length}</strong>
               </div>
             </section>
 
@@ -588,6 +640,18 @@ function App(): React.JSX.Element {
                     {categorias[tipo].map((nome) => (
                       <option key={nome} value={nome}>
                         {nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Conta bancária
+                  <select value={contaId} onChange={(e): void => setContaId(e.target.value)}>
+                    <option value="">Sem conta vinculada (histórico)</option>
+                    {contas.map((conta) => (
+                      <option key={conta.id} value={conta.id}>
+                        {conta.banco} · {conta.nome}
                       </option>
                     ))}
                   </select>

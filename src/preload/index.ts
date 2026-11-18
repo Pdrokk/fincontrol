@@ -30,6 +30,7 @@ const fincontrolAPI = {
     tipo: 'receita' | 'despesa'
     categoria: string
     data: string
+    contaId: string | null
   }): Promise<unknown> => ipcRenderer.invoke('transacoes:salvar', dados),
 
   removerTransacao: (id: string): Promise<boolean> => ipcRenderer.invoke('transacoes:remover', id),
@@ -42,6 +43,7 @@ const fincontrolAPI = {
       tipo: 'receita' | 'despesa'
       categoria: string
       data: string
+      contaId: string | null
     }
   ): Promise<unknown> => ipcRenderer.invoke('transacoes:editar', id, dados),
 
@@ -50,9 +52,19 @@ const fincontrolAPI = {
   cadastrarConta: (dados: {
     banco: string
     nome: string
-    tipo: 'corrente' | 'poupanca' | 'dinheiro' | 'outra'
+    tipo: 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
     saldoInicialCentavos: number
-  }): Promise<unknown> => ipcRenderer.invoke('contas:cadastrar', dados)
+  }): Promise<unknown> => ipcRenderer.invoke('contas:cadastrar', dados),
+
+  listarTransferencias: (): Promise<unknown> => ipcRenderer.invoke('transferencias:listar'),
+
+  criarTransferencia: (dados: {
+    origemId: string
+    destinoId: string
+    valorCentavos: number
+    data: string
+    descricao: string
+  }): Promise<unknown> => ipcRenderer.invoke('transferencias:criar', dados)
 }
 
 contextBridge.exposeInMainWorld('fincontrol', fincontrolAPI)

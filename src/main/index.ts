@@ -5,9 +5,15 @@ import { iniciarBanco } from './database'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
-import { criarTabelaContas, listarContas, cadastrarConta } from './contas'
+import {
+  criarTabelaContas,
+  listarContas,
+  cadastrarConta,
+  listarTransferencias,
+  transferirEntreContas
+} from './contas'
 
-import type { NovaConta } from './contas'
+import type { NovaConta, NovaTransferencia } from './contas'
 
 import type { NovaTransacao } from './database'
 
@@ -56,6 +62,12 @@ app.whenReady().then(() => {
 
   ipcMain.handle('contas:cadastrar', (_evento, dados: NovaConta) => {
     return cadastrarConta(dados)
+  })
+
+  ipcMain.handle('transferencias:listar', () => listarTransferencias())
+
+  ipcMain.handle('transferencias:criar', (_evento, dados: NovaTransferencia) => {
+    return transferirEntreContas(dados)
   })
 
   ipcMain.handle('transacoes:listar', () => {
