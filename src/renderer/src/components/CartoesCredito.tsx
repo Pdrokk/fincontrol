@@ -127,7 +127,7 @@ export default function CartoesCredito(): React.JSX.Element {
     setLimite((cartao.limiteCentavos / 100).toFixed(2).replace('.', ','))
     setFechamento(String(cartao.diaFechamento))
     setVencimento(String(cartao.diaVencimento))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.getElementById('formulario-cartao')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function limparFormularioCartao(): void {
@@ -250,7 +250,7 @@ export default function CartoesCredito(): React.JSX.Element {
 
       <CentralPagamentos onPagamento={atualizar} />
 
-      <section className="painel">
+      <section id="formulario-cartao" className="painel">
         <h3>{cartaoEditandoId ? "Editar cartão" : "Cadastrar cartão"}</h3>
         <form className="formulario" onSubmit={(e): void => { void salvarCartao(e) }}>
           <label>Banco ou instituição
