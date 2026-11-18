@@ -928,3 +928,77 @@ button:disabled {
   justify-content: center;
   gap: 8px;
 }
+
+/* FINCONTROL - CARTÕES DE CRÉDITO */
+
+.fincontrol .pagina-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.fincontrol .pagina-cartoes > .painel {
+  margin-top: 0;
+}
+
+.fincontrol .pagina-cartoes .formulario .botao-primario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fincontrol .pagina-cartoes .cartao-conta h3 {
+  font-size: 22px;
+}
+
+.fincontrol .pagina-cartoes .transacao {
+  gap: 16px;
+}
+
+.fincontrol .pagina-cartoes .transacao-info {
+  min-width: 0;
+}
+
+.fincontrol .pagina-cartoes .transacao-info span {
+  overflow-wrap: anywhere;
+}
+
+/* Etapa 10 — pagamento de faturas */
+.fincontrol .fatura-linha {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.fincontrol .pagamento-acoes {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 0 12px;
+}
+
+.fincontrol .pagamento-acoes label {
+  display: flex;
+  flex: 1;
+  min-width: 210px;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.fincontrol .pagamento-acoes select {
+  height: 43px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+.fincontrol .pagamento-acoes button {
+  min-height: 43px;
+}

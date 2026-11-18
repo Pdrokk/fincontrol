@@ -30,9 +30,74 @@ interface TransferenciaFinanceira {
   descricao: string
 }
 
+interface CartaoFinanceiro {
+  id: string
+  contaId: string | null
+  nome: string
+  banco: string
+  limiteCentavos: number
+  limiteUtilizadoCentavos: number
+  limiteDisponivelCentavos: number
+  diaFechamento: number
+  diaVencimento: number
+}
+interface CompraCartaoFinanceira {
+  id: string
+  cartaoId: string
+  descricao: string
+  categoria: string
+  data: string
+  valorCentavos: number
+  numeroParcelas: number
+}
+interface FaturaPrevistaFinanceira {
+  cartaoId: string
+  competencia: string
+  vencimento: string
+  totalCentavos: number
+  quantidadeParcelas: number
+  paga: boolean
+  pagamentoId: string | null
+  contaPagamentoId: string | null
+  dataPagamento: string | null
+}
+
+interface PagamentoFaturaFinanceiro {
+  id: string
+  cartaoId: string
+  competencia: string
+  contaId: string
+  dataPagamento: string
+  valorCentavos: number
+}
+
+interface ParcelaRelatorioFinanceira {
+  id: string
+  descricao: string
+  valorCentavos: number
+  categoria: string
+  tipo: 'despesa'
+  data: string
+  contaId: null
+  origem: 'cartao'
+}
+
 declare global {
   interface Window {
     fincontrol: {
+      listarCartoes: () => Promise<CartaoFinanceiro[]>
+      cadastrarCartao: (
+        dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>
+      ) => Promise<CartaoFinanceiro>
+      listarComprasCartao: () => Promise<CompraCartaoFinanceira[]>
+      cadastrarCompraCartao: (
+        dados: Omit<CompraCartaoFinanceira, 'id'>
+      ) => Promise<CompraCartaoFinanceira>
+      listarFaturasPrevistas: () => Promise<FaturaPrevistaFinanceira[]>
+      listarParcelasRelatorio: () => Promise<ParcelaRelatorioFinanceira[]>
+      pagarFatura: (
+        dados: Omit<PagamentoFaturaFinanceiro, 'id' | 'valorCentavos'>
+      ) => Promise<PagamentoFaturaFinanceiro>
       listarTransacoes: () => Promise<TransacaoFinanceira[]>
 
       salvarTransacao: (dados: Omit<TransacaoFinanceira, 'id'>) => Promise<TransacaoFinanceira>

@@ -8,14 +8,17 @@ import {
   Tags,
   Settings,
   Wallet,
-  Landmark
+  Landmark,
+  CreditCard
 } from 'lucide-react'
 
 import ContasBancarias from './components/ContasBancarias'
+import CartoesCredito from './components/CartoesCredito'
 
 type Tipo = 'receita' | 'despesa'
 
-type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'configuracoes'
+type Pagina =
+  'dashboard' | 'transacoes' | 'relatorios' | 'categorias' | 'contas' | 'cartoes' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -25,6 +28,29 @@ interface Transacao {
   categoria: string
   data: string
   contaId: string | null
+}
+
+interface FaturaResumo {
+  cartaoId: string
+  competencia: string
+  vencimento: string
+  totalCentavos: number
+  quantidadeParcelas: number
+  paga: boolean
+  pagamentoId: string | null
+  contaPagamentoId: string | null
+  dataPagamento: string | null
+}
+
+interface ParcelaCartaoRelatorio {
+  id: string
+  descricao: string
+  valorCentavos: number
+  tipo: 'despesa'
+  categoria: string
+  data: string
+  contaId: null
+  origem: 'cartao'
 }
 
 interface ContaResumo {
@@ -45,6 +71,7 @@ const nomesPaginas: Record<Pagina, string> = {
   relatorios: 'Relatórios',
   categorias: 'Categorias',
   contas: 'Minhas contas',
+  cartoes: 'Cartões e faturas',
   configuracoes: 'Configurações'
 }
 
@@ -54,6 +81,7 @@ const iconesPaginas = {
   relatorios: ChartNoAxesCombined,
   categorias: Tags,
   contas: Landmark,
+  cartoes: CreditCard,
   configuracoes: Settings
 }
 
@@ -69,6 +97,8 @@ function App(): React.JSX.Element {
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [contas, setContas] = useState<ContaResumo[]>([])
   const [contaId, setContaId] = useState('')
+  const [faturasPrevistas, setFaturasPrevistas] = useState<FaturaResumo[]>([])
+  const [parcelasCartao, setParcelasCartao] = useState<ParcelaCartaoRelatorio[]>([])
 
   const [mesFiltro, setMesFiltro] = useState('todos')
   const [anoFiltro, setAnoFiltro] = useState('todos')
@@ -138,6 +168,21 @@ function App(): React.JSX.Element {
     }
   }, [pagina, transacoes])
 
+  useEffect((): (() => void) => {
+    let ativo = true
+    window.fincontrol
+      .listarFaturasPrevistas()
+      .then((lista): void => {
+        if (ativo) setFaturasPrevistas(lista)
+      })
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar faturas:', erro)
+      })
+    return (): void => {
+      ativo = false
+    }
+  }, [pagina])
+
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
   const [tipo, setTipo] = useState<Tipo>('despesa')
@@ -167,20 +212,26 @@ function App(): React.JSX.Element {
     'Dezembro'
   ]
 
-  const anosDisponiveis = Array.from(new Set(transacoes.map((t) => t.data.slice(0, 4)))).sort(
-    (a, b) => b.localeCompare(a)
-  )
+  // Receitas/despesas bancárias e parcelas do cartão são fontes distintas.
+  // O pagamento da fatura NÃO entra como despesa novamente.
+  const transacoesContabeis: Transacao[] = [...transacoes, ...parcelasCartao]
+  const anosDisponiveis = Array.from(
+    new Set(transacoesContabeis.map((t) => t.data.slice(0, 4)))
+  ).sort((a, b) => b.localeCompare(a))
 
-  const transacoesPeriodo = transacoes.filter((t) => {
+  function pertencePeriodo(t: Transacao): boolean {
     const ano = t.data.slice(0, 4)
     const mes = t.data.slice(5, 7)
+    return (
+      (anoFiltro === 'todos' || ano === anoFiltro) && (mesFiltro === 'todos' || mes === mesFiltro)
+    )
+  }
 
-    const correspondeAno = anoFiltro === 'todos' || ano === anoFiltro
-
-    const correspondeMes = mesFiltro === 'todos' || mes === mesFiltro
-
-    return correspondeAno && correspondeMes
-  })
+  const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
+  const transacoesBancariasPeriodo = transacoes.filter(pertencePeriodo)
+  const totalParcelasCartao = parcelasCartao
+    .filter(pertencePeriodo)
+    .reduce((total, t) => total + t.valorCentavos, 0)
 
   const totalReceitas = transacoesPeriodo
     .filter((t) => t.tipo === 'receita')
@@ -192,7 +243,7 @@ function App(): React.JSX.Element {
 
   const saldo = totalReceitas - totalDespesas
 
-  const transacoesFiltradas = transacoesPeriodo.filter((t) => {
+  const transacoesFiltradas = transacoesBancariasPeriodo.filter((t) => {
     const correspondeTipo = tipoFiltro === 'todos' || t.tipo === tipoFiltro
 
     const correspondeCategoria = categoriaFiltro === 'todas' || t.categoria === categoriaFiltro
@@ -425,6 +476,7 @@ function App(): React.JSX.Element {
         </header>
 
         {pagina === 'contas' && <ContasBancarias />}
+        {pagina === 'cartoes' && <CartoesCredito />}
 
         {(pagina === 'dashboard' || pagina === 'transacoes' || pagina === 'relatorios') && (
           <section className="filtros-periodo">
@@ -481,7 +533,7 @@ function App(): React.JSX.Element {
           <>
             <section className="cards">
               <div className="card">
-                <h3>Saldo Total</h3>
+                <h3>Resultado do período</h3>
                 <strong>{formatarMoeda(saldo)}</strong>
               </div>
 
@@ -491,7 +543,7 @@ function App(): React.JSX.Element {
               </div>
 
               <div className="card">
-                <h3>Despesas</h3>
+                <h3>Despesas (incluindo parcelas)</h3>
                 <strong className="despesa">{formatarMoeda(totalDespesas)}</strong>
               </div>
             </section>
@@ -516,13 +568,58 @@ function App(): React.JSX.Element {
               </div>
             </section>
 
+            <section className="painel">
+              <h3>Cartões e faturas previstas</h3>
+              <p>
+                Valores das parcelas cadastradas, sem impactar o saldo bancário até o pagamento.
+              </p>
+              <p>
+                Total previsto:{' '}
+                <strong>
+                  {formatarMoeda(faturasPrevistas.reduce((total, f) => total + f.totalCentavos, 0))}
+                </strong>
+              </p>
+              <p>
+                Faturas em aberto:{' '}
+                <strong>
+                  {formatarMoeda(
+                    faturasPrevistas
+                      .filter((f) => !f.paga)
+                      .reduce((total, f) => total + f.totalCentavos, 0)
+                  )}
+                </strong>
+              </p>
+              {faturasPrevistas
+                .filter((f) => !f.paga)
+                .slice(0, 3)
+                .map((f) => (
+                  <div className="transacao" key={`${f.cartaoId}-${f.competencia}`}>
+                    <div className="transacao-info">
+                      <strong>Fatura {f.competencia}</strong>
+                      <span>Vencimento: {f.vencimento.split('-').reverse().join('/')}</span>
+                    </div>
+                    <strong>{formatarMoeda(f.totalCentavos)}</strong>
+                  </div>
+                  <strong>{formatarMoeda(f.totalCentavos)}</strong>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="botao-editar"
+                onClick={(): void => setPagina('cartoes')}
+              >
+                Ver cartões e faturas
+              </button>
+            </section>
             <GraficosFinanceiros transacoes={transacoesPeriodo} />
 
             <section className="painel">
-              <h3>Últimas Transações</h3>
+              <h3>Últimas Transações Bancárias</h3>
 
               {listaTransacoes(
-                [...transacoesPeriodo].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5)
+                [...transacoesBancariasPeriodo]
+                  .sort((a, b) => b.data.localeCompare(a.data))
+                  .slice(0, 5)
               )}
             </section>
           </>
@@ -701,7 +798,7 @@ function App(): React.JSX.Element {
             <GraficosFinanceiros transacoes={transacoesPeriodo} />
 
             <section className="painel">
-              <h3>Resumo financeiro</h3>
+              <h3>Resumo financeiro por competência</h3>
 
               <p>Receitas: {formatarMoeda(totalReceitas)}</p>
 
