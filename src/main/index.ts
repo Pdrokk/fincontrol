@@ -71,6 +71,8 @@ app.whenReady().then(() => {
   ipcMain.handle('compras-cartao:listar', () => listarCompras())
   ipcMain.handle('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
   ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
+  ipcMain.handle('parcelas-relatorios:listar', () => listarParcelasParaRelatorios())
+  ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
 
   ipcMain.handle('contas:listar', () => {
     return listarContas()

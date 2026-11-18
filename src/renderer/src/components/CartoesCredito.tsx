@@ -7,6 +7,8 @@ interface Cartao {
   nome: string
   banco: string
   limiteCentavos: number
+  limiteUtilizadoCentavos: number
+  limiteDisponivelCentavos: number
   diaFechamento: number
   diaVencimento: number
 }
@@ -14,6 +16,7 @@ interface Conta {
   id: string
   nome: string
   banco: string
+  saldoAtualCentavos: number
 }
 interface Compra {
   id: string
@@ -30,6 +33,10 @@ interface Fatura {
   vencimento: string
   totalCentavos: number
   quantidadeParcelas: number
+  paga: boolean
+  pagamentoId: string | null
+  contaPagamentoId: string | null
+  dataPagamento: string | null
 }
 
 function moeda(centavos: number): string {
@@ -59,6 +66,7 @@ export default function CartoesCredito(): React.JSX.Element {
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [contaPagamento, setContaPagamento] = useState<Record<string, string>>({})
 
   const [banco, setBanco] = useState('')
   const [nome, setNome] = useState('')
@@ -180,7 +188,9 @@ export default function CartoesCredito(): React.JSX.Element {
     const c = cartoes.find((item) => item.id === id)
     return c ? `${c.banco} · ${c.nome}` : 'Cartão não encontrado'
   }
-  const totalPrevisto = faturas.reduce((soma, fatura) => soma + fatura.totalCentavos, 0)
+  const totalAberto = faturas
+    .filter((f) => !f.paga)
+    .reduce((soma, fatura) => soma + fatura.totalCentavos, 0)
 
   return (
     <div className="pagina-cartoes">
