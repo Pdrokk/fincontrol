@@ -119,8 +119,9 @@ export function processarSalariosVencidos(): void {
             )
           ORDER BY ABS(CAST(substr(t.data, 9, 2) AS INTEGER) - ?), t.rowid DESC
           LIMIT 1
-        `).get(salario.contaId, salario.valorCentavos, competencia, salario.dia)
-          as { id: string } | undefined
+        `).get(salario.contaId, salario.valorCentavos, competencia, salario.dia) as
+          | { id: string }
+          | undefined
         if (manual) {
           db.prepare(`
             INSERT INTO salarios_lancamentos (salario_id, competencia, transacao_id)
