@@ -69,11 +69,21 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
       alert('Informe um salário válido.')
       return
     }
+    const inicio = `${mesInicio}-${String(dia).padStart(2, '0')}`
+    const hoje = (() => {
+      const d = new Date()
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    })()
+    const permitirRetroativo = inicio < hoje
+    if (permitirRetroativo && !window.confirm(
+      'O início escolhido é anterior a hoje. Isso lançará imediatamente os salários vencidos e aumentará o saldo. Confirma os recebimentos retroativos?'
+    )) return
     try {
       setSalvando(true)
       await window.fincontrol.cadastrarSalario({
         contaId, descricao: descricao.trim(), valorCentavos,
-        dia: Number(dia), mesInicio, quantidadeMeses: Number(quantidadeMeses)
+        dia: Number(dia), mesInicio, quantidadeMeses: Number(quantidadeMeses),
+        permitirRetroativo
       })
       await recarregarSalarios()
       await onAtualizar()
