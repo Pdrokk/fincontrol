@@ -140,12 +140,10 @@ export function listarContas(): Conta[] {
       - COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE origem_id = c.id AND data <= date('now', 'localtime')), 0)
       - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_fatura pf WHERE pf.conta_id = c.id
                    AND pf.data_pagamento <= date('now', 'localtime')
-                   AND NOT EXISTS (SELECT 1 FROM estornos_pagamentos e
-                     WHERE e.tipo = 'fatura' AND e.pagamento_id = pf.id)), 0)
+                   AND pf.estornado = 0), 0)
       - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_parcelas pp WHERE pp.conta_id = c.id
                    AND pp.data_pagamento <= date('now', 'localtime')
-                   AND NOT EXISTS (SELECT 1 FROM estornos_pagamentos e
-                     WHERE e.tipo = 'parcela' AND e.pagamento_id = pp.id)), 0)
+                   AND pp.estornado = 0), 0)
       + COALESCE((SELECT SUM(diferenca_centavos) FROM ajustes_saldo WHERE conta_id = c.id AND data <= date('now', 'localtime')), 0)
         AS saldoAtualCentavos
     FROM contas c ORDER BY c.criado_em DESC
