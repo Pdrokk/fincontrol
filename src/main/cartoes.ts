@@ -554,6 +554,90 @@ export function listarDespesasCartaoRealizadas(): DespesaCartaoRealizada[] {
   }))
 }
 
+export function listarEstornosPagamentos(): EstornoPagamento[] {
+  return obterBanco().prepare(`
+    SELECT id, pagamento_id AS pagamentoId, tipo, conta_id AS contaId,
+      valor_centavos AS valorCentavos, data_pagamento AS dataPagamento,
+      motivo, estornado_em AS estornadoEm
+    FROM estornos_pagamentos
+    ORDER BY estornado_em DESC
+  `).all() as unknown as EstornoPagamento[]
+}
+
+export function estornarPagamento(dados: NovoEstornoPagamento): EstornoPagamento {
+  if (!dados || typeof dados.pagamentoId !== 'string' || !dados.pagamentoId ||
+      (dados.tipo !== 'fatura' && dados.tipo !== 'parcela') ||
+      typeof dados.motivo !== 'string' || dados.motivo.trim().length < 5 ||
+      dados.motivo.length > 200) {
+    throw new Error('Informe um pagamento válido e o motivo do estorno (mínimo 5 caracteres).')
+  }
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const tabela = dados.tipo === 'fatura' ? 'pagamentos_fatura' : 'pagamentos_parcelas'
+    const pagamento = db.prepare(`
+      SELECT id, conta_id AS contaId, valor_centavos AS valorCentavos,
+        data_pagamento AS dataPagamento
+      FROM ${tabela} WHERE id = ? AND estornado = 0
+    `).get(dados.pagamentoId) as {
+      id: string
+      contaId: string
+      valorCentavos: number
+      dataPagamento: string
+    } | undefined
+    if (!pagamento) throw new Error('Pagamento não encontrado ou já estornado.')
+
+    const vinculacao = dados.tipo === 'fatura'
+      ? db.prepare('SELECT cartao_id AS cartaoId FROM pagamentos_fatura WHERE id = ?')
+          .get(dados.pagamentoId) as { cartaoId: string }
+      : db.prepare(`SELECT p.cartao_id AS cartaoId FROM pagamentos_parcelas pp
+          JOIN parcelas_cartao p ON p.id = pp.parcela_id WHERE pp.id = ?`)
+          .get(dados.pagamentoId) as { cartaoId: string }
+    const cartao = listarCartoes().find((c) => c.id === vinculacao.cartaoId)
+    if (!cartao || cartao.limiteDisponivelCentavos < pagamento.valorCentavos) {
+      throw new Error('Não é possível estornar: o limite do cartão seria ultrapassado. Ajuste o limite antes.')
+    }
+
+    db.prepare(`UPDATE ${tabela} SET estornado = 1 WHERE id = ?`)
+      .run(dados.pagamentoId)
+    const estorno: EstornoPagamento = {
+      id: randomUUID(),
+      pagamentoId: pagamento.id,
+      tipo: dados.tipo,
+      contaId: pagamento.contaId,
+      valorCentavos: pagamento.valorCentavos,
+      dataPagamento: pagamento.dataPagamento,
+      motivo: dados.motivo.trim(),
+      estornadoEm: new Date().toISOString()
+    }
+    db.prepare(`
+      INSERT INTO estornos_pagamentos
+      (id, pagamento_id, tipo, conta_id, valor_centavos, data_pagamento, motivo, estornado_em)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(estorno.id, estorno.pagamentoId, estorno.tipo, estorno.contaId,
+      estorno.valorCentavos, estorno.dataPagamento, estorno.motivo, estorno.estornadoEm)
+
+    if (dados.tipo === 'parcela') {
+      db.prepare(`DELETE FROM parcelas_arquivadas WHERE parcela_id IN (
+        SELECT parcela_id FROM pagamentos_parcelas WHERE id = ?
+      )`).run(dados.pagamentoId)
+    } else {
+      db.prepare(`DELETE FROM parcelas_arquivadas WHERE parcela_id IN (
+        SELECT p.id FROM parcelas_cartao p
+        JOIN pagamentos_fatura pf ON pf.cartao_id = p.cartao_id
+          AND pf.competencia = p.competencia
+        WHERE pf.id = ?
+      )`).run(dados.pagamentoId)
+    }
+
+    db.exec('COMMIT')
+    return estorno
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
+}
+
 export function listarParcelasParaRelatorios(): ParcelaRelatorio[] {
   const registros = obterBanco().prepare(`
     SELECT p.id, (c.descricao || ' (' || p.numero || '/' || c.numero_parcelas || ')') AS descricao,
