@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Landmark,
+  Plus,
+  Wallet,
+  Pencil,
+  CirclePlus,
+  SlidersHorizontal,
+  Trash2
+} from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
 import SalarioRecorrente from './SalarioRecorrente'
 import { corBanco, gradienteBanco } from '../utils/coresBancos'
@@ -166,15 +175,22 @@ export default function ContasBancarias(): React.JSX.Element {
   }
 
   async function removerConta(conta: Conta): Promise<void> {
-    if (!window.confirm(
-      `Excluir a conta "${conta.banco} · ${conta.nome}"? Apenas contas sem histórico, cartões ou salários vinculados podem ser excluídas.`
-    )) return
+    if (
+      !window.confirm(
+        `Excluir a conta "${conta.banco} · ${conta.nome}"? Apenas contas sem histórico, cartões ou salários vinculados podem ser excluídas.`
+      )
+    )
+      return
     try {
       await window.fincontrol.excluirConta(conta.id)
       if (contaSelecionadaId === conta.id) setContaSelecionadaId('')
       await recarregar()
     } catch (falha) {
-      alert(falha instanceof Error ? falha.message : 'Esta conta possui vínculos e não pode ser excluída.')
+      alert(
+        falha instanceof Error
+          ? falha.message
+          : 'Esta conta possui vínculos e não pode ser excluída.'
+      )
     }
   }
 
@@ -197,13 +213,20 @@ export default function ContasBancarias(): React.JSX.Element {
         <div className="resumo-contas">
           <span>Saldo total disponível nas contas</span>
           <strong>{formatarMoeda(total)}</strong>
-          <small>Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de saldo</small>
+          <small>
+            Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de
+            saldo
+          </small>
         </div>
         {carregando && <p>Carregando contas...</p>}
         {erro && <p role="alert">{erro}</p>}
         <div className="grade-contas">
           {contas.map((conta) => (
-            <article className="cartao-conta" key={conta.id} style={{ background: gradienteBanco(conta.banco) }}>
+            <article
+              className="cartao-conta"
+              key={conta.id}
+              style={{ background: gradienteBanco(conta.banco) }}
+            >
               <div className="cartao-conta-topo">
                 <Wallet size={24} />
                 <strong>{conta.banco}</strong>
@@ -224,7 +247,12 @@ export default function ContasBancarias(): React.JSX.Element {
                 <button type="button" onClick={(): void => abrirGerenciar(conta.id, 'ajuste')}>
                   <SlidersHorizontal size={15} /> Corrigir saldo
                 </button>
-                <button type="button" onClick={(): void => { void removerConta(conta) }}>
+                <button
+                  type="button"
+                  onClick={(): void => {
+                    void removerConta(conta)
+                  }}
+                >
                   <Trash2 size={15} /> Excluir
                 </button>
               </div>

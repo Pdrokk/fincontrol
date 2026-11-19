@@ -1,9 +1,11 @@
 # Etapa 15 — Gráficos: realizado, previsto e paginação
 
 ## Diagnóstico
+
 Anteriormente, `listarParcelasParaRelatorios()` incluía todas as parcelas de cartão nos gráficos, mesmo aquelas previstas para meses futuros. O gráfico "Evolução do saldo" subtraía essas parcelas futuras, parecendo representar um saldo bancário negativo. O pagamento de fatura não era criado como despesa no banco, mas o relatório não diferenciava previsão e realizado.
 
 ## Comportamento novo
+
 - **Realizado**: transações bancárias lançadas até hoje + parcelas de cartão efetivamente pagas, na data do pagamento. O pagamento não é somado duas vezes.
 - **Previsto**: somente parcelas ainda não pagas, na competência da fatura.
 - **Navegação**: páginas com até seis meses. Meses sem movimentações aparecem zerados quando estão entre outros meses com dados.
@@ -13,6 +15,7 @@ Anteriormente, `listarParcelasParaRelatorios()` incluía todas as parcelas de ca
 - **Receitas e despesas do Dashboard/Relatórios**: por padrão, efetivamente realizadas; faturas pendentes continuam visíveis separadamente.
 
 ## Validar no Windows
+
 Antes: feche o Electron e faça backup do `fincontrol.db`.
 
 ```powershell
@@ -25,6 +28,7 @@ npm.cmd run dev
 ```
 
 ## Testes sugeridos
+
 1. Compra de R$ 3.600,00 em 12 vezes: nenhuma parcela futura aparece como despesa no modo **Realizado** antes do pagamento.
 2. No modo **Previsto**, todas as parcelas pendentes aparecem distribuídas nos meses corretos.
 3. Pagar duas parcelas (R$ 300 + R$ 300): ambas deixam o modo Previsto e passam a constar no Realizado na data do pagamento, uma única vez.
@@ -37,6 +41,7 @@ npm.cmd run dev
 10. Reiniciar o aplicativo e repetir a consulta.
 
 ## Observações
+
 - A opção **Realizado** usa a data de pagamento para despesas de cartão, enquanto **Previsto** usa a competência da fatura. Isso é uma apresentação de **fluxo realizado versus compromissos futuros**, não um demonstrativo contábil formal por competência.
 - Se o usuário cadastrou manualmente uma despesa para o pagamento de uma fatura, além do pagamento na Central, ela poderá estar duplicada no histórico manual. Essa versão não tenta remover lançamentos manuais automaticamente.
 - Para transações bancárias incluídas com datas futuras, o modo Realizado as omite até a data chegar.

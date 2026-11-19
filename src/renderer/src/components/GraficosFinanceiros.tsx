@@ -1,7 +1,17 @@
 import { useState } from 'react'
 import {
-  Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -26,14 +36,17 @@ const moeda = (reais: number): string =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(reais)
 
 const rotuloMes = (mes: string): string => {
-  const [ano, numero] = mes.split('-')
-  const nome = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
-    .format(new Date(`${mes}-01T12:00:00Z`))
+  const ano = mes.split('-')[0]
+  const nome = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' }).format(
+    new Date(`${mes}-01T12:00:00Z`)
+  )
   return `${nome}/${ano.slice(2)}`
 }
 
 export default function GraficosFinanceiros({
-  transacoes, previsoes = [], compacto = false
+  transacoes,
+  previsoes = [],
+  compacto = false
 }: Props): React.JSX.Element {
   const [modo, setModo] = useState<'realizado' | 'previsto'>('realizado')
   const [pagina, setPagina] = useState<number | null>(null)
@@ -57,7 +70,10 @@ export default function GraficosFinanceiros({
     while (`${ano}-${String(mes).padStart(2, '0')}` <= ultima && meses.length < 1200) {
       meses.push(`${ano}-${String(mes).padStart(2, '0')}`)
       mes += 1
-      if (mes > 12) { mes = 1; ano += 1 }
+      if (mes > 12) {
+        mes = 1
+        ano += 1
+      }
     }
   }
 
@@ -85,30 +101,65 @@ export default function GraficosFinanceiros({
     categorias.set(item.categoria, (categorias.get(item.categoria) ?? 0) + item.valorCentavos)
   }
 
-  const dadosCategorias = [...categorias.entries()].sort((a, b) => b[1] - a[1])
+  const dadosCategorias = [...categorias.entries()]
+    .sort((a, b) => b[1] - a[1])
     .map(([nome, centavos], index) => ({
-      nome, valor: centavos / 100, fill: cores[index % cores.length]
+      nome,
+      valor: centavos / 100,
+      fill: cores[index % cores.length]
     }))
 
   return (
     <div className="graficos-relatorio">
       <div className="graficos-toolbar">
         <div className="graficos-abas" role="group" aria-label="Visão dos gráficos">
-          <button type="button" aria-pressed={modo === 'realizado'}
+          <button
+            type="button"
+            aria-pressed={modo === 'realizado'}
             className={modo === 'realizado' ? 'ativo' : ''}
-            onClick={(): void => { setModo('realizado'); setPagina(null) }}>Realizado</button>
-          <button type="button" aria-pressed={modo === 'previsto'}
+            onClick={(): void => {
+              setModo('realizado')
+              setPagina(null)
+            }}
+          >
+            Realizado
+          </button>
+          <button
+            type="button"
+            aria-pressed={modo === 'previsto'}
             className={modo === 'previsto' ? 'ativo' : ''}
-            onClick={(): void => { setModo('previsto'); setPagina(0) }}>Previsto</button>
+            onClick={(): void => {
+              setModo('previsto')
+              setPagina(0)
+            }}
+          >
+            Previsto
+          </button>
         </div>
         <div className="graficos-paginacao">
-          <button type="button" aria-label="Seis meses anteriores" title="Meses anteriores"
+          <button
+            type="button"
+            aria-label="Seis meses anteriores"
+            title="Meses anteriores"
             disabled={paginaAtual === 0}
-            onClick={(): void => setPagina(paginaAtual - 1)}><ChevronLeft size={17} /></button>
-          <span>{visiveis.length ? `${rotuloMes(visiveis[0])} – ${rotuloMes(visiveis[visiveis.length - 1])}` : 'Sem dados'}</span>
-          <button type="button" aria-label="Próximos seis meses" title="Próximos meses"
+            onClick={(): void => setPagina(paginaAtual - 1)}
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <span>
+            {visiveis.length
+              ? `${rotuloMes(visiveis[0])} – ${rotuloMes(visiveis[visiveis.length - 1])}`
+              : 'Sem dados'}
+          </span>
+          <button
+            type="button"
+            aria-label="Próximos seis meses"
+            title="Próximos meses"
             disabled={paginaAtual >= totalPaginas - 1}
-            onClick={(): void => setPagina(paginaAtual + 1)}><ChevronRight size={17} /></button>
+            onClick={(): void => setPagina(paginaAtual + 1)}
+          >
+            <ChevronRight size={17} />
+          </button>
         </div>
       </div>
       <p className="graficos-explicacao">
@@ -136,7 +187,9 @@ export default function GraficosFinanceiros({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          ) : <p className="grafico-vazio">Não há lançamentos nesta visão.</p>}
+          ) : (
+            <p className="grafico-vazio">Não há lançamentos nesta visão.</p>
+          )}
         </section>
         <section className="grafico-card">
           <h3>Despesas por categoria</h3>
@@ -146,8 +199,14 @@ export default function GraficosFinanceiros({
               <div className="grafico-area">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={dadosCategorias} dataKey="valor" nameKey="nome"
-                      innerRadius="52%" outerRadius="78%" paddingAngle={2} />
+                    <Pie
+                      data={dadosCategorias}
+                      dataKey="valor"
+                      nameKey="nome"
+                      innerRadius="52%"
+                      outerRadius="78%"
+                      paddingAngle={2}
+                    />
                     <Tooltip formatter={(value): string => moeda(Number(value))} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -162,15 +221,23 @@ export default function GraficosFinanceiros({
                 ))}
               </div>
             </>
-          ) : <p className="grafico-vazio">Sem despesas nesta janela.</p>}
+          ) : (
+            <p className="grafico-vazio">Sem despesas nesta janela.</p>
+          )}
         </section>
 
         {!compacto && (
           <section className="grafico-card grafico-largo">
-            <h3>{modo === 'realizado' ? 'Resultado acumulado da janela' : 'Compromissos acumulados da janela'}</h3>
-            <p>{modo === 'realizado'
-              ? 'Receitas menos despesas realizadas, iniciando em zero nesta página; não é o saldo das contas.'
-              : 'Soma de parcelas pendentes nesta página, sem considerar receitas futuras.'}</p>
+            <h3>
+              {modo === 'realizado'
+                ? 'Resultado acumulado da janela'
+                : 'Compromissos acumulados da janela'}
+            </h3>
+            <p>
+              {modo === 'realizado'
+                ? 'Receitas menos despesas realizadas, iniciando em zero nesta página; não é o saldo das contas.'
+                : 'Soma de parcelas pendentes nesta página, sem considerar receitas futuras.'}
+            </p>
             {dados.length ? (
               <div className="grafico-area">
                 <ResponsiveContainer width="100%" height="100%">
@@ -179,13 +246,20 @@ export default function GraficosFinanceiros({
                     <XAxis dataKey="mes" />
                     <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
                     <Tooltip formatter={(value): string => moeda(Number(value))} />
-                    <Line type="monotone" dataKey="resultado"
+                    <Line
+                      type="monotone"
+                      dataKey="resultado"
                       name={modo === 'realizado' ? 'Resultado' : 'Parcelas pendentes acumuladas'}
-                      stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} />
+                      stroke="#2563eb"
+                      strokeWidth={2.5}
+                      dot={{ r: 4 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            ) : <p className="grafico-vazio">Sem dados nesta janela.</p>}
+            ) : (
+              <p className="grafico-vazio">Sem dados nesta janela.</p>
+            )}
           </section>
         )}
       </div>

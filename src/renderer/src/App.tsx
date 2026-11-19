@@ -103,7 +103,9 @@ function App(): React.JSX.Element {
   const [parcelasPendentesIds, setParcelasPendentesIds] = useState<string[]>([])
   const [despesasCartaoPagas, setDespesasCartaoPagas] = useState<Transacao[]>([])
 
-  const [mesFiltro, setMesFiltro] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [mesFiltro, setMesFiltro] = useState(() =>
+    String(new Date().getMonth() + 1).padStart(2, '0')
+  )
   const [anoFiltro, setAnoFiltro] = useState(() => String(new Date().getFullYear()))
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
@@ -178,17 +180,21 @@ function App(): React.JSX.Element {
       window.fincontrol.listarParcelasRelatorio(),
       window.fincontrol.listarParcelasPagamento(),
       window.fincontrol.listarDespesasCartaoRealizadas()
-    ]).then(([listaFaturas, listaParcelas, listaPagamentos, listaRealizadas]): void => {
-      if (ativo) {
-        setFaturasPrevistas(listaFaturas)
-        setParcelasCartao(listaParcelas)
-        setParcelasPendentesIds(listaPagamentos.filter((p) => !p.paga).map((p) => p.id))
-        setDespesasCartaoPagas(listaRealizadas)
-      }
-    }).catch((erro: unknown): void => {
-      console.error('Erro ao carregar faturas e parcelas:', erro)
-    })
-    return (): void => { ativo = false }
+    ])
+      .then(([listaFaturas, listaParcelas, listaPagamentos, listaRealizadas]): void => {
+        if (ativo) {
+          setFaturasPrevistas(listaFaturas)
+          setParcelasCartao(listaParcelas)
+          setParcelasPendentesIds(listaPagamentos.filter((p) => !p.paga).map((p) => p.id))
+          setDespesasCartaoPagas(listaRealizadas)
+        }
+      })
+      .catch((erro: unknown): void => {
+        console.error('Erro ao carregar faturas e parcelas:', erro)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [pagina])
 
   const [descricao, setDescricao] = useState('')
@@ -224,23 +230,31 @@ function App(): React.JSX.Element {
   // Parcelas ainda em aberto ficam apenas na previsão, sem reduzir os resultados reais.
   const hoje = (() => {
     const d = new Date()
-    return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'),
-      String(d.getDate()).padStart(2, '0')].join('-')
+    return [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0')
+    ].join('-')
   })()
-  const transacoesRealizadas: Transacao[] = [...transacoes, ...despesasCartaoPagas]
-    .filter((t) => t.data <= hoje)
+  const transacoesRealizadas: Transacao[] = [...transacoes, ...despesasCartaoPagas].filter(
+    (t) => t.data <= hoje
+  )
   const pendentes = new Set(parcelasPendentesIds)
   const transacoesPrevistas: Transacao[] = parcelasCartao.filter((t) => pendentes.has(t.id))
   const transacoesContabeis = transacoesRealizadas
   const anosDisponiveis = Array.from(
-    new Set([String(new Date().getFullYear()), ...transacoesContabeis.map((t) => t.data.slice(0, 4))])
+    new Set([
+      String(new Date().getFullYear()),
+      ...transacoesContabeis.map((t) => t.data.slice(0, 4))
+    ])
   ).sort((a, b) => b.localeCompare(a))
 
   function pertencePeriodo(t: Transacao): boolean {
     const ano = t.data.slice(0, 4)
     const mes = t.data.slice(5, 7)
-    return (anoFiltro === 'todos' || ano === anoFiltro) &&
-      (mesFiltro === 'todos' || mes === mesFiltro)
+    return (
+      (anoFiltro === 'todos' || ano === anoFiltro) && (mesFiltro === 'todos' || mes === mesFiltro)
+    )
   }
 
   const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
@@ -540,7 +554,10 @@ function App(): React.JSX.Element {
 
         {pagina === 'dashboard' && (
           <DashboardResumo
-            saldoContasCentavos={contas.reduce((total, conta) => total + conta.saldoAtualCentavos, 0)}
+            saldoContasCentavos={contas.reduce(
+              (total, conta) => total + conta.saldoAtualCentavos,
+              0
+            )}
             receitasCentavos={totalReceitas}
             despesasCentavos={totalDespesas}
             transacoes={transacoesRealizadas}
@@ -724,7 +741,10 @@ function App(): React.JSX.Element {
 
         {pagina === 'relatorios' && (
           <>
-            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} />
+            <GraficosFinanceiros
+              transacoes={transacoesRealizadas}
+              previsoes={transacoesPrevistas}
+            />
 
             <section className="painel">
               <h3>Resumo financeiro por competência</h3>
@@ -733,7 +753,7 @@ function App(): React.JSX.Element {
 
               <p>Despesas: {formatarMoeda(totalDespesas)}</p>
 
-              <p>Saldo: {formatarMoeda(saldo)}</p>
+              <p>Resultado financeiro: {formatarMoeda(totalReceitas - totalDespesas)}</p>
 
               <h3 className="subtitulo">Despesas por categoria</h3>
 
@@ -776,13 +796,17 @@ function App(): React.JSX.Element {
               <h4 className="subtitulo">Receitas</h4>
               <div className="etiquetas">
                 {categorias.receita.map((nome) => (
-                  <span className="etiqueta" key={nome}>{nome}</span>
+                  <span className="etiqueta" key={nome}>
+                    {nome}
+                  </span>
                 ))}
               </div>
               <h4 className="subtitulo">Despesas</h4>
               <div className="etiquetas">
                 {categorias.despesa.map((nome) => (
-                  <span className="etiqueta" key={nome}>{nome}</span>
+                  <span className="etiqueta" key={nome}>
+                    {nome}
+                  </span>
                 ))}
               </div>
             </section>

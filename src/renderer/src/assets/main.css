@@ -1024,7 +1024,7 @@ button:disabled {
   color: #fff;
   cursor: pointer;
   font-size: 12px;
-  transition: background .15s ease;
+  transition: background 0.15s ease;
 }
 
 .fincontrol .acoes-conta button:hover {
@@ -1105,7 +1105,6 @@ button:disabled {
   gap: 5px;
 }
 
-
 /* ============================
    Etapa 13 — interface minimalista
    ============================ */
@@ -1181,7 +1180,9 @@ button:disabled {
   border-radius: 50%;
   background: #e2e8f0;
   border: 1px solid #cbd5e1;
-  transition: transform 0.18s ease, background 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
   pointer-events: none;
 }
 
@@ -1602,7 +1603,9 @@ button:disabled {
   background: transparent;
   color: #94a3b8;
   cursor: pointer;
-  transition: color .15s ease, background .15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .fincontrol .botao-tema-lateral:hover {
@@ -1730,7 +1733,7 @@ button:disabled {
 }
 
 .fincontrol .graficos-paginacao button:disabled {
-  opacity: .3;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
