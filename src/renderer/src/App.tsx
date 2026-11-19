@@ -113,10 +113,37 @@ function App(): React.JSX.Element {
   const [salvando, setSalvando] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [erroBanco, setErroBanco] = useState('')
+  const [backupOcupado, setBackupOcupado] = useState(false)
 
   const [tema, setTema] = useState<'light' | 'dark'>(() => {
     return localStorage.getItem('fincontrol-tema') === 'dark' ? 'dark' : 'light'
   })
+
+  async function exportarBackupUI(): Promise<void> {
+    if (backupOcupado) return
+    try {
+      setBackupOcupado(true)
+      const arquivo = await window.fincontrol.exportarBackup()
+      if (arquivo) alert(`Backup criado: ${arquivo}`)
+    } catch (falha) {
+      alert(falha instanceof Error ? falha.message : 'Falha ao exportar backup.')
+    } finally {
+      setBackupOcupado(false)
+    }
+  }
+
+  async function restaurarBackupUI(): Promise<void> {
+    if (backupOcupado) return
+    try {
+      setBackupOcupado(true)
+      await window.fincontrol.restaurarBackup()
+      // O processo principal recarrega esta janela após uma restauração bem-sucedida.
+    } catch (falha) {
+      alert(falha instanceof Error ? falha.message : 'Falha ao restaurar backup.')
+    } finally {
+      setBackupOcupado(false)
+    }
+  }
 
   function alternarTema(): void {
     setTema((anterior) => {
@@ -819,9 +846,24 @@ function App(): React.JSX.Element {
               </div>
             </section>
             <section className="painel">
+              <h3>Backup e restauração</h3>
+              <p>Exporte uma cópia SQLite dos seus dados para outro local ou restaure um backup validado.</p>
+              <p>Ao restaurar, os dados atuais serão substituídos. O FinControl cria um backup de emergência antes dessa troca.</p>
+              <div className="configuracoes-backup">
+                <button type="button" className="botao-primario" disabled={backupOcupado}
+                  onClick={(): void => { void exportarBackupUI() }}>
+                  {backupOcupado ? 'Processando...' : 'Exportar backup'}
+                </button>
+                <button type="button" className="botao-secundario" disabled={backupOcupado}
+                  onClick={(): void => { void restaurarBackupUI() }}>
+                  Restaurar backup
+                </button>
+              </div>
+            </section>
+            <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão de desenvolvimento: 0.1.0</p>
+              <p>Versão em desenvolvimento — preparação para FinControl 1.0</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>
