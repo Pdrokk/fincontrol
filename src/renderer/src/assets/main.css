@@ -1743,3 +1743,72 @@ button:disabled {
 .fincontrol .graficos-relatorio .graficos-financeiros {
   margin-top: 8px;
 }
+
+
+/* Auditoria: recuperação de erros, backup e histórico de estornos */
+.fincontrol .configuracoes-backup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.fincontrol .configuracoes-backup button {
+  min-height: 40px;
+  border-radius: 9px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.fincontrol .configuracoes-backup button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.fincontrol .central-estornos {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-color);
+}
+
+.fincontrol .central-estornos h4 {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.tela-recuperacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: #0b1220;
+  color: #f8fafc;
+}
+
+.tela-recuperacao .painel {
+  width: min(100%, 560px);
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 26px;
+}
+
+.tela-recuperacao h1 {
+  font-size: 24px;
+  margin: 0 0 14px;
+}
+
+.tela-recuperacao p {
+  color: #cbd5e1;
+}
+
+.tela-recuperacao button {
+  background: #2563eb;
+  border: 0;
+  border-radius: 9px;
+  color: #fff;
+  padding: 11px 16px;
+  margin-top: 18px;
+  cursor: pointer;
+}
