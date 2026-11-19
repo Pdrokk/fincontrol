@@ -23,6 +23,8 @@ interface Props {
   despesasCentavos: number
   transacoes: Transacao[]
   previsoes: Transacao[]
+  filtroMes: string
+  filtroAno: string
   transacoesRecentes: Transacao[]
   faturas: Fatura[]
   onPagamentos: () => void
@@ -36,7 +38,7 @@ const dataBR = (data: string): string => data.split('-').reverse().join('/')
 
 export default function DashboardResumo({
   saldoContasCentavos, receitasCentavos, despesasCentavos, transacoes, previsoes,
-  transacoesRecentes, faturas, onPagamentos, onTransacoes
+  filtroMes, filtroAno, transacoesRecentes, faturas, onPagamentos, onTransacoes
 }: Props): React.JSX.Element {
   const emAberto = faturas.filter((f) => !f.paga && f.saldoPendenteCentavos > 0)
   const proximas = [...emAberto].sort((a, b) => a.vencimento.localeCompare(b.vencimento)).slice(0, 3)
@@ -73,7 +75,7 @@ export default function DashboardResumo({
           <p>Realizado e previsto em visões separadas, por janelas de seis meses.</p>
         </div>
       </div>
-      <GraficosFinanceiros transacoes={transacoes} previsoes={previsoes} compacto />
+      <GraficosFinanceiros transacoes={transacoes} previsoes={previsoes} filtroMes={filtroMes} filtroAno={filtroAno} compacto />
 
       <div className="dashboard-duas-colunas">
         <section className="painel dashboard-lista">
