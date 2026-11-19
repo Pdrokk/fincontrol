@@ -233,7 +233,11 @@ function App(): React.JSX.Element {
   const transacoesPrevistas: Transacao[] = parcelasCartao.filter((t) => pendentes.has(t.id))
   const transacoesContabeis = transacoesRealizadas
   const anosDisponiveis = Array.from(
-    new Set([String(new Date().getFullYear()), ...transacoesContabeis.map((t) => t.data.slice(0, 4))])
+    new Set([
+      String(new Date().getFullYear()),
+      ...transacoesContabeis.map((t) => t.data.slice(0, 4)),
+      ...transacoesPrevistas.map((t) => t.data.slice(0, 4))
+    ])
   ).sort((a, b) => b.localeCompare(a))
 
   function pertencePeriodo(t: Transacao): boolean {
@@ -267,15 +271,41 @@ function App(): React.JSX.Element {
 
   const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => b.data.localeCompare(a.data))
 
-  const despesasPorCategoria = categorias.despesa
-    .map((nome) => ({
-      nome,
-      total: transacoesPeriodo
-        .filter((t) => t.tipo === 'despesa' && t.categoria === nome)
-        .reduce((soma, t) => soma + t.valorCentavos, 0)
-    }))
-    .filter((item) => item.total > 0)
+  // Categorias reais vêm das transações, não somente das opções fixas da UI.
+  const totaisCategorias = new Map<string, number>()
+  for (const t of transacoesPeriodo) {
+    if (t.tipo === 'despesa') {
+      totaisCategorias.set(t.categoria, (totaisCategorias.get(t.categoria) ?? 0) + t.valorCentavos)
+    }
+  }
+  const despesasPorCategoria = [...totaisCategorias.entries()]
+    .map(([nome, total]) => ({ nome, total }))
     .sort((a, b) => b.total - a.total)
+
+  useEffect(() => {
+    let ativo = true
+    const cancelar = window.fincontrol.onAtualizacaoAutomatica(() => {
+      Promise.all([
+        window.fincontrol.listarTransacoes(),
+        window.fincontrol.listarContas(),
+        window.fincontrol.listarFaturasPrevistas(),
+        window.fincontrol.listarParcelasRelatorio(),
+        window.fincontrol.listarParcelasPagamento(),
+        window.fincontrol.listarDespesasCartaoRealizadas()
+      ]).then(([ts, cs, fs, ps, pagamentos, realizadas]) => {
+        if (!ativo) return
+        setTransacoes(ts)
+        setContas(cs)
+        setFaturasPrevistas(fs)
+        setParcelasCartao(ps)
+        setParcelasPendentesIds(pagamentos.filter((p) => !p.paga).map((p) => p.id))
+        setDespesasCartaoPagas(realizadas)
+      }).catch((erro: unknown) => {
+        console.error('Falha ao atualizar dados automaticamente:', erro)
+      })
+    })
+    return () => { ativo = false; cancelar() }
+  }, [])
 
   function iniciarEdicao(transacao: Transacao): void {
     setEditandoId(transacao.id)
@@ -545,6 +575,8 @@ function App(): React.JSX.Element {
             despesasCentavos={totalDespesas}
             transacoes={transacoesRealizadas}
             previsoes={transacoesPrevistas}
+            filtroMes={mesFiltro}
+            filtroAno={anoFiltro}
             transacoesRecentes={[...transacoesBancariasPeriodo]
               .sort((a, b) => b.data.localeCompare(a.data))
               .slice(0, 5)}
@@ -724,7 +756,7 @@ function App(): React.JSX.Element {
 
         {pagina === 'relatorios' && (
           <>
-            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} />
+            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} filtroMes={mesFiltro} filtroAno={anoFiltro} />
 
             <section className="painel">
               <h3>Resumo financeiro realizado do período</h3>
