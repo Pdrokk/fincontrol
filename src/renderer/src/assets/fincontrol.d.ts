@@ -115,6 +115,18 @@ interface ParcelaPagamentoFinanceira {
   valorCentavos: number
   paga: boolean
   arquivada: boolean
+  pagamentoId: string | null
+  pagamentoTipo: 'fatura' | 'parcela' | null
+}
+interface EstornoPagamentoFinanceiro {
+  id: string
+  pagamentoId: string
+  tipo: 'fatura' | 'parcela'
+  contaId: string
+  valorCentavos: number
+  dataPagamento: string
+  motivo: string
+  estornadoEm: string
 }
 interface SalarioRecorrenteFinanceiro {
   id: string
@@ -129,9 +141,18 @@ interface SalarioRecorrenteFinanceiro {
 declare global {
   interface Window {
     fincontrol: {
+      exportarBackup: () => Promise<string | null>
+      restaurarBackup: () => Promise<boolean>
+      estornarPagamento: (dados: {
+        tipo: 'fatura' | 'parcela'
+        pagamentoId: string
+        motivo: string
+      }) => Promise<EstornoPagamentoFinanceiro>
+      listarEstornosPagamentos: () => Promise<EstornoPagamentoFinanceiro[]>
+      onAtualizacaoAutomatica: (callback: () => void) => () => void
       excluirConta: (id: string) => Promise<boolean>
       listarSalarios: () => Promise<SalarioRecorrenteFinanceiro[]>
-      cadastrarSalario: (dados: Omit<SalarioRecorrenteFinanceiro, 'id' | 'ativo'>) => Promise<SalarioRecorrenteFinanceiro>
+      cadastrarSalario: (dados: Omit<SalarioRecorrenteFinanceiro, 'id' | 'ativo'> & { permitirRetroativo?: boolean }) => Promise<SalarioRecorrenteFinanceiro>
       desativarSalario: (id: string) => Promise<void>
       listarParcelasPagamento: () => Promise<ParcelaPagamentoFinanceira[]>
       arquivarParcela: (id: string, arquivar: boolean) => Promise<void>

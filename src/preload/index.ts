@@ -22,6 +22,19 @@ if (process.contextIsolated) {
 }
 
 const fincontrolAPI = {
+  exportarBackup: (): Promise<string | null> => ipcRenderer.invoke('backup:exportar'),
+  restaurarBackup: (): Promise<boolean> => ipcRenderer.invoke('backup:restaurar'),
+  estornarPagamento: (dados: {
+    tipo: 'fatura' | 'parcela'
+    pagamentoId: string
+    motivo: string
+  }): Promise<unknown> => ipcRenderer.invoke('pagamentos:estornar', dados),
+  listarEstornosPagamentos: (): Promise<unknown> => ipcRenderer.invoke('pagamentos:estornos-listar'),
+  onAtualizacaoAutomatica: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('fincontrol:atualizado', listener)
+    return (): void => { ipcRenderer.removeListener('fincontrol:atualizado', listener) }
+  },
   listarTransacoes: (): Promise<unknown> => ipcRenderer.invoke('transacoes:listar'),
 
   salvarTransacao: (dados: {
@@ -57,6 +70,7 @@ const fincontrolAPI = {
     dia: number
     mesInicio: string
     quantidadeMeses: number
+    permitirRetroativo?: boolean
   }): Promise<unknown> => ipcRenderer.invoke('salarios:cadastrar', dados),
   desativarSalario: (id: string): Promise<void> => ipcRenderer.invoke('salarios:desativar', id),
   listarParcelasPagamento: (): Promise<unknown> => ipcRenderer.invoke('parcelas:listar'),

@@ -4,3 +4,9 @@ out
 .DS_Store
 .eslintcache
 *.log*
+# Bancos de dados, backups e journals SQLite
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3

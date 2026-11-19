@@ -1,3 +1,2 @@
-provider: generic
-url: https://example.com/auto-updates
-updaterCacheDirName: fincontrol-updater
+# Autoatualização não configurada para a versão de TCC.
+# Não usar provedores de exemplo nem prometer atualizações automáticas.

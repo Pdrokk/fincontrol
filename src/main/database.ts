@@ -6,12 +6,22 @@ import { randomUUID } from 'node:crypto'
 
 let banco: DatabaseSync | null = null
 
+export function caminhoBanco(): string {
+  return join(app.getPath('userData'), 'dados', 'fincontrol.db')
+}
+
+export function fecharBanco(): void {
+  banco?.close()
+  banco = null
+}
+
 export function iniciarBanco(): void {
+  if (banco) return
   const pasta = join(app.getPath('userData'), 'dados')
 
   mkdirSync(pasta, { recursive: true })
 
-  const caminho = join(pasta, 'fincontrol.db')
+  const caminho = caminhoBanco()
 
   banco = new DatabaseSync(caminho)
 
@@ -121,6 +131,20 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
   }
 
   const contaId = validarContaId(dados.contaId)
+  // Não registrar manualmente um segundo salário na mesma competência quando
+  // a recorrência já gerou aquele recebimento na conta.
+  if (dados.tipo === 'receita' && dados.categoria.toLowerCase() === 'salário') {
+    const duplicado = obterBanco().prepare(`
+      SELECT 1 FROM salarios_lancamentos sl
+      JOIN transacoes t ON t.id = sl.transacao_id
+      WHERE t.conta_id IS ? AND t.valor_centavos = ?
+        AND substr(t.data, 1, 7) = ? AND t.categoria = 'Salário'
+      LIMIT 1
+    `).get(contaId, dados.valorCentavos, dados.data.slice(0, 7))
+    if (duplicado) {
+      throw new Error('Esse salário já foi registrado pela recorrência neste mês. Confira o histórico antes de adicionar outra receita.')
+    }
+  }
 
   const transacao: Transacao = {
     id: randomUUID(),

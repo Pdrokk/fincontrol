@@ -1,7 +1,8 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { iniciarBanco } from './database'
+import { iniciarBanco, obterBanco } from './database'
+import { exportarBackup, restaurarBackup } from './backup'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
@@ -24,7 +25,8 @@ import type { NovoSalarioRecorrente } from './salarios'
 import type { NovaTransacao } from './database'
 import { criarTabelasCartoes, listarCartoes, cadastrarCartao, atualizarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, listarDespesasCartaoRealizadas, pagarFatura } from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
-import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela } from './cartoes'
+import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela, estornarPagamento, listarEstornosPagamentos } from './cartoes'
+import type { NovoEstornoPagamento } from './cartoes'
 
 function createWindow(): void {
   // Create the browser window.
@@ -45,7 +47,19 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const url = new URL(details.url)
+      const dominios = new Set(['github.com', 'react.dev', 'electronjs.org'])
+      if (url.protocol === 'https:' && dominios.has(url.hostname.toLowerCase())) {
+        void shell.openExternal(url.toString()).catch((erro) => {
+          console.error('Falha ao abrir URL externa permitida:', erro)
+        })
+      } else {
+        console.warn('URL externa bloqueada pelo FinControl:', details.url)
+      }
+    } catch {
+      console.warn('URL externa inválida bloqueada.')
+    }
     return { action: 'deny' }
   })
 
@@ -66,7 +80,22 @@ app.whenReady().then(() => {
   criarTabelaContas()
   criarTabelasCartoes()
   criarTabelaSalarios()
+  obterBanco().exec('PRAGMA foreign_keys = ON')
   processarSalariosVencidos()
+
+  // A recorrência também é conferida com o aplicativo aberto. O processo
+  // principal nunca insere salário enquanto o programa está fechado.
+  const verificadorSalarios = setInterval(() => {
+    try {
+      processarSalariosVencidos()
+      for (const janela of BrowserWindow.getAllWindows()) {
+        janela.webContents.send('fincontrol:atualizado')
+      }
+    } catch (erro) {
+      console.error('Erro ao processar salários recorrentes:', erro)
+    }
+  }, 60_000)
+  app.once('before-quit', () => clearInterval(verificadorSalarios))
 
   ipcMain.handle('cartoes:listar', () => listarCartoes())
   ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
@@ -79,6 +108,14 @@ app.whenReady().then(() => {
   ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
   ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
   ipcMain.handle('parcelas:arquivar', (_evento, id: string, arquivar: boolean) => definirArquivoParcela(id, arquivar))
+  ipcMain.handle('pagamentos:estornar', (_evento, dados: NovoEstornoPagamento) => estornarPagamento(dados))
+  ipcMain.handle('pagamentos:estornos-listar', () => listarEstornosPagamentos())
+  ipcMain.handle('backup:exportar', () => exportarBackup())
+  ipcMain.handle('backup:restaurar', async (evento) => {
+    const restaurado = await restaurarBackup()
+    if (restaurado) setTimeout(() => evento.sender.reload(), 350)
+    return restaurado
+  })
   ipcMain.handle('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
     pagarParcelasSelecionadas(dados))
   ipcMain.handle('salarios:listar', () => listarSalarios())

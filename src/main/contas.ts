@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { obterBanco } from './database'
+import { podeExcluirConta, validarOperacaoImediata } from './regrasFinanceiras'
+import { CONSULTA_SALDOS_CONTAS } from './consultasFinanceiras'
 
 export type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 
@@ -127,24 +129,7 @@ export function criarTabelaContas(): void {
 
 export function listarContas(): Conta[] {
   const db = obterBanco()
-  const registros = db
-    .prepare(
-      `
-    SELECT c.id, c.banco, c.nome, c.tipo, c.cor,
-      c.saldo_inicial_centavos AS saldoInicialCentavos,
-      c.saldo_inicial_centavos
-      + COALESCE((SELECT SUM(CASE WHEN t.tipo = 'receita' THEN t.valor_centavos ELSE -t.valor_centavos END)
-                   FROM transacoes t WHERE t.conta_id = c.id), 0)
-      + COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE destino_id = c.id), 0)
-      - COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE origem_id = c.id), 0)
-      - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_fatura WHERE conta_id = c.id), 0)
-      - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_parcelas WHERE conta_id = c.id), 0)
-      + COALESCE((SELECT SUM(diferenca_centavos) FROM ajustes_saldo WHERE conta_id = c.id), 0)
-        AS saldoAtualCentavos
-    FROM contas c ORDER BY c.criado_em DESC
-  `
-    )
-    .all()
+  const registros = db.prepare(CONSULTA_SALDOS_CONTAS).all()
   return registros as unknown as Conta[]
 }
 
@@ -229,6 +214,7 @@ export function ajustarSaldo(dados: NovoAjusteSaldo): AjusteSaldo {
   if (typeof dados.motivo !== 'string' || dados.motivo.trim().length < 3 ||
       dados.motivo.length > 200) throw new Error('Informe o motivo do ajuste.')
   validarDataAjuste(dados.data)
+  validarOperacaoImediata(dados.data)
 
   const db = obterBanco()
   db.exec('BEGIN IMMEDIATE')
@@ -281,12 +267,18 @@ export function excluirConta(id: string): void {
   try {
     const existe = db.prepare('SELECT id FROM contas WHERE id = ?').get(id)
     if (!existe) throw new Error('Conta não encontrada.')
+    const conta = listarContas().find((c) => c.id === id)
+    if (!conta || !podeExcluirConta(conta.saldoAtualCentavos) ||
+        conta.saldoInicialCentavos !== 0) {
+      throw new Error('Não é possível excluir uma conta com saldo. Zere-a por transferência ou saque registrado.')
+    }
     const dependencias = [
       ['transacoes', 'conta_id'],
       ['transferencias', 'origem_id'],
       ['transferencias', 'destino_id'],
       ['pagamentos_fatura', 'conta_id'],
       ['pagamentos_parcelas', 'conta_id'],
+      ['estornos_pagamentos', 'conta_id'],
       ['cartoes', 'conta_id'],
       ['ajustes_saldo', 'conta_id'],
       ['salarios_recorrentes', 'conta_id']
@@ -341,6 +333,7 @@ export function transferirEntreContas(dados: NovaTransferencia): Transferencia {
   )
     throw new Error('Data inválida.')
 
+  validarOperacaoImediata(dados.data)
   const db = obterBanco()
   db.exec('BEGIN IMMEDIATE')
   try {
