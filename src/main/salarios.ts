@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { obterBanco } from './database'
+import { inicioDeSalarioRetroativo, hojeLocalISO } from './regrasFinanceiras'
 
 export interface SalarioRecorrente {
   id: string
@@ -11,7 +12,9 @@ export interface SalarioRecorrente {
   quantidadeMeses: number
   ativo: number
 }
-export type NovoSalarioRecorrente = Omit<SalarioRecorrente, 'id' | 'ativo'>
+export type NovoSalarioRecorrente = Omit<SalarioRecorrente, 'id' | 'ativo'> & {
+  permitirRetroativo?: boolean
+}
 
 export function criarTabelaSalarios(): void {
   obterBanco().exec(`
@@ -64,7 +67,13 @@ export function cadastrarSalario(dados: NovoSalarioRecorrente): SalarioRecorrent
     throw new Error('Mês inicial inválido.')
   if (!Number.isInteger(dados.quantidadeMeses) || dados.quantidadeMeses < 1 || dados.quantidadeMeses > 120)
     throw new Error('Escolha entre 1 e 120 meses.')
-  const salario: SalarioRecorrente = { ...dados, id: randomUUID(), descricao: dados.descricao.trim(), ativo: 1 }
+  if (inicioDeSalarioRetroativo(dados.mesInicio, dados.dia) && dados.permitirRetroativo !== true)
+    throw new Error('Este salário tem parcelas retroativas. Confirme explicitamente o lançamento de meses anteriores.')
+  const salario: SalarioRecorrente = {
+    id: randomUUID(), contaId: dados.contaId, descricao: dados.descricao.trim(),
+    valorCentavos: dados.valorCentavos, dia: dados.dia, mesInicio: dados.mesInicio,
+    quantidadeMeses: dados.quantidadeMeses, ativo: 1
+  }
   obterBanco().prepare(`
     INSERT INTO salarios_recorrentes
       (id, conta_id, descricao, valor_centavos, dia, mes_inicio, quantidade_meses, ativo, criado_em)
@@ -84,8 +93,7 @@ export function desativarSalario(id: string): void {
 
 export function processarSalariosVencidos(): void {
   const db = obterBanco()
-  const hoje = new Date()
-  const hojeLocal = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+  const hojeLocal = hojeLocalISO()
   db.exec('BEGIN IMMEDIATE')
   try {
     for (const salario of listarSalarios().filter((s) => s.ativo === 1)) {
@@ -98,6 +106,28 @@ export function processarSalariosVencidos(): void {
           WHERE salario_id = ? AND competencia = ?
         `).get(salario.id, competencia)
         if (existente) continue
+        // Se o salário já foi registrado manualmente, vincula o lançamento
+        // em vez de creditar dinheiro pela segunda vez.
+        const manual = db.prepare(`
+          SELECT t.id FROM transacoes t
+          WHERE t.conta_id = ? AND t.tipo = 'receita'
+            AND LOWER(t.categoria) = LOWER('Salário')
+            AND t.valor_centavos = ?
+            AND substr(t.data, 1, 7) = ?
+            AND NOT EXISTS (
+              SELECT 1 FROM salarios_lancamentos sl WHERE sl.transacao_id = t.id
+            )
+          ORDER BY ABS(CAST(substr(t.data, 9, 2) AS INTEGER) - ?), t.rowid DESC
+          LIMIT 1
+        `).get(salario.contaId, salario.valorCentavos, competencia, salario.dia)
+          as { id: string } | undefined
+        if (manual) {
+          db.prepare(`
+            INSERT INTO salarios_lancamentos (salario_id, competencia, transacao_id)
+            VALUES (?, ?, ?)
+          `).run(salario.id, competencia, manual.id)
+          continue
+        }
         const id = randomUUID()
         db.prepare(`
           INSERT INTO transacoes
