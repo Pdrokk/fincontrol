@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Archive, ArrowDownRight, CheckCircle2, CreditCard, RotateCcw } from 'lucide-react'
+import { Archive, ArrowDownRight, CheckCircle2, CreditCard, RotateCcw, Undo2 } from 'lucide-react'
 
 interface ContaPagamento {
   id: string
@@ -23,6 +23,15 @@ interface Parcela {
   valorCentavos: number
   paga: boolean
   arquivada: boolean
+  pagamentoId: string | null
+  pagamentoTipo: 'fatura' | 'parcela' | null
+}
+interface Estorno {
+  id: string
+  tipo: 'fatura' | 'parcela'
+  valorCentavos: number
+  motivo: string
+  estornadoEm: string
 }
 
 interface Props {
@@ -44,6 +53,7 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
   const [parcelas, setParcelas] = useState<Parcela[]>([])
   const [contas, setContas] = useState<ContaPagamento[]>([])
   const [cartoes, setCartoes] = useState<CartaoPagamento[]>([])
+  const [estornos, setEstornos] = useState<Estorno[]>([])
   const [selecionadas, setSelecionadas] = useState<string[]>([])
   const [contaId, setContaId] = useState('')
   const [dataPagamento, setDataPagamento] = useState(dataAtual)
@@ -54,14 +64,16 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
   const [erro, setErro] = useState('')
 
   async function carregar(): Promise<void> {
-    const [listaParcelas, listaContas, listaCartoes] = await Promise.all([
+    const [listaParcelas, listaContas, listaCartoes, listaEstornos] = await Promise.all([
       window.fincontrol.listarParcelasPagamento(),
       window.fincontrol.listarContas(),
-      window.fincontrol.listarCartoes()
+      window.fincontrol.listarCartoes(),
+      window.fincontrol.listarEstornosPagamentos()
     ])
     setParcelas(listaParcelas)
     setContas(listaContas)
     setCartoes(listaCartoes)
+    setEstornos(listaEstornos)
     setSelecionadas([])
   }
 
@@ -70,12 +82,14 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
     Promise.all([
       window.fincontrol.listarParcelasPagamento(),
       window.fincontrol.listarContas(),
-      window.fincontrol.listarCartoes()
-    ]).then(([p, c, b]): void => {
+      window.fincontrol.listarCartoes(),
+      window.fincontrol.listarEstornosPagamentos()
+    ]).then(([p, c, b, e]): void => {
       if (!ativo) return
       setParcelas(p)
       setContas(c)
       setCartoes(b)
+      setEstornos(e)
     }).catch((falha: unknown): void => {
       console.error(falha)
       if (ativo) setErro('Não foi possível carregar os pagamentos.')
@@ -137,6 +151,38 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
     } catch (falha) {
       console.error(falha)
       alert(falha instanceof Error ? falha.message : 'Não foi possível confirmar o pagamento.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  async function estornarParcela(parcela: Parcela): Promise<void> {
+    if (salvando || !parcela.pagamentoId || !parcela.pagamentoTipo) return
+    const valor = parcela.pagamentoTipo === 'fatura'
+      ? parcelas.filter((p) => p.pagamentoId === parcela.pagamentoId)
+          .reduce((total, p) => total + p.valorCentavos, 0)
+      : parcela.valorCentavos
+    const motivo = window.prompt('Motivo do estorno (mínimo 5 caracteres):')
+    if (motivo === null) return
+    if (motivo.trim().length < 5) {
+      alert('Informe um motivo com pelo menos 5 caracteres.')
+      return
+    }
+    if (!window.confirm(
+      `Estornar ${moeda(valor)}? O valor voltará à conta pagadora e o limite disponível do cartão será reduzido. ${parcela.pagamentoTipo === 'fatura' ? 'Isso estornará toda a fatura.' : 'Isso estornará esta parcela.'}`
+    )) return
+    try {
+      setSalvando(true)
+      await window.fincontrol.estornarPagamento({
+        pagamentoId: parcela.pagamentoId,
+        tipo: parcela.pagamentoTipo,
+        motivo: motivo.trim()
+      })
+      await carregar()
+      if (onPagamento) await onPagamento()
+    } catch (falha) {
+      console.error(falha)
+      alert(falha instanceof Error ? falha.message : 'Não foi possível estornar.')
     } finally {
       setSalvando(false)
     }
@@ -232,7 +278,7 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
                 </select>
               </label>
               <label>Data do pagamento
-                <input type="date" value={dataPagamento}
+                <input type="date" max={dataAtual()} value={dataPagamento}
                   onChange={(e): void => setDataPagamento(e.target.value)} />
               </label>
               <button type="button" className="botao-primario"
@@ -261,15 +307,35 @@ export default function CentralPagamentos({ onPagamento }: Props): React.JSX.Ele
               </span>
               <strong>{moeda(parcela.valorCentavos)}</strong>
               <button type="button" className="central-icone"
-                disabled={salvando}
+                disabled={salvando || !parcela.pagamentoId}
                 title={parcela.arquivada ? 'Restaurar ao histórico' : 'Ocultar do histórico'}
                 aria-label={parcela.arquivada ? 'Restaurar parcela' : 'Arquivar parcela'}
                 onClick={(): void => { void alterarArquivo(parcela.id, !parcela.arquivada) }}>
                 {parcela.arquivada ? <RotateCcw size={17} /> : <Archive size={17} />}
               </button>
+              {parcela.pagamentoId && (
+                <button type="button" className="central-icone" title="Estornar pagamento"
+                  aria-label="Estornar pagamento" disabled={salvando}
+                  onClick={(): void => { void estornarParcela(parcela) }}>
+                  <Undo2 size={17} />
+                </button>
+              )}
             </div>
           ))}
-          <p className="central-nota"><ArrowDownRight size={15} /> Arquivar apenas oculta a parcela desta lista. O pagamento e o histórico financeiro permanecem intactos.</p>
+          <p className="central-nota"><ArrowDownRight size={15} /> Arquivar oculta uma parcela sem apagar seu histórico. Estornar reverte o saldo e o limite, preservando a justificativa.</p>
+          {estornos.length > 0 && (
+            <div className="central-estornos">
+              <h4>Estornos registrados</h4>
+              {estornos.map((e) => (
+                <div className="dashboard-item" key={e.id}>
+                  <div><strong>{e.tipo === 'fatura' ? 'Fatura estornada' : 'Parcela estornada'}</strong>
+                    <small>{e.motivo} · {e.estornadoEm.slice(0, 10).split('-').reverse().join('/')}</small>
+                  </div>
+                  <strong>{moeda(e.valorCentavos)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </section>
