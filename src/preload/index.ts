@@ -33,7 +33,7 @@ const fincontrolAPI = {
   onAtualizacaoAutomatica: (callback: () => void): (() => void) => {
     const listener = (): void => callback()
     ipcRenderer.on('fincontrol:atualizado', listener)
-    return (): void => ipcRenderer.removeListener('fincontrol:atualizado', listener)
+    return (): void => { ipcRenderer.removeListener('fincontrol:atualizado', listener) }
   },
   listarTransacoes: (): Promise<unknown> => ipcRenderer.invoke('transacoes:listar'),
 
