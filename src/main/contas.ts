@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { obterBanco } from './database'
 import { podeExcluirConta, validarOperacaoImediata } from './regrasFinanceiras'
+import { CONSULTA_SALDOS_CONTAS } from './consultasFinanceiras'
 
 export type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 
@@ -128,28 +129,7 @@ export function criarTabelaContas(): void {
 
 export function listarContas(): Conta[] {
   const db = obterBanco()
-  const registros = db
-    .prepare(
-      `
-    SELECT c.id, c.banco, c.nome, c.tipo, c.cor,
-      c.saldo_inicial_centavos AS saldoInicialCentavos,
-      c.saldo_inicial_centavos
-      + COALESCE((SELECT SUM(CASE WHEN t.tipo = 'receita' THEN t.valor_centavos ELSE -t.valor_centavos END)
-                   FROM transacoes t WHERE t.conta_id = c.id AND t.data <= date('now', 'localtime')), 0)
-      + COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE destino_id = c.id AND data <= date('now', 'localtime')), 0)
-      - COALESCE((SELECT SUM(valor_centavos) FROM transferencias WHERE origem_id = c.id AND data <= date('now', 'localtime')), 0)
-      - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_fatura pf WHERE pf.conta_id = c.id
-                   AND pf.data_pagamento <= date('now', 'localtime')
-                   AND pf.estornado = 0), 0)
-      - COALESCE((SELECT SUM(valor_centavos) FROM pagamentos_parcelas pp WHERE pp.conta_id = c.id
-                   AND pp.data_pagamento <= date('now', 'localtime')
-                   AND pp.estornado = 0), 0)
-      + COALESCE((SELECT SUM(diferenca_centavos) FROM ajustes_saldo WHERE conta_id = c.id AND data <= date('now', 'localtime')), 0)
-        AS saldoAtualCentavos
-    FROM contas c ORDER BY c.criado_em DESC
-  `
-    )
-    .all()
+  const registros = db.prepare(CONSULTA_SALDOS_CONTAS).all()
   return registros as unknown as Conta[]
 }
 
