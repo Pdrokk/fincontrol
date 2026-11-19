@@ -18,6 +18,8 @@ interface Props {
   transacoes: TransacaoGrafico[]
   previsoes?: TransacaoGrafico[]
   compacto?: boolean
+  filtroMes?: string
+  filtroAno?: string
 }
 
 const cores = ['#16a34a', '#2563eb', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#64748b']
@@ -33,11 +35,14 @@ const rotuloMes = (mes: string): string => {
 }
 
 export default function GraficosFinanceiros({
-  transacoes, previsoes = [], compacto = false
+  transacoes, previsoes = [], compacto = false, filtroMes = 'todos', filtroAno = 'todos'
 }: Props): React.JSX.Element {
   const [modo, setModo] = useState<'realizado' | 'previsto'>('realizado')
   const [pagina, setPagina] = useState<number | null>(null)
-  const registros = modo === 'realizado' ? transacoes : previsoes
+  const registros = (modo === 'realizado' ? transacoes : previsoes).filter((t) =>
+    (filtroAno === 'todos' || t.data.slice(0, 4) === filtroAno) &&
+    (filtroMes === 'todos' || t.data.slice(5, 7) === filtroMes)
+  )
 
   const mapa = new Map<string, { receitas: number; despesas: number }>()
   for (const item of registros) {
@@ -112,6 +117,9 @@ export default function GraficosFinanceiros({
         </div>
       </div>
       <p className="graficos-explicacao">
+        {filtroMes !== 'todos' || filtroAno !== 'todos'
+          ? 'Os filtros de mês e ano acima estão aplicados aos gráficos. Use Limpar período para navegar por todo o histórico. '
+          : ''}
         {modo === 'realizado'
           ? 'Somente receitas registradas e despesas efetivamente pagas. Parcelas futuras não entram neste resultado.'
           : 'Somente parcelas de cartão em aberto, por mês de competência. Não reduz o saldo bancário atual.'}
