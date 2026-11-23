@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
@@ -20,6 +20,7 @@ import { criarTabelaContas } from './contas'
 import { criarTabelasCartoes } from './cartoes'
 import { cadastrarSalario, criarTabelaSalarios, processarSalariosVencidos } from './salarios'
 import { hojeLocalISO } from './regrasFinanceiras'
+import { aplicarRestauracaoValidada } from './backup'
 
 const dinheiro = (id: string): number => {
   const conta = listarContas().find((c) => c.id === id)
@@ -196,8 +197,29 @@ export async function executarSmokeInstalado(): Promise<void> {
     assert.equal(integridadeBackup?.integrity_check, 'ok')
     const contagemBackup = bancoBackup.prepare('SELECT COUNT(*) AS n FROM contas').get() as { n: number }
     assert.equal(contagemBackup.n, 2)
+    bancoBackup.close()
+    bancoBackup = null
 
-    console.info('FINCONTROL_SMOKE_OK: banco, contas, transações, cartões, pagamentos, estornos, salários, backup')
+    // Restauração real do banco de teste: alterações posteriores ao backup
+    // devem desaparecer, e o estado antigo deve ser recuperado.
+    const extra = salvarTransacao({
+      contaId: b.id, descricao: 'Movimento após o backup',
+      tipo: 'receita', valorCentavos: 4_321,
+      categoria: 'Outros', data: hoje
+    })
+    assert.ok(listarTransacoes().some(t => t.id === extra.id))
+    await aplicarRestauracaoValidada(arquivo)
+    assert.ok(!listarTransacoes().some(t => t.id === extra.id),
+      'Restauração deve recuperar o estado anterior ao backup')
+    assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)
+
+    const invalido = join(pasta, 'arquivo-invalido.db')
+    writeFileSync(invalido, 'não é um banco SQLite')
+    await assert.rejects(aplicarRestauracaoValidada(invalido),
+      'Arquivo inválido não pode sobrescrever o banco atual')
+    assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)
+
+    console.info('FINCONTROL_SMOKE_OK: banco, contas, transações, cartões, pagamentos, estornos, salários, backup/restauração')
   } finally {
     bancoBackup?.close()
     fecharBanco()
