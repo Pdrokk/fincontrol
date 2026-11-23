@@ -29,7 +29,7 @@ const dinheiro = (id: string): number => {
 }
 
 function recusar(fn: () => unknown, motivo: string): void {
-  assert.throws(fn, undefined, motivo)
+  assert.throws(fn, /./, motivo)
 }
 
 /**
@@ -119,11 +119,12 @@ export async function executarSmokeInstalado(): Promise<void> {
     }), 'Não permitir pagamento duplicado')
 
     const paga = listarParcelasPagamento().find(p => p.id === parcelas[0].id)
-    assert.ok(paga?.pagamentoId)
+    const pagamentoParcelaId = paga?.pagamentoId
+    assert.ok(pagamentoParcelaId)
     definirArquivoParcela(parcelas[0].id, true)
     assert.equal(listarParcelasPagamento().find(p => p.id === parcelas[0].id)?.arquivada, true)
     const estorno = estornarPagamento({
-      tipo: 'parcela', pagamentoId: paga.pagamentoId, motivo: 'Teste de estorno'
+      tipo: 'parcela', pagamentoId: pagamentoParcelaId, motivo: 'Teste de estorno'
     })
     assert.equal(estorno.valorCentavos, 20_000)
     assert.equal(dinheiro(a.id), antes - 20_000)
@@ -131,7 +132,7 @@ export async function executarSmokeInstalado(): Promise<void> {
     assert.equal(listarParcelasPagamento().find(p => p.id === parcelas[0].id)?.arquivada, false)
     assert.equal(listarEstornosPagamentos().length, 1)
     recusar(() => estornarPagamento({
-      tipo: 'parcela', pagamentoId: paga.pagamentoId, motivo: 'Estorno duplicado'
+      tipo: 'parcela', pagamentoId: pagamentoParcelaId, motivo: 'Estorno duplicado'
     }), 'Estorno deve ser único')
 
     pagarParcelasSelecionadas({
