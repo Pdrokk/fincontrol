@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { iniciarBanco, obterBanco } from './database'
 import { exportarBackup, restaurarBackup } from './backup'
+import { executarSmokeInstalado } from './smoke'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
@@ -76,6 +77,17 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // O modo de verificação só utiliza um banco temporário e não abre janelas.
+  if (process.argv.includes('--fincontrol-smoke-test')) {
+    void executarSmokeInstalado().then(
+      () => app.quit(),
+      (erro: unknown) => {
+        console.error('FINCONTROL_SMOKE_FAIL:', erro)
+        app.exit(1)
+      }
+    )
+    return
+  }
   iniciarBanco()
   criarTabelaContas()
   criarTabelasCartoes()
@@ -167,7 +179,7 @@ app.whenReady().then(() => {
   })
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.fincontrol.desktop')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
