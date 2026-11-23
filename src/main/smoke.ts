@@ -1,0 +1,229 @@
+import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { app } from 'electron'
+import { DatabaseSync, backup } from 'node:sqlite'
+import { iniciarBanco, obterBanco, fecharBanco, salvarTransacao, listarTransacoes } from './database'
+import {
+  cadastrarConta, listarContas, editarConta, ajustarSaldo, transferirEntreContas,
+  excluirConta
+} from './contas'
+import {
+  cadastrarCartao, atualizarCartao, cadastrarCompra, listarCartoes,
+  listarParcelasPagamento, listarFaturasPrevistas, pagarParcelasSelecionadas,
+  listarDespesasCartaoRealizadas, estornarPagamento, pagarFatura,
+  definirArquivoParcela, listarEstornosPagamentos
+} from './cartoes'
+import { criarTabelaContas } from './contas'
+import { criarTabelasCartoes } from './cartoes'
+import { cadastrarSalario, criarTabelaSalarios, processarSalariosVencidos } from './salarios'
+import { hojeLocalISO } from './regrasFinanceiras'
+import { aplicarRestauracaoValidada } from './backup'
+
+const dinheiro = (id: string): number => {
+  const conta = listarContas().find((c) => c.id === id)
+  assert.ok(conta, 'Conta deve existir')
+  return conta.saldoAtualCentavos
+}
+
+function recusar(fn: () => unknown, motivo: string): void {
+  assert.throws(fn, /./, motivo)
+}
+
+/**
+ * Smoke de integração executado pelo próprio Electron empacotado.
+ * Usa um diretório temporário e jamais abre ou modifica o banco pessoal.
+ */
+export async function executarSmokeInstalado(): Promise<void> {
+  const pasta = mkdtempSync(join(tmpdir(), 'fincontrol-v1-smoke-'))
+  app.setPath('userData', pasta)
+  let bancoBackup: DatabaseSync | null = null
+  try {
+    iniciarBanco()
+    criarTabelaContas()
+    criarTabelasCartoes()
+    criarTabelaSalarios()
+    obterBanco().exec('PRAGMA foreign_keys = ON')
+    const hoje = hojeLocalISO()
+
+    const a = cadastrarConta({
+      banco: 'Nubank', nome: 'Principal', cor: '#6c28a7',
+      tipo: 'corrente', saldoInicialCentavos: 200_000
+    })
+    const b = cadastrarConta({
+      banco: 'Inter', nome: 'Reserva', cor: '#e77916',
+      tipo: 'poupanca', saldoInicialCentavos: 0
+    })
+    assert.equal(dinheiro(a.id), 200_000)
+    editarConta(a.id, { banco: 'Nubank', nome: 'Dia a dia', cor: '#6c28a7', tipo: 'corrente' })
+    assert.equal(listarContas().find(c => c.id === a.id)?.nome, 'Dia a dia')
+    transferirEntreContas({
+      origemId: a.id, destinoId: b.id, valorCentavos: 10_000,
+      data: hoje, descricao: 'Transferência de teste'
+    })
+    assert.equal(dinheiro(a.id), 190_000)
+    assert.equal(dinheiro(b.id), 10_000)
+    recusar(() => transferirEntreContas({
+      origemId: a.id, destinoId: b.id, valorCentavos: 1000,
+      data: '2999-01-01', descricao: 'Futura'
+    }), 'Transferência futura não deve ser efetuada')
+
+    const receita = salvarTransacao({
+      contaId: a.id, descricao: 'Receita de teste',
+      tipo: 'receita', valorCentavos: 30_000, categoria: 'Outros', data: hoje
+    })
+    assert.ok(listarTransacoes().some(t => t.id === receita.id))
+    assert.equal(dinheiro(a.id), 220_000)
+
+    recusar(() => excluirConta(a.id), 'Não pode apagar banco com saldo ou vínculos')
+    const vazia = cadastrarConta({
+      banco: 'Banco Teste', nome: 'Excluir', cor: '#334155',
+      tipo: 'outra', saldoInicialCentavos: 0
+    })
+    excluirConta(vazia.id)
+    assert.ok(!listarContas().some(c => c.id === vazia.id))
+
+    const cartao = cadastrarCartao({
+      contaId: a.id, banco: 'Nubank', nome: 'Crédito',
+      limiteCentavos: 100_000, diaFechamento: 25, diaVencimento: 10
+    })
+    atualizarCartao(cartao.id, {
+      contaId: a.id, banco: 'Nubank', nome: 'Crédito principal',
+      limiteCentavos: 100_000, diaFechamento: 25, diaVencimento: 10
+    })
+    cadastrarCompra({
+      cartaoId: cartao.id, descricao: 'Notebook', categoria: 'Eletrônicos',
+      data: hoje, valorCentavos: 60_000, numeroParcelas: 3
+    })
+    assert.equal(listarCartoes().find(c => c.id === cartao.id)?.limiteDisponivelCentavos, 40_000)
+    const parcelas = listarParcelasPagamento().filter(p => p.cartaoId === cartao.id)
+    assert.equal(parcelas.length, 3)
+    assert.equal(parcelas.reduce((n, p) => n + p.valorCentavos, 0), 60_000)
+    recusar(() => pagarParcelasSelecionadas({
+      contaId: a.id, parcelaIds: [parcelas[0].id],
+      dataPagamento: '2999-01-01'
+    }), 'Pagamento futuro não deve alterar o saldo')
+
+    const antes = dinheiro(a.id)
+    pagarParcelasSelecionadas({
+      contaId: a.id, parcelaIds: parcelas.slice(0, 2).map(p => p.id),
+      dataPagamento: hoje
+    })
+    assert.equal(dinheiro(a.id), antes - 40_000)
+    assert.equal(listarCartoes().find(c => c.id === cartao.id)?.limiteDisponivelCentavos, 80_000)
+    assert.equal(listarDespesasCartaoRealizadas().filter(p => parcelas.some(q => q.id === p.id)).length, 2)
+    recusar(() => pagarParcelasSelecionadas({
+      contaId: a.id, parcelaIds: [parcelas[0].id], dataPagamento: hoje
+    }), 'Não permitir pagamento duplicado')
+
+    const paga = listarParcelasPagamento().find(p => p.id === parcelas[0].id)
+    const pagamentoParcelaId = paga?.pagamentoId
+    assert.ok(pagamentoParcelaId)
+    definirArquivoParcela(parcelas[0].id, true)
+    assert.equal(listarParcelasPagamento().find(p => p.id === parcelas[0].id)?.arquivada, true)
+    const estorno = estornarPagamento({
+      tipo: 'parcela', pagamentoId: pagamentoParcelaId, motivo: 'Teste de estorno'
+    })
+    assert.equal(estorno.valorCentavos, 20_000)
+    assert.equal(dinheiro(a.id), antes - 20_000)
+    assert.equal(listarParcelasPagamento().find(p => p.id === parcelas[0].id)?.paga, false)
+    assert.equal(listarParcelasPagamento().find(p => p.id === parcelas[0].id)?.arquivada, false)
+    assert.equal(listarEstornosPagamentos().length, 1)
+    recusar(() => estornarPagamento({
+      tipo: 'parcela', pagamentoId: pagamentoParcelaId, motivo: 'Estorno duplicado'
+    }), 'Estorno deve ser único')
+
+    pagarParcelasSelecionadas({
+      contaId: a.id, parcelaIds: [parcelas[0].id, parcelas[2].id], dataPagamento: hoje
+    })
+    assert.equal(dinheiro(a.id), antes - 60_000)
+    assert.equal(listarCartoes().find(c => c.id === cartao.id)?.limiteDisponivelCentavos, 100_000)
+    assert.ok(listarFaturasPrevistas().filter(f => f.cartaoId === cartao.id).every(f => f.paga))
+
+    // A fatura integral também precisa permitir pagar novamente após um estorno.
+    const segundo = cadastrarCartao({
+      contaId: a.id, banco: 'Inter', nome: 'Fatura integral',
+      limiteCentavos: 40_000, diaFechamento: 20, diaVencimento: 5
+    })
+    cadastrarCompra({
+      cartaoId: segundo.id, descricao: 'Compra à vista', categoria: 'Alimentação',
+      data: hoje, valorCentavos: 10_000, numeroParcelas: 1
+    })
+    const competencia = listarParcelasPagamento().find(p => p.cartaoId === segundo.id)?.competencia
+    assert.ok(competencia)
+    const pagamento = pagarFatura({
+      contaId: a.id, cartaoId: segundo.id, competencia, dataPagamento: hoje
+    })
+    assert.equal(pagamento.valorCentavos, 10_000)
+    estornarPagamento({ tipo: 'fatura', pagamentoId: pagamento.id, motivo: 'Teste reversão' })
+    assert.ok(listarFaturasPrevistas().some(f => f.cartaoId === segundo.id && !f.paga))
+    pagarFatura({ contaId: a.id, cartaoId: segundo.id, competencia, dataPagamento: hoje })
+    assert.ok(listarFaturasPrevistas().some(f => f.cartaoId === segundo.id && f.paga))
+
+    const saldoAnterior = dinheiro(b.id)
+    ajustarSaldo({
+      contaId: b.id, saldoDesejadoCentavos: saldoAnterior + 123,
+      data: hoje, motivo: 'Conciliação automática'
+    })
+    assert.equal(dinheiro(b.id), saldoAnterior + 123)
+
+    const mes = hoje.slice(0, 7)
+    const dia = Math.min(Number(hoje.slice(8, 10)), 28)
+    cadastrarSalario({
+      contaId: b.id, descricao: 'Salário teste',
+      valorCentavos: 8_500, dia, mesInicio: mes,
+      quantidadeMeses: 3, permitirRetroativo: true
+    })
+    processarSalariosVencidos()
+    processarSalariosVencidos()
+    const quantidade = obterBanco().prepare(
+      'SELECT COUNT(*) AS n FROM salarios_lancamentos'
+    ).get() as { n: number }
+    assert.equal(quantidade.n, 1, 'Salário recorrente não pode duplicar no mesmo mês')
+    assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)
+
+    const integridade = obterBanco().prepare('PRAGMA integrity_check').get() as
+      | { integrity_check: string } | undefined
+    assert.equal(integridade?.integrity_check, 'ok')
+    const chaves = obterBanco().prepare('PRAGMA foreign_key_check').all()
+    assert.equal(chaves.length, 0, 'Não deve haver referências SQLite órfãs')
+
+    const arquivo = join(pasta, `backup-smoke-${randomUUID()}.db`)
+    await backup(obterBanco(), arquivo)
+    bancoBackup = new DatabaseSync(arquivo, { readOnly: true })
+    const integridadeBackup = bancoBackup.prepare('PRAGMA integrity_check').get() as
+      | { integrity_check: string } | undefined
+    assert.equal(integridadeBackup?.integrity_check, 'ok')
+    const contagemBackup = bancoBackup.prepare('SELECT COUNT(*) AS n FROM contas').get() as { n: number }
+    assert.equal(contagemBackup.n, 2)
+    bancoBackup.close()
+    bancoBackup = null
+
+    // Restauração real do banco de teste: alterações posteriores ao backup
+    // devem desaparecer, e o estado antigo deve ser recuperado.
+    const extra = salvarTransacao({
+      contaId: b.id, descricao: 'Movimento após o backup',
+      tipo: 'receita', valorCentavos: 4_321,
+      categoria: 'Outros', data: hoje
+    })
+    assert.ok(listarTransacoes().some(t => t.id === extra.id))
+    await aplicarRestauracaoValidada(arquivo)
+    assert.ok(!listarTransacoes().some(t => t.id === extra.id),
+      'Restauração deve recuperar o estado anterior ao backup')
+    assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)
+
+    const invalido = join(pasta, 'arquivo-invalido.db')
+    writeFileSync(invalido, 'não é um banco SQLite')
+    await assert.rejects(aplicarRestauracaoValidada(invalido),
+      'Arquivo inválido não pode sobrescrever o banco atual')
+    assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)
+
+    console.info('FINCONTROL_SMOKE_OK: banco, contas, transações, cartões, pagamentos, estornos, salários, backup/restauração')
+  } finally {
+    bancoBackup?.close()
+    fecharBanco()
+    rmSync(pasta, { recursive: true, force: true })
+  }
+}

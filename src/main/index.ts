@@ -1,8 +1,12 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { iniciarBanco, obterBanco } from './database'
 import { exportarBackup, restaurarBackup } from './backup'
+import { executarSmokeInstalado } from './smoke'
+import { executarMigracaoLegadaSmoke } from './migracaoSmoke'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
@@ -28,6 +32,68 @@ import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas
 import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela, estornarPagamento, listarEstornosPagamentos } from './cartoes'
 import type { NovoEstornoPagamento } from './cartoes'
 
+const modoUISmoke = process.argv.includes('--fincontrol-ui-smoke-test')
+
+/**
+ * Exercita a interface React do executável de produção com o browser oculto.
+ * Usa um perfil SQLite isolado, criado apenas no modo de teste.
+ */
+async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void> {
+  const resultado = await janela.webContents.executeJavaScript(`
+    (async () => {
+      const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      for (let i = 0; i < 30 && !document.querySelector('.sidebar nav'); i++) {
+        await dormir(100);
+      }
+      if (!document.querySelector('.sidebar nav')) {
+        throw new Error('Menu principal não foi renderizado.');
+      }
+
+      const paginas = [
+        'Visão Geral', 'Transações', 'Relatórios', 'Minhas contas',
+        'Cartões e faturas', 'Configurações'
+      ];
+      const verificadas = [];
+      for (const nome of paginas) {
+        const botao = [...document.querySelectorAll('.sidebar nav button')]
+          .find(b => b.getAttribute('title') === nome);
+        if (!botao) throw new Error('Menu ausente: ' + nome);
+        botao.click();
+        await dormir(550);
+        const titulo = document.querySelector('.cabecalho h2')?.textContent?.trim();
+        if (titulo !== nome) {
+          throw new Error('Navegação falhou: ' + nome + ' / título: ' + titulo);
+        }
+        if (document.body.textContent?.includes('Não foi possível carregar esta tela')) {
+          throw new Error('React caiu ao entrar em ' + nome);
+        }
+        if (nome === 'Relatórios' && !document.querySelector('.graficos-relatorio')) {
+          throw new Error('Gráficos ausentes na página Relatórios.');
+        }
+        if (nome === 'Cartões e faturas' && !document.querySelector('.central-pagamentos')) {
+          throw new Error('Central de Pagamentos ausente.');
+        }
+        if (nome === 'Configurações' &&
+            !document.body.textContent?.includes('Backup e restauração')) {
+          throw new Error('Configurações sem backup/restauração.');
+        }
+        verificadas.push(nome);
+      }
+
+      const aplicativo = document.querySelector('.fincontrol');
+      const antes = aplicativo?.getAttribute('data-theme');
+      const tema = document.querySelector('.botao-tema-lateral');
+      if (!tema) throw new Error('Controle de tema ausente.');
+      tema.click();
+      await dormir(250);
+      const depois = aplicativo?.getAttribute('data-theme');
+      if (antes === depois) throw new Error('Tema não foi alterado.');
+      return { paginas: verificadas, tema: 'OK' };
+    })()
+  `)
+  console.info('FINCONTROL_UI_SMOKE_OK:', JSON.stringify(resultado))
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -43,8 +109,24 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    if (!modoUISmoke) mainWindow.show()
   })
+
+  if (modoUISmoke) {
+    mainWindow.webContents.once('did-fail-load', (_evento, codigo, descricao) => {
+      console.error('FINCONTROL_UI_SMOKE_FAIL: Falha de carregamento', codigo, descricao)
+      app.exit(1)
+    })
+    mainWindow.webContents.once('did-finish-load', () => {
+      void verificarInterfaceInstalada(mainWindow).then(
+        () => app.exit(0),
+        (erro: unknown) => {
+          console.error('FINCONTROL_UI_SMOKE_FAIL:', erro)
+          app.exit(1)
+        }
+      )
+    })
+  }
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     try {
@@ -76,6 +158,29 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // O modo de verificação só utiliza um banco temporário e não abre janelas.
+  if (process.argv.includes('--fincontrol-smoke-test')) {
+    void executarSmokeInstalado().then(
+      async () => {
+        try {
+          executarMigracaoLegadaSmoke()
+          app.quit()
+        } catch (erro) {
+          console.error('FINCONTROL_MIGRACAO_FAIL:', erro)
+          app.exit(1)
+        }
+      },
+      (erro: unknown) => {
+        console.error('FINCONTROL_SMOKE_FAIL:', erro)
+        app.exit(1)
+      }
+    )
+    return
+  }
+  if (modoUISmoke) {
+    const pasta = mkdtempSync(join(tmpdir(), 'fincontrol-ui-smoke-'))
+    app.setPath('userData', pasta)
+  }
   iniciarBanco()
   criarTabelaContas()
   criarTabelasCartoes()
@@ -167,7 +272,7 @@ app.whenReady().then(() => {
   })
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.fincontrol.desktop')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

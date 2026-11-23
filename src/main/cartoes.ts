@@ -694,7 +694,8 @@ export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
     }
 
     const anterior = db.prepare(`
-      SELECT id FROM pagamentos_fatura WHERE cartao_id = ? AND competencia = ?
+      SELECT id FROM pagamentos_fatura
+      WHERE cartao_id = ? AND competencia = ? AND estornado = 0
     `).get(dados.cartaoId, dados.competencia)
     if (anterior) throw new Error('Fatura já paga.')
     const pagamentosParciais = db.prepare(`
