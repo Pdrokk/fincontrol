@@ -10,3 +10,5 @@ out
 *.db-shm
 *.sqlite
 *.sqlite3
+# Ícones construídos automaticamente para o instalador
+build/generated/
