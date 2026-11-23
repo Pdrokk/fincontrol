@@ -15,17 +15,11 @@ win:
   executableName: fincontrol
   icon: build/generated/icon.ico
   target:
-    - target: nsis
+    - target: portable
       arch:
         - x64
-nsis:
-  artifactName: FinControl-${version}-setup.${ext}
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  perMachine: false
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+portable:
+  artifactName: FinControl-${version}-portable.${ext}
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
