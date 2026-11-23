@@ -1,16 +1,16 @@
-name: FinControl 1.0 - instalador Windows
+name: FinControl 1.0 - Windows portátil
 on:
   push:
     branches:
-      - 'release/**'
+      - 'portable/**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  windows-installer:
-    name: Build, testes e instalação Windows x64
+  windows-portable:
+    name: Testar e gerar executável único Windows x64
     runs-on: windows-latest
     timeout-minutes: 45
     env:
@@ -30,67 +30,63 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: TypeScript
+      - name: Verificar TypeScript
         run: npm run typecheck
 
-      - name: ESLint
+      - name: Verificar ESLint
         run: npm run lint
 
-      - name: Testes de regras e SQL
+      - name: Testar regras e SQL
         run: npm test
 
-      - name: Gerar instalador EXE Windows
+      - name: Gerar FinControl portátil
         shell: pwsh
         run: npm run build:win -- --x64
 
-      - name: Validar instalação gerada e executar smoke isolado
+      - name: Verificar executável empacotado com banco isolado
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $installer = Join-Path $PWD "dist/FinControl-$version-setup.exe"
           $unpacked = Join-Path $PWD "dist/win-unpacked/fincontrol.exe"
-          if (-not (Test-Path $installer)) { throw "Instalador nao criado: $installer" }
-          if (-not (Test-Path $unpacked)) { throw "Aplicativo empacotado nao encontrado: $unpacked" }
-          $bytes = (Get-Item $installer).Length
-          if ($bytes -lt 10485760) { throw "Instalador inesperadamente pequeno: $bytes bytes" }
-          Write-Host "Instalador: $installer ($bytes bytes)"
-          $p = Start-Process -FilePath $unpacked -ArgumentList "--fincontrol-smoke-test" -PassThru -Wait
-          if ($p.ExitCode -ne 0) { throw "Smoke do executavel empacotado falhou: $($p.ExitCode)" }
+          if (-not (Test-Path $unpacked)) { throw "EXE empacotado não encontrado: $unpacked" }
+          $teste = Start-Process -FilePath $unpacked -ArgumentList "--fincontrol-smoke-test" -PassThru -Wait
+          if ($teste.ExitCode -ne 0) { throw "Teste financeiro do EXE empacotado falhou: $($teste.ExitCode)" }
+          $testeUI = Start-Process -FilePath $unpacked -ArgumentList "--fincontrol-ui-smoke-test" -PassThru -Wait
+          if ($testeUI.ExitCode -ne 0) { throw "Teste React do EXE empacotado falhou: $($testeUI.ExitCode)" }
 
-      - name: Instalar EXE silenciosamente e validar executável instalado
+      - name: Executar o portátil real sem instalar
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $installer = Join-Path $PWD "dist/FinControl-$version-setup.exe"
-          $diretorio = Join-Path $env:RUNNER_TEMP "FinControl-Instalado"
-          $instalacao = Start-Process -FilePath $installer -ArgumentList "/S /D=$diretorio" -Wait -PassThru
-          if ($instalacao.ExitCode -ne 0) { throw "Instalacao NSIS falhou com codigo $($instalacao.ExitCode)" }
-          $exe = Join-Path $diretorio "fincontrol.exe"
-          if (-not (Test-Path $exe)) { throw "O instalador nao produziu $exe" }
-          $teste = Start-Process -FilePath $exe -ArgumentList "--fincontrol-smoke-test" -PassThru -Wait
-          if ($teste.ExitCode -ne 0) { throw "Smoke do aplicativo instalado falhou: $($teste.ExitCode)" }
-          $testeUI = Start-Process -FilePath $exe -ArgumentList "--fincontrol-ui-smoke-test" -PassThru -Wait
-          if ($testeUI.ExitCode -ne 0) { throw "Smoke da interface React instalada falhou: $($testeUI.ExitCode)" }
-          Write-Host "Instalacao, SQLite e navegacao React OK"
+          $portatil = Join-Path $PWD "dist/FinControl-$version-portable.exe"
+          if (-not (Test-Path $portatil)) { throw "EXE portátil não gerado: $portatil" }
+          $bytes = (Get-Item $portatil).Length
+          if ($bytes -lt 10485760) { throw "EXE portátil inesperadamente pequeno: $bytes bytes" }
+          Write-Host "Portátil gerado: $portatil ($bytes bytes)"
+
+          $teste = Start-Process -FilePath $portatil -ArgumentList "--fincontrol-smoke-test" -PassThru -Wait
+          if ($teste.ExitCode -ne 0) { throw "Teste financeiro do portátil falhou: $($teste.ExitCode)" }
+          $testeUI = Start-Process -FilePath $portatil -ArgumentList "--fincontrol-ui-smoke-test" -PassThru -Wait
+          if ($testeUI.ExitCode -ne 0) { throw "Navegação React do portátil falhou: $($testeUI.ExitCode)" }
+          Write-Host "EXE portátil executado sem instalação. Testes SQLite, migração, backup, estornos e navegação OK."
 
       - name: Registrar checksum SHA-256
         shell: pwsh
         run: |
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $installer = Join-Path $PWD "dist/FinControl-$version-setup.exe"
-          $hash = (Get-FileHash -Path $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  FinControl-$version-setup.exe" |
+          $portatil = Join-Path $PWD "dist/FinControl-$version-portable.exe"
+          $hash = (Get-FileHash -Path $portatil -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  FinControl-$version-portable.exe" |
             Out-File -FilePath "dist/SHA256SUMS.txt" -Encoding ascii
           Get-Content dist/SHA256SUMS.txt
 
-      - name: Disponibilizar instalador para download
+      - name: Disponibilizar executável portátil
         uses: actions/upload-artifact@v4
         with:
-          name: FinControl-1.0.0-Windows-x64
+          name: FinControl-1.0.0-Portatil-Windows-x64
           path: |
-            dist/FinControl-1.0.0-setup.exe
+            dist/FinControl-1.0.0-portable.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
