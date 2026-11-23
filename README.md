@@ -16,22 +16,24 @@ Aplicativo desktop **offline** de controle financeiro pessoal para Windows, dese
 
 **O FinControl não se conecta a bancos reais e não movimenta dinheiro de verdade.** Os valores são registros de controle pessoal.
 
-## Instalação — Windows
+## Abrir o FinControl — Windows, sem instalação
 
-1. Baixe o arquivo `FinControl-1.0.0-setup.exe` no artefato da execução aprovada do [GitHub Actions — Instalador Windows](https://github.com/Pdrokk/fincontrol/actions/workflows/windows-installer.yml).
-2. Extraia o arquivo ZIP do artefato e confira o `SHA256SUMS.txt`, se desejar verificar a integridade.
-3. Execute o instalador, escolha a pasta e siga o assistente.
-4. Abra o FinControl pelo atalho criado no menu Iniciar ou na Área de Trabalho.
+O FinControl 1.0 está disponível como **um único executável portátil**. Não existe assistente de instalação: abra o arquivo e use o app.
 
-**Assinatura digital:** a versão acadêmica não possui certificado de assinatura de código. O Windows pode exibir um aviso do SmartScreen sobre editor desconhecido. Verifique a procedência no repositório antes de executar; não desative proteções do sistema.
+1. Acesse [GitHub Actions — FinControl portátil](https://github.com/Pdrokk/fincontrol/actions/workflows/windows-installer.yml) e abra a execução aprovada mais recente da branch `portable/fincontrol-v1.0.0`.
+2. Em **Artifacts**, baixe `FinControl-1.0.0-Portatil-Windows-x64`. O GitHub entrega os artefatos em um ZIP.
+3. Extraia o ZIP e execute `FinControl-1.0.0-portable.exe` com duplo clique. Não são necessários VS Code, npm nem Node.js.
+4. O arquivo pode ficar na Área de Trabalho ou em outra pasta. O primeiro início pode ser um pouco mais demorado porque o executável portátil extrai arquivos temporários.
 
-### Onde meus dados ficam?
+**Assinatura digital:** esta versão acadêmica não tem certificado de assinatura. O Windows pode apresentar um aviso de editor desconhecido. Confira o arquivo e sua procedência no GitHub; não desative proteções do sistema.
 
-O banco é salvo no diretório de dados do aplicativo, em `dados/fincontrol.db`. Não fica na pasta do instalador. Reinstalar o aplicativo normalmente não deve apagar dados antigos; ainda assim, faça um backup antes de atualizar ou restaurar dados.
+### Onde ficam meus dados?
 
-No aplicativo, acesse **Configurações → Exportar backup** para guardar uma cópia SQLite. Use **Restaurar backup** apenas depois de confirmar o arquivo e lembrar que a operação substitui os dados atuais.
+O aplicativo usa o diretório de dados do usuário do Windows, em `dados/fincontrol.db`, da mesma forma que a versão com instalador. **O banco não fica dentro do executável** e não é apagado quando você substitui o `.exe` por uma versão nova.
 
-**Atenção:** não compartilhe seu `fincontrol.db`, backups ou extratos em repositórios públicos.
+A versão sem instalação **não** coloca todos os dados ao lado do `.exe`; portanto, ao levar somente o arquivo executável para outro computador, seus dados não vão junto. Para isso, use **Configurações → Exportar backup** e depois **Restaurar backup** no outro computador.
+
+Faça um backup antes da troca de versão. Não compartilhe bancos e backups financeiros em repositórios públicos.
 
 ## Requisitos
 
@@ -58,7 +60,7 @@ npm.cmd run build
 npm.cmd run build:win -- --x64
 ```
 
-O `npm.cmd test` executa testes de regras financeiras e consultas SQLite em memória. A workflow Windows também inicia o aplicativo empacotado em modo isolado (`--fincontrol-smoke-test`) para validar contas, pagamentos, estornos, salários, backup/restauração, integridade SQLite e migração de banco legado.
+O `npm.cmd test` executa testes de regras financeiras e consultas SQLite em memória. A workflow Windows também inicia o executável portátil em modo isolado (`--fincontrol-smoke-test`) para validar contas, pagamentos, estornos, salários, backup/restauração, integridade SQLite e migração de banco legado.
 
 ## Organização do projeto
 
@@ -66,7 +68,7 @@ O `npm.cmd test` executa testes de regras financeiras e consultas SQLite em mem�
 - `src/preload/`: API IPC exposta com isolamento de contexto
 - `src/renderer/`: interface React, gráficos, navegação e estilos
 - `tests/`: testes automatizados sem dados pessoais
-- `.github/workflows/`: CI de código e compilação do instalador no Windows
+- `.github/workflows/`: CI de código e compilação do executável portátil no Windows
 - `docs/`: roteiros de homologação e material de desenvolvimento
 
 ## Restrições e observações
