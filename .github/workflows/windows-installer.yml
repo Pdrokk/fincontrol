@@ -71,7 +71,9 @@ jobs:
           if (-not (Test-Path $exe)) { throw "O instalador nao produziu $exe" }
           $teste = Start-Process -FilePath $exe -ArgumentList "--fincontrol-smoke-test" -PassThru -Wait
           if ($teste.ExitCode -ne 0) { throw "Smoke do aplicativo instalado falhou: $($teste.ExitCode)" }
-          Write-Host "Instalacao + execucao isolada OK"
+          $testeUI = Start-Process -FilePath $exe -ArgumentList "--fincontrol-ui-smoke-test" -PassThru -Wait
+          if ($testeUI.ExitCode -ne 0) { throw "Smoke da interface React instalada falhou: $($testeUI.ExitCode)" }
+          Write-Host "Instalacao, SQLite e navegacao React OK"
 
       - name: Registrar checksum SHA-256
         shell: pwsh
