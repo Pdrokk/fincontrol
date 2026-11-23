@@ -117,11 +117,11 @@ for (let i = 0; i < imagens.length; i++) {
   offset += imagens[i].length
 }
 
-for (const caminho of ['build/icon.ico', 'build/icon.png', 'resources/icon.png']) {
+for (const caminho of ['build/generated/icon.ico', 'build/generated/icon.png']) {
   mkdirSync(dirname(caminho), { recursive: true })
   writeFileSync(caminho, caminho.endsWith('.ico')
     ? Buffer.concat([icoCabecalho, ...imagens])
     : imagens[imagens.length - 1])
 }
 
-console.info('Ícones FinControl gerados: build/icon.ico, build/icon.png, resources/icon.png')
+console.info('Ícones FinControl gerados: build/generated/icon.ico e build/generated/icon.png')
