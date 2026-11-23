@@ -1,6 +1,6 @@
 import { app, dialog } from 'electron'
 import { DatabaseSync, backup } from 'node:sqlite'
-import { copyFileSync, mkdirSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { caminhoBanco, fecharBanco, iniciarBanco, obterBanco } from './database'
 import { criarTabelaContas } from './contas'
@@ -82,21 +82,47 @@ export async function restaurarBackup(): Promise<boolean> {
   })
   if (confirmacao.response !== 1) return false
 
+  await aplicarRestauracaoValidada(origem)
+  return true
+}
+
+/**
+ * Núcleo da restauração (sem diálogo): reutilizado no teste integrado
+ * do executável, sempre com backup de emergência primeiro.
+ */
+export async function aplicarRestauracaoValidada(origem: string): Promise<void> {
+  if (resolve(origem) === resolve(caminhoBanco())) {
+    throw new Error('Não use o próprio banco aberto como arquivo de restauração.')
+  }
+  validarBackup(origem)
   const atual = caminhoBanco()
   const pastaSeguranca = join(app.getPath('userData'), 'dados', 'backups')
   mkdirSync(pastaSeguranca, { recursive: true })
   const snapshot = join(pastaSeguranca, `antes-restauracao-${Date.now()}.db`)
   await backup(obterBanco(), snapshot)
 
+  const limparJournals = (): void => {
+    for (const sufixo of ['-wal', '-shm']) {
+      const arquivo = atual + sufixo
+      if (existsSync(arquivo)) unlinkSync(arquivo)
+    }
+  }
+
   fecharBanco()
   try {
     mkdirSync(dirname(atual), { recursive: true })
+    limparJournals()
     copyFileSync(origem, atual)
     iniciarModelo()
-    return true
+    const integridade = obterBanco().prepare('PRAGMA integrity_check').get() as
+      | { integrity_check: string } | undefined
+    if (integridade?.integrity_check !== 'ok' ||
+        obterBanco().prepare('PRAGMA foreign_key_check').all().length !== 0) {
+      throw new Error('Falha na verificação do banco restaurado.')
+    }
   } catch (erro) {
-    // Não perder dados: reverter sempre para o estado anterior.
     fecharBanco()
+    limparJournals()
     copyFileSync(snapshot, atual)
     iniciarModelo()
     throw erro
