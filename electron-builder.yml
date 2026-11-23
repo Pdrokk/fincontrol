@@ -13,7 +13,7 @@ asarUnpack:
   - resources/**
 win:
   executableName: fincontrol
-  icon: build/icon.ico
+  icon: build/generated/icon.ico
   target:
     - target: nsis
       arch:
