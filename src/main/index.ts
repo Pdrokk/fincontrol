@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { iniciarBanco, obterBanco } from './database'
 import { exportarBackup, restaurarBackup } from './backup'
 import { executarSmokeInstalado } from './smoke'
+import { executarMigracaoLegadaSmoke } from './migracaoSmoke'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
@@ -80,7 +81,15 @@ app.whenReady().then(() => {
   // O modo de verificação só utiliza um banco temporário e não abre janelas.
   if (process.argv.includes('--fincontrol-smoke-test')) {
     void executarSmokeInstalado().then(
-      () => app.quit(),
+      async () => {
+        try {
+          executarMigracaoLegadaSmoke()
+          app.quit()
+        } catch (erro) {
+          console.error('FINCONTROL_MIGRACAO_FAIL:', erro)
+          app.exit(1)
+        }
+      },
       (erro: unknown) => {
         console.error('FINCONTROL_SMOKE_FAIL:', erro)
         app.exit(1)
