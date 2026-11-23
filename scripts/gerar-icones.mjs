@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 /**
  * Ícone autoral do FinControl (carteira + moeda).
  * Gera PNG e ICO usando somente módulos nativos do Node — sem dependências extras.
