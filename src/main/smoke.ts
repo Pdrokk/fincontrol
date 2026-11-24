@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { DatabaseSync, backup } from 'node:sqlite'
-import { iniciarBanco, obterBanco, fecharBanco, salvarTransacao, listarTransacoes } from './database'
+import { iniciarBanco, obterBanco, fecharBanco, salvarTransacao, editarTransacao, listarTransacoes } from './database'
 import {
   cadastrarConta, listarContas, editarConta, ajustarSaldo, transferirEntreContas,
   excluirConta
@@ -204,6 +204,11 @@ export async function executarSmokeInstalado(): Promise<void> {
     ).get() as { n: number }
     assert.equal(quantidade.n, 1, 'Salário recorrente não pode duplicar no mesmo mês')
     assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)
+    recusar(() => editarTransacao(receita.id, {
+      contaId: b.id, descricao: 'Tentativa de duplicar salário',
+      valorCentavos: 8_500, tipo: 'receita',
+      categoria: 'Salário', data: hoje
+    }), 'Edição também deve bloquear salário recorrente duplicado')
 
     const integridade = obterBanco().prepare('PRAGMA integrity_check').get() as
       | { integrity_check: string } | undefined
