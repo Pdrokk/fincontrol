@@ -243,6 +243,20 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
   if (banco.prepare('SELECT 1 FROM salarios_lancamentos WHERE transacao_id = ?').get(id)) {
     throw new Error('Lançamentos de salário recorrente não podem ser editados individualmente.')
   }
+  // A proteção de salário duplicado também precisa valer na edição. Do contrário,
+  // uma despesa/receita comum poderia ser convertida em salário já recebido.
+  if (dados.tipo === 'receita' && dados.categoria.trim().toLocaleLowerCase('pt-BR') === 'salário') {
+    const duplicado = banco.prepare(`
+      SELECT 1 FROM salarios_lancamentos sl
+      JOIN transacoes t ON t.id = sl.transacao_id
+      WHERE t.id <> ? AND t.conta_id IS ? AND t.valor_centavos = ?
+        AND substr(t.data, 1, 7) = ? AND t.categoria = 'Salário'
+      LIMIT 1
+    `).get(id, contaId, dados.valorCentavos, dados.data.slice(0, 7))
+    if (duplicado) {
+      throw new Error('Esse salário já foi registrado pela recorrência neste mês.')
+    }
+  }
 
   const resultado = banco
     .prepare(
