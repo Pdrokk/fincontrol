@@ -218,14 +218,6 @@ function App(): React.JSX.Element {
     return (): void => { ativo = false }
   }, [pagina])
 
-  // Ao cadastrar uma transação, sugere a primeira conta para evitar
-  // lançamentos nos relatórios que não alteram nenhum saldo por engano.
-  useEffect(() => {
-    if (!editandoId && contas.length > 0) {
-      setContaId((atual) => atual || contas[0].id)
-    }
-  }, [contas.length, editandoId])
-
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
   const [tipo, setTipo] = useState<Tipo>('despesa')
@@ -361,7 +353,7 @@ function App(): React.JSX.Element {
     setValor('')
     setTipo('despesa')
     setCategoria('Alimentação')
-    setContaId(contas[0]?.id ?? '')
+    setContaId('')
   }
 
   function alterarTipo(novoTipo: Tipo): void {
@@ -384,7 +376,7 @@ function App(): React.JSX.Element {
       !Number.isFinite(numero) ||
       !Number.isSafeInteger(centavos) ||
       centavos <= 0 ||
-      !data || (!editandoId && !contaId)
+      !data || (!editandoId && !contaId && contas.length === 0)
     ) {
       alert('Preencha os campos corretamente.')
       return
@@ -396,7 +388,7 @@ function App(): React.JSX.Element {
       tipo,
       categoria,
       data,
-      contaId: contaId || null
+      contaId: contaId || (!editandoId ? (contas[0]?.id ?? null) : null)
     }
 
     try {
@@ -746,7 +738,8 @@ function App(): React.JSX.Element {
 
                 <label>
                   Conta bancária
-                  <select value={contaId} onChange={(e): void => setContaId(e.target.value)} required={!editandoId}>
+                  <select value={contaId || (!editandoId ? (contas[0]?.id ?? '') : '')}
+                      onChange={(e): void => setContaId(e.target.value)} required={!editandoId}>
                     {editandoId && <option value="">Sem conta vinculada (histórico)</option>}
                     {contas.length === 0 && <option value="">Cadastre uma conta primeiro</option>}
                     {contas.map((conta) => (
