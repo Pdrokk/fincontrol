@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { DatabaseSync, backup } from 'node:sqlite'
-import { iniciarBanco, obterBanco, fecharBanco, salvarTransacao, listarTransacoes } from './database'
+import { iniciarBanco, obterBanco, fecharBanco, salvarTransacao, editarTransacao, listarTransacoes } from './database'
 import {
   cadastrarConta, listarContas, editarConta, ajustarSaldo, transferirEntreContas,
   excluirConta
@@ -141,6 +141,17 @@ export async function executarSmokeInstalado(): Promise<void> {
     assert.equal(dinheiro(a.id), antes - 60_000)
     assert.equal(listarCartoes().find(c => c.id === cartao.id)?.limiteDisponivelCentavos, 100_000)
     assert.ok(listarFaturasPrevistas().filter(f => f.cartaoId === cartao.id).every(f => f.paga))
+    const historicoParcela = obterBanco().prepare(`
+      SELECT id, estornado FROM pagamentos_parcelas WHERE parcela_id = ?
+    `).all(parcelas[0].id) as { id: string; estornado: number }[]
+    assert.equal(historicoParcela.length, 2, 'Re-pagamento deve preservar a primeira baixa')
+    assert.ok(historicoParcela.some((p) => p.id === pagamentoParcelaId && p.estornado === 1))
+    assert.equal(historicoParcela.filter((p) => p.estornado === 0).length, 1)
+    assert.equal(listarEstornosPagamentos()[0].pagamentoId, pagamentoParcelaId)
+    criarTabelasCartoes() // Migração idempotente não pode apagar a trilha de auditoria.
+    assert.equal((obterBanco().prepare(
+      'SELECT COUNT(*) AS n FROM pagamentos_parcelas WHERE parcela_id = ?'
+    ).get(parcelas[0].id) as { n: number }).n, 2)
 
     // A fatura integral também precisa permitir pagar novamente após um estorno.
     const segundo = cadastrarCartao({
@@ -159,8 +170,18 @@ export async function executarSmokeInstalado(): Promise<void> {
     assert.equal(pagamento.valorCentavos, 10_000)
     estornarPagamento({ tipo: 'fatura', pagamentoId: pagamento.id, motivo: 'Teste reversão' })
     assert.ok(listarFaturasPrevistas().some(f => f.cartaoId === segundo.id && !f.paga))
-    pagarFatura({ contaId: a.id, cartaoId: segundo.id, competencia, dataPagamento: hoje })
+    const segundaQuitacao = pagarFatura({
+      contaId: a.id, cartaoId: segundo.id, competencia, dataPagamento: hoje
+    })
     assert.ok(listarFaturasPrevistas().some(f => f.cartaoId === segundo.id && f.paga))
+    assert.notEqual(segundaQuitacao.id, pagamento.id)
+    const historicoFatura = obterBanco().prepare(`
+      SELECT id, estornado FROM pagamentos_fatura
+      WHERE cartao_id = ? AND competencia = ?
+    `).all(segundo.id, competencia) as { id: string; estornado: number }[]
+    assert.equal(historicoFatura.length, 2, 'Estorno integral não pode apagar o pagamento antigo')
+    assert.ok(historicoFatura.some((p) => p.id === pagamento.id && p.estornado === 1))
+    assert.equal(historicoFatura.filter((p) => p.estornado === 0).length, 1)
 
     const saldoAnterior = dinheiro(b.id)
     ajustarSaldo({
@@ -183,6 +204,11 @@ export async function executarSmokeInstalado(): Promise<void> {
     ).get() as { n: number }
     assert.equal(quantidade.n, 1, 'Salário recorrente não pode duplicar no mesmo mês')
     assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)
+    recusar(() => editarTransacao(receita.id, {
+      contaId: b.id, descricao: 'Tentativa de duplicar salário',
+      valorCentavos: 8_500, tipo: 'receita',
+      categoria: 'Salário', data: hoje
+    }), 'Edição também deve bloquear salário recorrente duplicado')
 
     const integridade = obterBanco().prepare('PRAGMA integrity_check').get() as
       | { integrity_check: string } | undefined

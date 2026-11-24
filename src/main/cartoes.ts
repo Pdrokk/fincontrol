@@ -143,15 +143,16 @@ export function criarTabelasCartoes(): void {
       conta_id TEXT NOT NULL REFERENCES contas(id),
       data_pagamento TEXT NOT NULL,
       valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0),
-      UNIQUE (cartao_id, competencia)
+      estornado INTEGER NOT NULL DEFAULT 0 CHECK (estornado IN (0, 1))
     );
 
     CREATE TABLE IF NOT EXISTS pagamentos_parcelas (
       id TEXT PRIMARY KEY,
-      parcela_id TEXT NOT NULL UNIQUE REFERENCES parcelas_cartao(id),
+      parcela_id TEXT NOT NULL REFERENCES parcelas_cartao(id),
       conta_id TEXT NOT NULL REFERENCES contas(id),
       data_pagamento TEXT NOT NULL,
-      valor_centavos INTEGER NOT NULL CHECK(valor_centavos > 0)
+      valor_centavos INTEGER NOT NULL CHECK(valor_centavos > 0),
+      estornado INTEGER NOT NULL DEFAULT 0 CHECK (estornado IN (0, 1))
     );
     CREATE TABLE IF NOT EXISTS estornos_pagamentos (
       id TEXT PRIMARY KEY,
@@ -181,6 +182,85 @@ export function criarTabelasCartoes(): void {
     if (!colunas.some((c) => c.name === 'estornado')) {
       db.exec(`ALTER TABLE ${tabela} ADD COLUMN estornado INTEGER NOT NULL DEFAULT 0`)
     }
+  }
+
+  // A versão anterior impunha UNIQUE em toda a história da fatura/parcela.
+  // Isso obrigava INSERT OR REPLACE e apagava o pagamento que havia sido
+  // estornado. O histórico passa a ser preservado em linhas distintas.
+  const unicidadeLegada = (tabela: string, colunas: string[]): boolean => {
+    const indices = db.prepare(`PRAGMA index_list("${tabela}")`).all() as
+      { name: string; origin: string }[]
+    return indices.some((indice) => {
+      if (indice.origin !== 'u') return false
+      const nomes = (db.prepare(`PRAGMA index_info("${indice.name}")`).all() as
+        { name: string }[]).map((coluna) => coluna.name)
+      return nomes.join(',') === colunas.join(',')
+    })
+  }
+  const migrarFaturas = unicidadeLegada('pagamentos_fatura', ['cartao_id', 'competencia'])
+  const migrarParcelas = unicidadeLegada('pagamentos_parcelas', ['parcela_id'])
+  if (migrarFaturas || migrarParcelas) {
+    // Desabilitar FK somente durante a recriação das tabelas, fora da transação.
+    const chavesAtivas = (db.prepare('PRAGMA foreign_keys').get() as
+      { foreign_keys: number }).foreign_keys === 1
+    if (chavesAtivas) db.exec('PRAGMA foreign_keys = OFF')
+    try {
+      db.exec('BEGIN IMMEDIATE')
+      if (migrarFaturas) {
+        db.exec(`
+          CREATE TABLE pagamentos_fatura_historico_novo (
+            id TEXT PRIMARY KEY,
+            cartao_id TEXT NOT NULL REFERENCES cartoes(id),
+            competencia TEXT NOT NULL,
+            conta_id TEXT NOT NULL REFERENCES contas(id),
+            data_pagamento TEXT NOT NULL,
+            valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0),
+            estornado INTEGER NOT NULL DEFAULT 0 CHECK (estornado IN (0, 1))
+          );
+          INSERT INTO pagamentos_fatura_historico_novo
+            (id, cartao_id, competencia, conta_id, data_pagamento, valor_centavos, estornado)
+          SELECT id, cartao_id, competencia, conta_id, data_pagamento, valor_centavos, estornado
+          FROM pagamentos_fatura;
+          DROP TABLE pagamentos_fatura;
+          ALTER TABLE pagamentos_fatura_historico_novo RENAME TO pagamentos_fatura;
+        `)
+      }
+      if (migrarParcelas) {
+        db.exec(`
+          CREATE TABLE pagamentos_parcelas_historico_novo (
+            id TEXT PRIMARY KEY,
+            parcela_id TEXT NOT NULL REFERENCES parcelas_cartao(id),
+            conta_id TEXT NOT NULL REFERENCES contas(id),
+            data_pagamento TEXT NOT NULL,
+            valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0),
+            estornado INTEGER NOT NULL DEFAULT 0 CHECK (estornado IN (0, 1))
+          );
+          INSERT INTO pagamentos_parcelas_historico_novo
+            (id, parcela_id, conta_id, data_pagamento, valor_centavos, estornado)
+          SELECT id, parcela_id, conta_id, data_pagamento, valor_centavos, estornado
+          FROM pagamentos_parcelas;
+          DROP TABLE pagamentos_parcelas;
+          ALTER TABLE pagamentos_parcelas_historico_novo RENAME TO pagamentos_parcelas;
+        `)
+      }
+      db.exec('COMMIT')
+    } catch (erro) {
+      db.exec('ROLLBACK')
+      throw erro
+    } finally {
+      if (chavesAtivas) db.exec('PRAGMA foreign_keys = ON')
+    }
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_fatura_ativa_unica
+      ON pagamentos_fatura(cartao_id, competencia) WHERE estornado = 0;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_parcela_ativa_unica
+      ON pagamentos_parcelas(parcela_id) WHERE estornado = 0;
+    CREATE INDEX IF NOT EXISTS idx_pagamentos_fatura_conta ON pagamentos_fatura(conta_id);
+    CREATE INDEX IF NOT EXISTS idx_pagamentos_parcelas_conta ON pagamentos_parcelas(conta_id);
+  `)
+  if (db.prepare('PRAGMA foreign_key_check').all().length > 0) {
+    throw new Error('Migração de pagamentos encontrou vínculos inválidos no banco.')
   }
 }
 
@@ -495,7 +575,7 @@ export function pagarParcelasSelecionadas(dados: NovoPagamentoParcelas): { valor
     if (!conta) throw new Error('Conta não encontrada.')
     if (conta.saldoAtualCentavos < total) throw new Error('Saldo insuficiente para as parcelas escolhidas.')
     const inserir = db.prepare(`
-      INSERT OR REPLACE INTO pagamentos_parcelas (id, parcela_id, conta_id, data_pagamento, valor_centavos)
+      INSERT INTO pagamentos_parcelas (id, parcela_id, conta_id, data_pagamento, valor_centavos)
       VALUES (?, ?, ?, ?, ?)
     `)
     for (const p of selecionadas) {
@@ -718,7 +798,7 @@ export function pagarFatura(dados: NovoPagamentoFatura): PagamentoFatura {
       valorCentavos: total
     }
     db.prepare(`
-      INSERT OR REPLACE INTO pagamentos_fatura
+      INSERT INTO pagamentos_fatura
         (id, cartao_id, competencia, conta_id, data_pagamento, valor_centavos)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(

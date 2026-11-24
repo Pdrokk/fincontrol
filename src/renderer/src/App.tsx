@@ -376,7 +376,7 @@ function App(): React.JSX.Element {
       !Number.isFinite(numero) ||
       !Number.isSafeInteger(centavos) ||
       centavos <= 0 ||
-      !data
+      !data || (!editandoId && !contaId && contas.length === 0)
     ) {
       alert('Preencha os campos corretamente.')
       return
@@ -388,7 +388,7 @@ function App(): React.JSX.Element {
       tipo,
       categoria,
       data,
-      contaId: contaId || null
+      contaId: contaId || (!editandoId ? (contas[0]?.id ?? null) : null)
     }
 
     try {
@@ -592,6 +592,12 @@ function App(): React.JSX.Element {
             >
               Limpar período
             </button>
+            {(pagina === 'dashboard' || pagina === 'relatorios') && (
+              <p className="filtros-aviso">
+                Os indicadores seguem o mês e ano selecionados. Os gráficos mostram até seis meses
+                por página, dentro do ano escolhido.
+              </p>
+            )}
           </section>
         )}
 
@@ -602,7 +608,7 @@ function App(): React.JSX.Element {
             despesasCentavos={totalDespesas}
             transacoes={transacoesRealizadas}
             previsoes={transacoesPrevistas}
-            filtroMes={mesFiltro}
+            filtroMes="todos"
             filtroAno={anoFiltro}
             transacoesRecentes={[...transacoesBancariasPeriodo]
               .sort((a, b) => b.data.localeCompare(a.data))
@@ -732,8 +738,10 @@ function App(): React.JSX.Element {
 
                 <label>
                   Conta bancária
-                  <select value={contaId} onChange={(e): void => setContaId(e.target.value)}>
-                    <option value="">Sem conta vinculada (histórico)</option>
+                  <select value={contaId || (!editandoId ? (contas[0]?.id ?? '') : '')}
+                      onChange={(e): void => setContaId(e.target.value)} required={!editandoId}>
+                    {editandoId && <option value="">Sem conta vinculada (histórico)</option>}
+                    {contas.length === 0 && <option value="">Cadastre uma conta primeiro</option>}
                     {contas.map((conta) => (
                       <option key={conta.id} value={conta.id}>
                         {conta.banco} · {conta.nome}
@@ -755,7 +763,7 @@ function App(): React.JSX.Element {
                 <button
                   className="botao-primario"
                   type="submit"
-                  disabled={salvando || carregando || Boolean(erroBanco)}
+                  disabled={salvando || carregando || Boolean(erroBanco) || (!editandoId && contas.length === 0)}
                 >
                   {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Salvar transação'}
                 </button>
@@ -783,7 +791,7 @@ function App(): React.JSX.Element {
 
         {pagina === 'relatorios' && (
           <>
-            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} filtroMes={mesFiltro} filtroAno={anoFiltro} />
+            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} filtroMes="todos" filtroAno={anoFiltro} />
 
             <section className="painel">
               <h3>Resumo financeiro realizado do período</h3>

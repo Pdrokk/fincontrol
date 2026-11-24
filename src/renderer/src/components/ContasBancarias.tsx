@@ -189,7 +189,7 @@ export default function ContasBancarias(): React.JSX.Element {
       <section className="painel">
         <div className="titulo-contas">
           <div>
-            <h3>Minhas contas</h3>
+            <h3>Contas cadastradas</h3>
             <p>Gerencie seus bancos e saldos financeiros.</p>
           </div>
           <Landmark size={26} />

@@ -117,9 +117,11 @@ export default function GraficosFinanceiros({
         </div>
       </div>
       <p className="graficos-explicacao">
-        {filtroMes !== 'todos' || filtroAno !== 'todos'
-          ? 'Os filtros de mês e ano acima estão aplicados aos gráficos. Use Limpar período para navegar por todo o histórico. '
-          : ''}
+        {filtroMes !== 'todos'
+          ? 'O gráfico está filtrado pelo mês selecionado. '
+          : filtroAno !== 'todos'
+            ? 'O gráfico mostra até seis meses por página do ano selecionado; o mês filtrado vale para os indicadores. '
+            : 'Use as setas para navegar pelo histórico de seis em seis meses. '}
         {modo === 'realizado'
           ? 'Somente receitas registradas e despesas efetivamente pagas. Parcelas futuras não entram neste resultado.'
           : 'Somente parcelas de cartão em aberto, por mês de competência. Não reduz o saldo bancário atual.'}
