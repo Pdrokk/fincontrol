@@ -82,13 +82,24 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
 
       const aplicativo = document.querySelector('.fincontrol');
       const antes = aplicativo?.getAttribute('data-theme');
+      const trilhoAntes = getComputedStyle(document.documentElement)
+        .getPropertyValue('--fc-scroll-track').trim();
       const tema = document.querySelector('.botao-tema-lateral');
       if (!tema) throw new Error('Controle de tema ausente.');
       tema.click();
       await dormir(250);
       const depois = aplicativo?.getAttribute('data-theme');
       if (antes === depois) throw new Error('Tema não foi alterado.');
-      return { paginas: verificadas, tema: 'OK' };
+      const trilhoDepois = getComputedStyle(document.documentElement)
+        .getPropertyValue('--fc-scroll-track').trim();
+      if (!trilhoAntes || !trilhoDepois || trilhoAntes === trilhoDepois) {
+        throw new Error('Scrollbar não acompanhou a mudança de tema.');
+      }
+      const esquema = getComputedStyle(document.documentElement).colorScheme;
+      if (esquema !== depois) {
+        throw new Error('Tema nativo do Chromium não acompanhou o React.');
+      }
+      return { paginas: verificadas, tema: 'OK', scrollbar: 'OK' };
     })()
   `)
   console.info('FINCONTROL_UI_SMOKE_OK:', JSON.stringify(resultado))
