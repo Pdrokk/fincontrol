@@ -1812,3 +1812,90 @@ button:disabled {
   margin-top: 18px;
   cursor: pointer;
 }
+
+/* FinControl 1.0 — scrollbar nativa do Electron sincronizada com o tema.
+ * A rolagem principal pertence ao documento (html/body), não a .content.
+ * :has() é suportado pelo Chromium embutido no Electron utilizado pelo projeto.
+ */
+:root {
+  color-scheme: light;
+  --fc-scroll-track: #f1f5f9;
+  --fc-scroll-thumb: #a4afbf;
+  --fc-scroll-thumb-hover: #64748b;
+}
+
+:root:has(.fincontrol[data-theme='dark']) {
+  color-scheme: dark;
+  --fc-scroll-track: #0b1220;
+  --fc-scroll-thumb: #46576d;
+  --fc-scroll-thumb-hover: #8296ae;
+}
+
+/* Evita também a faixa clara atrás da barra na rolagem do documento. */
+html,
+body,
+#root {
+  background-color: var(--fc-scroll-track);
+}
+
+/* Mozilla e Chromium moderno (inclui a scrollbar do viewport). */
+html,
+body,
+#root,
+.fincontrol,
+.fincontrol * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fc-scroll-thumb) var(--fc-scroll-track);
+}
+
+/* Chromium: trilho, polegar e botões coerentes com o modo escuro/claro. */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+.fincontrol::-webkit-scrollbar,
+.fincontrol *::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+#root::-webkit-scrollbar-track,
+.fincontrol::-webkit-scrollbar-track,
+.fincontrol *::-webkit-scrollbar-track {
+  background: var(--fc-scroll-track);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+#root::-webkit-scrollbar-thumb,
+.fincontrol::-webkit-scrollbar-thumb,
+.fincontrol *::-webkit-scrollbar-thumb {
+  background: var(--fc-scroll-thumb);
+  border: 2px solid var(--fc-scroll-track);
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+#root::-webkit-scrollbar-thumb:hover,
+.fincontrol::-webkit-scrollbar-thumb:hover,
+.fincontrol *::-webkit-scrollbar-thumb:hover {
+  background: var(--fc-scroll-thumb-hover);
+}
+
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+#root::-webkit-scrollbar-button,
+.fincontrol::-webkit-scrollbar-button,
+.fincontrol *::-webkit-scrollbar-button {
+  display: none;
+}
+
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+#root::-webkit-scrollbar-corner,
+.fincontrol::-webkit-scrollbar-corner,
+.fincontrol *::-webkit-scrollbar-corner {
+  background: var(--fc-scroll-track);
+}
