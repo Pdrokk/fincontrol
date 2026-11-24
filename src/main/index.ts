@@ -70,8 +70,32 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         if (nome === 'Relatórios' && !document.querySelector('.graficos-relatorio')) {
           throw new Error('Gráficos ausentes na página Relatórios.');
         }
-        if (nome === 'Cartões e faturas' && !document.querySelector('.central-pagamentos')) {
-          throw new Error('Central de Pagamentos ausente.');
+        if (nome === 'Cartões e faturas') {
+          if (!document.querySelector('.central-pagamentos')) {
+            throw new Error('Central de Pagamentos ausente.');
+          }
+          const aba = (texto) => [...document.querySelectorAll('.cartoes-navegacao button')]
+            .find((b) => b.textContent?.includes(texto));
+          const compras = aba('Compras e parcelas');
+          if (!compras) throw new Error('Aba Compras ausente.');
+          compras.click();
+          await dormir(200);
+          if (![...document.querySelectorAll('.pagina-cartoes h3')]
+            .some((h) => h.textContent?.includes('Registrar compra no cartão'))) {
+            throw new Error('Cadastro de compras não abriu.');
+          }
+          const gerenciar = aba('Cadastrar ou editar cartão');
+          if (!gerenciar) throw new Error('Aba Gerenciar ausente.');
+          gerenciar.click();
+          await dormir(200);
+          if (!document.querySelector('#formulario-cartao')) {
+            throw new Error('Cadastro de cartão não abriu.');
+          }
+          aba('Pagamentos e faturas')?.click();
+          await dormir(200);
+          if (!document.querySelector('.central-pagamentos')) {
+            throw new Error('Voltar a Pagamentos falhou.');
+          }
         }
         if (nome === 'Configurações' &&
             !document.body.textContent?.includes('Backup e restauração')) {
