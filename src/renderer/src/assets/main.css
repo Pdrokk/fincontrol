@@ -1899,3 +1899,68 @@ body::-webkit-scrollbar-corner,
 .fincontrol *::-webkit-scrollbar-corner {
   background: var(--fc-scroll-track);
 }
+
+/* FinControl — navegação de cartões sem formulário e histórico simultâneos. */
+.fincontrol .cartoes-navegacao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+  margin: 4px 0 18px;
+}
+
+.fincontrol .cartoes-navegacao button {
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fincontrol .cartoes-navegacao button.ativo {
+  border-color: #2563eb;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: inset 0 -2px #2563eb;
+}
+
+.fincontrol .cartoes-navegacao button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* Enquanto percorre as parcelas, o pagamento selecionado fica acessível. */
+.fincontrol .central-pagamento-form {
+  position: sticky;
+  bottom: 10px;
+  z-index: 10;
+  padding: 15px;
+  margin: 16px -3px -3px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px #00000018;
+}
+
+.fincontrol .filtros-periodo .filtros-aviso {
+  flex-basis: 100%;
+  width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+@media (max-width: 800px) {
+  .fincontrol .cartoes-navegacao button {
+    flex: 1 1 100%;
+    text-align: left;
+  }
+  .fincontrol .central-pagamento-form {
+    position: static;
+  }
+}
