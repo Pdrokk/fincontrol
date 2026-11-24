@@ -1,0 +1,61 @@
+name: Validar correções financeiras e layout FinControl 1.0
+on:
+  push:
+    branches:
+      - 'fix/integridade-estornos-ux-cartoes-v1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validacao-windows:
+    name: Testar base SQLite, migrações, interface e EXE Windows
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      CI: 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Tipos TypeScript
+        run: npm run typecheck
+      - name: Qualidade ESLint
+        run: npm run lint
+      - name: Testes unitários SQLite
+        run: npm test
+      - name: Gerar executável portátil
+        run: npm run build:win -- --x64
+      - name: Testar pagamentos, estornos, migrações e backup no EXE empacotado
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'dist/win-unpacked/fincontrol.exe'
+          if (-not (Test-Path $exe)) { throw "EXE empacotado ausente" }
+          $p = Start-Process -FilePath $exe -ArgumentList '--fincontrol-smoke-test' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Testes financeiros falharam: $($p.ExitCode)" }
+      - name: Testar navegação, gráficos, cartões e scrollbar no EXE portátil
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'dist/FinControl-1.0.0-portable.exe'
+          if (-not (Test-Path $exe)) { throw "EXE portátil ausente" }
+          $p = Start-Process -FilePath $exe -ArgumentList '--fincontrol-ui-smoke-test' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Teste de interface falhou: $($p.ExitCode)" }
+          $p2 = Start-Process -FilePath $exe -ArgumentList '--fincontrol-smoke-test' -Wait -PassThru
+          if ($p2.ExitCode -ne 0) { throw "Regressão financeira portátil falhou: $($p2.ExitCode)" }
+      - name: Disponibilizar executável portátil de testes
+        uses: actions/upload-artifact@v4
+        with:
+          name: FinControl-v1-Correcoes-Validacao-Windows
+          path: |
+            dist/FinControl-1.0.0-portable.exe
+          if-no-files-found: error
+          retention-days: 14
