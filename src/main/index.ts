@@ -1,12 +1,14 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { mkdtempSync } from 'node:fs'
+import { join, resolve } from 'path'
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { iniciarBanco, obterBanco } from './database'
 import { exportarBackup, restaurarBackup } from './backup'
 import { executarSmokeInstalado } from './smoke'
 import { executarMigracaoLegadaSmoke } from './migracaoSmoke'
+import { capturarTelasReais, criarDadosVisuaisFicticios } from './visualAudit'
+import { executarRegressaoUI } from './regressaoUI'
 import icon from '../../resources/icon.png?asset'
 import { listarTransacoes, salvarTransacao, removerTransacao, editarTransacao } from './database'
 
@@ -33,6 +35,14 @@ import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParce
 import type { NovoEstornoPagamento } from './cartoes'
 
 const modoUISmoke = process.argv.includes('--fincontrol-ui-smoke-test')
+const modoRegressao = process.argv.includes('--fincontrol-regressao-v1')
+
+function registrarErroAuditoria(erro: unknown): void {
+  const pasta = resolve(process.env.FINCONTROL_SCREENSHOT_DIR || 'audit/screenshots')
+  mkdirSync(pasta, { recursive: true })
+  writeFileSync(join(pasta, 'erro-auditoria.txt'),
+    erro instanceof Error ? (erro.stack || erro.message) : String(erro))
+}
 
 /**
  * Exercita a interface React do executável de produção com o browser oculto.
@@ -144,8 +154,28 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    if (!modoUISmoke) mainWindow.show()
+    if (!modoUISmoke && !modoRegressao) mainWindow.show()
   })
+
+  if (modoRegressao) {
+    mainWindow.webContents.once('did-fail-load', (_evento, codigo, descricao) => {
+      console.error('REGRESSAO_FAIL: carregamento', codigo, descricao)
+      registrarErroAuditoria(new Error('Falha de carregamento: ' + codigo + ' ' + descricao))
+      app.exit(1)
+    })
+    mainWindow.webContents.once('did-finish-load', () => {
+      void capturarTelasReais(mainWindow).then(
+        () => executarRegressaoUI(mainWindow)
+      ).then(
+        () => app.exit(0),
+        (erro: unknown) => {
+          console.error('REGRESSAO_FAIL:', erro)
+          registrarErroAuditoria(erro)
+          app.exit(1)
+        }
+      )
+    })
+  }
 
   if (modoUISmoke) {
     mainWindow.webContents.once('did-fail-load', (_evento, codigo, descricao) => {
@@ -212,7 +242,7 @@ app.whenReady().then(() => {
     )
     return
   }
-  if (modoUISmoke) {
+  if (modoUISmoke || modoRegressao) {
     const pasta = mkdtempSync(join(tmpdir(), 'fincontrol-ui-smoke-'))
     app.setPath('userData', pasta)
   }
@@ -222,6 +252,7 @@ app.whenReady().then(() => {
   criarTabelaSalarios()
   obterBanco().exec('PRAGMA foreign_keys = ON')
   processarSalariosVencidos()
+  if (modoRegressao) criarDadosVisuaisFicticios()
 
   // A recorrência também é conferida com o aplicativo aberto. O processo
   // principal nunca insere salário enquanto o programa está fechado.
