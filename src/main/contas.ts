@@ -60,19 +60,29 @@ export function criarTabelaContas(): void {
     .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='contas'")
     .get() as { sql: string } | undefined
   if (tabela && !tabela.sql.includes("'salario'")) {
-    db.exec('BEGIN IMMEDIATE')
+    const colunasOriginais = db.prepare('PRAGMA table_info(contas)').all() as
+      { name: string }[]
+    const possuiCor = colunasOriginais.some((c) => c.name === 'cor')
+    const corExistente = possuiCor ? 'cor' : "'#2563eb'"
+    const chavesAtivas = (db.prepare('PRAGMA foreign_keys').get() as
+      { foreign_keys: number }).foreign_keys === 1
+    if (chavesAtivas) db.exec('PRAGMA foreign_keys = OFF')
     try {
+      db.exec('BEGIN IMMEDIATE')
       db.exec(`
         CREATE TABLE contas_nova (
           id TEXT PRIMARY KEY,
           banco TEXT NOT NULL,
           nome TEXT NOT NULL,
           tipo TEXT NOT NULL CHECK (tipo IN ('corrente', 'poupanca', 'salario', 'dinheiro', 'outra')),
+          cor TEXT NOT NULL DEFAULT '#2563eb',
           saldo_inicial_centavos INTEGER NOT NULL CHECK (saldo_inicial_centavos >= 0),
           criado_em TEXT NOT NULL
         );
-        INSERT INTO contas_nova (id, banco, nome, tipo, saldo_inicial_centavos, criado_em)
-        SELECT id, banco, nome, tipo, saldo_inicial_centavos, criado_em FROM contas;
+        INSERT INTO contas_nova
+          (id, banco, nome, tipo, cor, saldo_inicial_centavos, criado_em)
+        SELECT id, banco, nome, tipo, ${corExistente}, saldo_inicial_centavos, criado_em
+          FROM contas;
         DROP TABLE contas;
         ALTER TABLE contas_nova RENAME TO contas;
       `)
@@ -80,6 +90,8 @@ export function criarTabelaContas(): void {
     } catch (erro) {
       db.exec('ROLLBACK')
       throw erro
+    } finally {
+      if (chavesAtivas) db.exec('PRAGMA foreign_keys = ON')
     }
   }
   if (!tabela) {
