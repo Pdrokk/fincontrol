@@ -206,7 +206,7 @@ export async function capturarTelasReais(janela: BrowserWindow): Promise<void> {
           foco = [...document.querySelectorAll('.pagina-cartoes section')]
             .find(x => x.querySelector('h3')?.textContent?.trim() === 'Registrar compra no cartão');
         }
-        const el = typeof foco === 'string' ? document.querySelector(foco) : foco;
+        const el = typeof foco === 'string' ? (foco ? document.querySelector(foco) : null) : foco;
         if (el) el.scrollIntoView({ block: 'start', behavior: 'instant' });
         else window.scrollTo({ top: 0, behavior: 'instant' });
       })()
