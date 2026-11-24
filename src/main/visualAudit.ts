@@ -128,7 +128,19 @@ export async function capturarTelasReais(janela: BrowserWindow): Promise<void> {
   mkdirSync(destino, { recursive: true })
   const diagnosticos: unknown[] = []
 
+  // did-finish-load pode ocorrer antes de React montar o menu.
+  let menuPronto = false
+  for (let tentativas = 0; tentativas < 50; tentativas++) {
+    menuPronto = await janela.webContents.executeJavaScript(
+      "Boolean(document.querySelector('.sidebar nav button'))"
+    ) as boolean
+    if (menuPronto) break
+    await adiar(150)
+  }
+  if (!menuPronto) throw new Error('React não renderizou o menu após o carregamento.')
+
   for (const c of capturas) {
+    writeFileSync(resolve(destino, 'etapa.txt'), c.id + ': antes da navegação')
     janela.setContentSize(c.largura, c.altura)
     const estado = await janela.webContents.executeJavaScript(`
       (() => {
@@ -143,6 +155,7 @@ export async function capturarTelasReais(janela: BrowserWindow): Promise<void> {
         return { nome, tema };
       })()
     `)
+    writeFileSync(resolve(destino, 'etapa.txt'), c.id + ': após navegar')
     await adiar(650)
     await janela.webContents.executeJavaScript(`
       (() => {
@@ -179,6 +192,7 @@ export async function capturarTelasReais(janela: BrowserWindow): Promise<void> {
         }
       })()
     `)
+    writeFileSync(resolve(destino, 'etapa.txt'), c.id + ': após interação')
     await adiar(400)
     await janela.webContents.executeJavaScript(`
       (() => {
@@ -226,6 +240,7 @@ export async function capturarTelasReais(janela: BrowserWindow): Promise<void> {
         };
       })()
     `)
+    writeFileSync(resolve(destino, 'etapa.txt'), c.id + ': antes de capturar PNG')
     const screenshot = await janela.webContents.capturePage()
     const bytes = screenshot.toPNG()
     if (bytes.byteLength < 20000) throw new Error('Imagem potencialmente vazia: ' + c.id)
