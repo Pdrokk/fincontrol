@@ -600,10 +600,12 @@ function App(): React.JSX.Element {
             >
               Limpar período
             </button>
-            <p className="filtros-aviso">
-              Os indicadores seguem o mês e ano selecionados. Os gráficos mostram até seis meses
-              por página, dentro do ano escolhido.
-            </p>
+            {(pagina === 'dashboard' || pagina === 'relatorios') && (
+              <p className="filtros-aviso">
+                Os indicadores seguem o mês e ano selecionados. Os gráficos mostram até seis meses
+                por página, dentro do ano escolhido.
+              </p>
+            )}
           </section>
         )}
 
