@@ -69,6 +69,7 @@ export default function CartoesCredito(): React.JSX.Element {
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [secao, setSecao] = useState<'pagamentos' | 'compras' | 'gerenciar'>('pagamentos')
 
   const [banco, setBanco] = useState('')
   const [nome, setNome] = useState('')
@@ -127,7 +128,9 @@ export default function CartoesCredito(): React.JSX.Element {
     setLimite((cartao.limiteCentavos / 100).toFixed(2).replace('.', ','))
     setFechamento(String(cartao.diaFechamento))
     setVencimento(String(cartao.diaVencimento))
-    document.getElementById('formulario-cartao')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setSecao('gerenciar')
+    window.setTimeout(() => document.getElementById('formulario-cartao')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
 
   function limparFormularioCartao(): void {
@@ -165,6 +168,7 @@ export default function CartoesCredito(): React.JSX.Element {
       }
       await atualizar()
       limparFormularioCartao()
+      setSecao('pagamentos')
     } catch (falha) {
       console.error(falha)
       alert(falha instanceof Error ? falha.message : 'Não foi possível salvar o cartão.')
@@ -195,6 +199,7 @@ export default function CartoesCredito(): React.JSX.Element {
       setDescricao('')
       setValor('')
       setParcelas('1')
+      setSecao('pagamentos')
     } catch (falha) {
       console.error(falha)
       alert('Não foi possível cadastrar a compra. Verifique o valor e a quantidade de parcelas.')
@@ -248,8 +253,20 @@ export default function CartoesCredito(): React.JSX.Element {
         </div>
       </section>
 
-      <CentralPagamentos onPagamento={atualizar} />
+      <nav className="cartoes-navegacao" aria-label="Áreas dos cartões">
+        <button type="button" className={secao === 'pagamentos' ? 'ativo' : ''}
+          aria-pressed={secao === 'pagamentos'}
+          onClick={(): void => setSecao('pagamentos')}>Pagamentos e faturas</button>
+        <button type="button" className={secao === 'compras' ? 'ativo' : ''}
+          aria-pressed={secao === 'compras'}
+          onClick={(): void => setSecao('compras')}>Compras e parcelas</button>
+        <button type="button" className={secao === 'gerenciar' ? 'ativo' : ''}
+          aria-pressed={secao === 'gerenciar'}
+          onClick={(): void => setSecao('gerenciar')}>Cadastrar ou editar cartão</button>
+      </nav>
+      {secao === 'pagamentos' && <CentralPagamentos onPagamento={atualizar} />}
 
+      {secao === 'gerenciar' && (
       <section id="formulario-cartao" className="painel">
         <h3>{cartaoEditandoId ? "Editar cartão" : "Cadastrar cartão"}</h3>
         <form className="formulario" onSubmit={(e): void => { void salvarCartao(e) }}>
@@ -284,7 +301,9 @@ export default function CartoesCredito(): React.JSX.Element {
           )}
         </form>
       </section>
+      )}
 
+      {secao === 'compras' && (<>
       <section className="painel">
         <h3>Registrar compra no cartão</h3>
         <form className="formulario" onSubmit={(e): void => { void salvarCompra(e) }}>
@@ -330,6 +349,7 @@ export default function CartoesCredito(): React.JSX.Element {
           </div>
         ))}
       </section>
+      </>)}
     </div>
   )
 }
