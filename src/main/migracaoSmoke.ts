@@ -23,10 +23,11 @@ export function executarMigracaoLegadaSmoke(): void {
     legado.exec(`
       CREATE TABLE contas (
         id TEXT PRIMARY KEY, banco TEXT NOT NULL, nome TEXT NOT NULL,
-        tipo TEXT NOT NULL, saldo_inicial_centavos INTEGER NOT NULL, criado_em TEXT NOT NULL
+        tipo TEXT NOT NULL, cor TEXT NOT NULL,
+        saldo_inicial_centavos INTEGER NOT NULL, criado_em TEXT NOT NULL
       );
       INSERT INTO contas VALUES ('legado-1', 'Inter', 'Minha conta antiga',
-        'corrente', 12000, '2025-01-01');
+        'corrente', '#ff8800', 12000, '2025-01-01');
       CREATE TABLE transacoes (
         id TEXT PRIMARY KEY, descricao TEXT NOT NULL, valor_centavos INTEGER NOT NULL,
         tipo TEXT NOT NULL, categoria TEXT NOT NULL, data TEXT NOT NULL
@@ -59,7 +60,7 @@ export function executarMigracaoLegadaSmoke(): void {
     const conta = listarContas().find(c => c.id === 'legado-1')
     assert.ok(conta)
     assert.equal(conta.saldoAtualCentavos, 12000)
-    assert.equal(conta.cor, '#2563eb')
+    assert.equal(conta.cor, '#ff8800', 'Não apagar a cor do banco antigo')
     const tx = listarTransacoes().find(t => t.id === 'transacao-antiga')
     assert.ok(tx)
     assert.equal(tx.contaId, null)
@@ -72,6 +73,23 @@ export function executarMigracaoLegadaSmoke(): void {
       if (tabela === 'contas') assert.ok(nomes.has('cor'))
       if (tabela === 'transacoes') assert.ok(nomes.has('conta_id'))
       if (tabela.startsWith('pagamentos')) assert.ok(nomes.has('estornado'))
+    }
+    // As duas tabelas antigas possuíam UNIQUE em todas as linhas.
+    // Os novos índices só podem ser únicos para pagamentos não estornados.
+    for (const [tabela, colunas] of [
+      ['pagamentos_fatura', 'cartao_id,competencia'],
+      ['pagamentos_parcelas', 'parcela_id']
+    ]) {
+      const indices = obterBanco().prepare(`PRAGMA index_list("${tabela}")`).all() as
+        { name: string; origin: string }[]
+      assert.ok(!indices.some((idx) => {
+        if (idx.origin !== 'u') return false
+        const nomes = (obterBanco().prepare(`PRAGMA index_info("${idx.name}")`).all() as
+          { name: string }[]).map(c => c.name).join(',')
+        return nomes === colunas
+      }), 'Migração não removeu a unicidade global de ' + tabela)
+      assert.ok(indices.some(idx => idx.origin === 'c' && idx.name.includes('ativa')),
+        'Índice ativo ausente em ' + tabela)
     }
     const resultado = obterBanco().prepare('PRAGMA integrity_check').get() as
       | { integrity_check: string } | undefined
