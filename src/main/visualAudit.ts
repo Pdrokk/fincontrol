@@ -157,6 +157,22 @@ export async function capturarTelasReais(janela: BrowserWindow): Promise<void> {
     `)
     writeFileSync(resolve(destino, 'etapa.txt'), c.id + ': após navegar')
     await adiar(650)
+    if (c.pagina === 'Cartões e faturas') {
+      await janela.webContents.executeJavaScript(`
+        (() => {
+          const nomeAba = ${JSON.stringify(c.interacao === 'cartoes-compra'
+            ? 'Compras e parcelas'
+            : c.interacao === 'cartoes-edicao'
+              ? 'Cadastrar ou editar cartão'
+              : 'Pagamentos e faturas')};
+          const b = [...document.querySelectorAll('.cartoes-navegacao button')]
+            .find(x => x.textContent?.includes(nomeAba));
+          if (!b) throw new Error('Aba de cartão não encontrada: ' + nomeAba);
+          b.click();
+        })()
+      `)
+      await adiar(230)
+    }
     await janela.webContents.executeJavaScript(`
       (() => {
         const acao = ${JSON.stringify(c.interacao || '')};
