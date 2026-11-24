@@ -1,0 +1,67 @@
+name: Reteste completo da versão corrigida — screenshots
+on:
+  push:
+    branches:
+      - 'audit/reteste-correcoes-fincontrol-v1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-correcoes:
+    name: 27 testes e 18 prints do Electron real no Windows
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      FINCONTROL_SCREENSHOT_DIR: audit/screenshots
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Dependências
+        run: npm ci
+      - name: Tipos e SQLite
+        run: |
+          npm run typecheck
+          npm test
+      - name: Compilar executável de testes
+        shell: pwsh
+        run: |
+          npm run build
+          node scripts/gerar-icones.mjs
+          npx electron-builder --win --dir --publish never
+      - name: Smoke financeiro e navegação atualizada
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD "dist/win-unpacked/fincontrol.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "--fincontrol-smoke-test" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Teste financeiro falhou: $($p.ExitCode)" }
+          $u = Start-Process -FilePath $exe -ArgumentList "--fincontrol-ui-smoke-test" -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "Navegação falhou: $($u.ExitCode)" }
+      - name: Auditoria completa e capturas
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD "dist/win-unpacked/fincontrol.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "--fincontrol-regressao-v1" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Auditoria não gerou relatórios: $($p.ExitCode)" }
+          $png = @(Get-ChildItem audit/screenshots -Filter "*.png")
+          if ($png.Count -ne 18) { throw "Esperadas 18 imagens e foram geradas $($png.Count)" }
+          $relatorio = Get-Content audit/screenshots/testes-regressao.json -Raw | ConvertFrom-Json
+          Write-Host "Testes: $($relatorio.total), aprovados: $($relatorio.aprovados), falhas: $($relatorio.falhas)"
+          $relatorio.resultados | Where-Object { $_.status -eq 'FALHOU' } | Format-Table
+          if ($relatorio.falhas -gt 0) { throw "A auditoria encontrou $($relatorio.falhas) regressões" }
+      - name: Publicar evidências, mesmo se falhar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FinControl-v1-Corrigido-18-prints-e-testes
+          path: audit/screenshots/
+          if-no-files-found: warn
+          retention-days: 30
