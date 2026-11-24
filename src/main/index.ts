@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { mkdtempSync } from 'node:fs'
+import { join, resolve } from 'path'
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { iniciarBanco, obterBanco } from './database'
@@ -36,6 +36,12 @@ import type { NovoEstornoPagamento } from './cartoes'
 
 const modoUISmoke = process.argv.includes('--fincontrol-ui-smoke-test')
 const modoRegressao = process.argv.includes('--fincontrol-regressao-v1')
+function registrarErroAuditoria(erro: unknown): void {
+  const pasta = resolve(process.env.FINCONTROL_SCREENSHOT_DIR || 'audit/screenshots')
+  mkdirSync(pasta, { recursive: true })
+  writeFileSync(join(pasta, 'erro-auditoria.txt'),
+    erro instanceof Error ? (erro.stack || erro.message) : String(erro))
+}
 
 /**
  * Exercita a interface React do executável de produção com o browser oculto.
@@ -129,6 +135,7 @@ function createWindow(): void {
   if (modoRegressao) {
     mainWindow.webContents.once('did-fail-load', (_evento, codigo, descricao) => {
       console.error('REGRESSAO_FAIL: carregamento', codigo, descricao)
+      registrarErroAuditoria(new Error('Carregamento Electron: ' + codigo + ' ' + descricao))
       app.exit(1)
     })
     mainWindow.webContents.once('did-finish-load', () => {
@@ -138,6 +145,7 @@ function createWindow(): void {
         () => app.exit(0),
         (erro: unknown) => {
           console.error('REGRESSAO_FAIL:', erro)
+          registrarErroAuditoria(erro)
           app.exit(1)
         }
       )
