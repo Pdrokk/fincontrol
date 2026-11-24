@@ -62,9 +62,10 @@ jobs:
           Get-Content audit/screenshots/testes-regressao.json
           Get-Content audit/screenshots/metricas.json
       - name: Disponibilizar evidências da auditoria
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: FinControl-v1-regressao-18-prints
           path: audit/screenshots/
           retention-days: 30
-          if-no-files-found: error
+          if-no-files-found: warn
