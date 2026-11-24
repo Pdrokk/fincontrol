@@ -1,0 +1,70 @@
+name: FinControl 1.0 - regressão até cartões e prints
+on:
+  push:
+    branches:
+      - 'audit/regressao-v1-scrollbar-dashboard-cartoes'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regressao-windows:
+    name: Testar versão portátil e capturar 18 prints reais
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      FINCONTROL_SCREENSHOT_DIR: audit/screenshots
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v4
+      - name: Configurar Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Verificar TypeScript
+        run: npm run typecheck
+      - name: Verificar ESLint
+        run: npm run lint
+      - name: Testes automáticos de regras e SQLite
+        run: npm test
+      - name: Gerar executável sem instalação para testes
+        shell: pwsh
+        run: |
+          npm run build
+          node scripts/gerar-icones.mjs
+          npx electron-builder --win --dir --publish never
+      - name: Executar testes do backend no Electron empacotado
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD "dist/win-unpacked/fincontrol.exe"
+          if (-not (Test-Path $exe)) { throw "Executável de testes não encontrado: $exe" }
+          $p = Start-Process -FilePath $exe -ArgumentList "--fincontrol-smoke-test" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Regressão backend falhou: $($p.ExitCode)" }
+          $u = Start-Process -FilePath $exe -ArgumentList "--fincontrol-ui-smoke-test" -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "UI smoke falhou: $($u.ExitCode)" }
+      - name: Testar dashboard, transações, relatórios, contas e cartões; capturar prints
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD "dist/win-unpacked/fincontrol.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "--fincontrol-regressao-v1" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Regressão visual não gerou relatório: $($p.ExitCode)" }
+          $images = @(Get-ChildItem audit/screenshots -Filter "*.png")
+          if ($images.Count -ne 18) { throw "Esperadas 18 prints; geradas: $($images.Count)" }
+          if (-not (Test-Path audit/screenshots/testes-regressao.json)) { throw "Relatório de testes ausente" }
+          Get-Content audit/screenshots/testes-regressao.json
+          Get-Content audit/screenshots/metricas.json
+      - name: Disponibilizar evidências da auditoria
+        uses: actions/upload-artifact@v4
+        with:
+          name: FinControl-v1-regressao-18-prints
+          path: audit/screenshots/
+          retention-days: 30
+          if-no-files-found: error
