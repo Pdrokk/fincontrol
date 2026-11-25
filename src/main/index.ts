@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.4.1')) {
+          if (!document.body.textContent?.includes('Versão 1.5.0')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -258,6 +258,18 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(550);
       if (!document.querySelector('.invest-ativo')?.textContent?.includes('BOVA11')) throw new Error('Ativo não aparece na carteira.');
       if (!document.querySelector('.invest-alocacao')) throw new Error('Alocação não aparece.');
+      if (!document.querySelector('.carteira-grafico-patrimonio') || carteira.evolucao.at(-1)?.valorCentavos !== 1200) throw new Error('Evolução patrimonial não representa a posição.');
+      const abrirFicha = document.querySelector('button[aria-label="Abrir ficha de BOVA11"]');
+      if (!abrirFicha) throw new Error('Ficha individual indisponível.');
+      abrirFicha.click();
+      await dormir(450);
+      const ficha = document.querySelector('.carteira-ficha');
+      if (!ficha || !ficha.textContent.includes('Histórico de cotações') || !ficha.textContent.includes('Resultado não realizado')) throw new Error('Ficha do ativo incompleta.');
+      const historicoCotacao = await window.fincontrol.listarHistoricoCotacoes(ativoTeste);
+      if (historicoCotacao.length !== 1 || historicoCotacao[0].preco !== 6) throw new Error('Histórico de cotação manual incorreto.');
+      ficha.querySelector('button[aria-label="Fechar ficha do ativo"]').click();
+      await dormir(150);
+      if (document.querySelector('.carteira-ficha')) throw new Error('Ficha não foi fechada.');
       botaoPagina('Minhas contas')?.click();
       await dormir(450);
       if (!document.querySelector('.icone-banco')) throw new Error('Identificador de banco ausente.');
