@@ -2,7 +2,9 @@ import { confirmarFinControl } from '../utils/dialogos'
 import { useEffect, useState } from 'react'
 import { TrendingUp, Plus, ArrowDownLeft, ArrowUpRight, Coins, Landmark, Building2, Wallet, ChartNoAxesCombined, RefreshCw, Pencil, X, Trash2, CheckCircle2, Search } from 'lucide-react'
 import Feedback from './Feedback'
-import type { Operacao, Posicao, Movimento } from '../../../main/investimentos'
+import GraficoHistoricoInvest from './GraficoHistoricoInvest'
+import FichaAtivo from './FichaAtivo'
+import type { Operacao, Posicao, Movimento, ObservacaoPatrimonio } from '../../../main/investimentos'
 
 type Conta = Awaited<ReturnType<typeof window.fincontrol.listarContas>>[number]
 type Modo = 'mercado' | 'manual'
@@ -26,6 +28,8 @@ function resumoCotacoes(r: Awaited<ReturnType<typeof window.fincontrol.sincroniz
 
 export default function Investimentos({ onAlteracao }: { onAlteracao: () => void }): React.JSX.Element {
   const [posicoes, setPosicoes] = useState<Posicao[]>([])
+  const [evolucao,setEvolucao] = useState<ObservacaoPatrimonio[]>([])
+  const [fichaId,setFichaId] = useState<string|null>(null)
   const [movimentos, setMovimentos] = useState<Movimento[]>([])
   const [contas, setContas] = useState<Conta[]>([])
   const [modo, setModo] = useState<Modo>('mercado')
@@ -72,19 +76,19 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
 
   async function carregar(): Promise<void> {
     const [dados, bancos, chave] = await Promise.all([window.fincontrol.listarInvestimentos(), window.fincontrol.listarContas(),window.fincontrol.chaveCotacoesConfigurada()])
-    setPosicoes(dados.posicoes); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave)
+    setPosicoes(dados.posicoes); setEvolucao(dados.evolucao); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave)
   }
   useEffect(() => {
     let ativo = true
     void Promise.all([window.fincontrol.listarInvestimentos(), window.fincontrol.listarContas(),window.fincontrol.chaveCotacoesConfigurada()])
       .then(async ([dados, bancos, chave]) => {
         if (!ativo) return
-        setPosicoes(dados.posicoes); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave); setCarregando(false)
+        setPosicoes(dados.posicoes); setEvolucao(dados.evolucao); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave); setCarregando(false)
         if (!dados.posicoes.some(a=>!a.arquivado && a.quantidadeMercado!==null)) return
         setSincronizando(true)
         const r = await window.fincontrol.sincronizarCotacoes(false)
         const novos = await window.fincontrol.listarInvestimentos()
-        if (ativo) {setPosicoes(novos.posicoes);setMovimentos(novos.movimentos);setStatusCotacoes(resumoCotacoes(r))}
+        if (ativo) {setPosicoes(novos.posicoes);setEvolucao(novos.evolucao);setMovimentos(novos.movimentos);setStatusCotacoes(resumoCotacoes(r))}
       })
       .catch((e: unknown) => { if (ativo) setErro(e instanceof Error ? e.message : 'Falha ao carregar investimentos.') })
       .finally(() => { if (ativo) {setCarregando(false);setSincronizando(false)} })
@@ -120,6 +124,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const mercado = ativas.filter(a=>a.quantidadeMercado!==null)
   const ativosComHistorico = new Set(movimentos.map(m=>m.ativoId))
   const cotacoesAntigas = mercado.filter(a=>a.cotacaoEm && agora-Date.parse(a.cotacaoEm)>72*3600000).length
+  const ficha = posicoes.find(a=>a.id===fichaId)
   const ativoOperacao = ativas.find(a=>a.id===operacao?.id)
   const tituloOperacao = operacao?.tipo==='compra'?'Comprar':operacao?.tipo==='venda'?'Vender':'Registrar provento'
   return <div className="investimentos carteira-v3">
@@ -148,6 +153,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           </ul>
         </div>}
       </div>
+      <GraficoHistoricoInvest titulo="Evolução do patrimônio" classe="carteira-grafico-patrimonio" pontos={evolucao.map(p=>({data:p.data,valor:p.valorCentavos===null?null:p.valorCentavos/100}))} agora={agora} carregando={carregando} descricao="Último valor observado em cada dia de uso. Inclui aportes e retiradas; não é rentabilidade. Dias incompletos ficam sem valor total; cotações em cache podem estar desatualizadas." />
       <div className="carteira-fonte"><span>BRAPI · BCB PTAX · Dados com atraso; últimos valores disponíveis offline.</span><button className="botao-texto" type="button" onClick={():void=>setConfigurando(v=>!v)} aria-expanded={configurando}>{chaveAtiva?'Gerenciar chave BRAPI':'Configurar fonte de dados'}</button></div>
       {configurando && <form className="carteira-edicao formulario" onSubmit={(e):void=>{e.preventDefault();const f=e.currentTarget;const dados=new FormData(f);void executar(()=>window.fincontrol.configurarChaveCotacoes(campo(dados,'chave')),'Chave configurada neste dispositivo.',f)}}>
         <p>Obtenha uma chave gratuita em brapi.dev/dashboard. PETR4, VALE3, MGLU3 e ITUB4 podem funcionar sem chave. A chave é protegida localmente; não faz parte do backup.</p>
@@ -195,7 +201,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           const editarQuantidade=automatico||manual
           const valorEdicao=manual?'':automatico?a.quantidade:a.cotacaoCentavos===null?'':a.cotacaoCentavos/100
           return <tr className="invest-ativo" key={a.id}>
-            <th scope="row"><span className="carteira-ativo-nome"><span className="carteira-icone-ativo" data-categoria={a.tipo}><Icone size={19} aria-hidden="true"/></span><span><strong>{a.codigo}</strong><small>{a.tipo}{a.instituicao?' · '+a.instituicao:''}{a.arquivado?' · Arquivado':''}</small></span></span></th>
+            <th scope="row"><span className="carteira-ativo-nome"><span className="carteira-icone-ativo" data-categoria={a.tipo}><Icone size={19} aria-hidden="true"/></span><span><button type="button" className="carteira-link-ativo" aria-label={'Abrir ficha de '+a.codigo} aria-expanded={fichaId===a.id} onClick={():void=>setFichaId(v=>v===a.id?null:a.id)}>{a.codigo}</button><small>{a.tipo}{a.instituicao?' · '+a.instituicao:''}{a.arquivado?' · Arquivado':''}</small></span></span></th>
             <td>{manual?'A definir':qtd(a.quantidade)}</td>
             <td>{automatico?a.precoMercado===null?'—':preco(a.precoMercado):manual?'—':a.cotacaoCentavos===null?'—':moeda(a.cotacaoCentavos)}
               <small>{automatico?a.cotacaoEm? a.fonteCotacao+' · '+hora(a.cotacaoEm)+(agora-Date.parse(a.cotacaoEm)>72*3600000?' · Antiga':''):'Aguardando cotação':manual?'Valor total anterior':'Cotação manual'}</small>
@@ -214,6 +220,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           </tr>
         })}</tbody>
       </table></div>}
+      {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentos.filter(m=>m.ativoId===ficha.id)} agora={agora} onFechar={():void=>setFichaId(null)} />}
       {operacao&&ativoOperacao&&<section className="carteira-edicao carteira-operacao" aria-labelledby="titulo-operacao" key={operacao.id+operacao.tipo}>
         <div className="carteira-cabecalho"><h3 id="titulo-operacao">{tituloOperacao} {ativoOperacao.codigo}</h3><button type="button" className="botao-secundario carteira-editar" aria-label="Cancelar operação" onClick={():void=>setOperacao(null)}><X size={17}/></button></div>
         <p className="invest-detalhe">Disponível: {qtd(ativoOperacao.quantidade)} un. · {operacao.tipo==='compra'?'Debita a conta selecionada.':'Credita a conta selecionada.'} Nenhuma ordem é enviada à corretora.</p>
