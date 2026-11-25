@@ -2054,3 +2054,90 @@ body::-webkit-scrollbar-corner,
     width: 100%;
   }
 }
+
+/* Impeccable Etapa 3 — histórico financeiro navegável, nos dois temas. */
+.fincontrol .historico-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.fincontrol .historico-cabecalho h3 { margin-bottom: 6px; }
+.fincontrol .historico-resumo {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.fincontrol .historico-controles {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.fincontrol .historico-controles label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.fincontrol .historico-controles select {
+  min-height: 40px;
+  min-width: 110px;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+}
+.fincontrol .historico-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-top: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.fincontrol .historico-paginacao button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+.fincontrol .historico-paginacao button:hover:not(:disabled) {
+  background: var(--bg);
+}
+.fincontrol .historico-paginacao button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.fincontrol .historico-controles select:focus-visible,
+.fincontrol .historico-paginacao button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+.fincontrol .historico-sem-resultados {
+  padding: 10px 0 18px;
+}
+@media (max-width: 800px) {
+  .fincontrol .historico-controles {
+    width: 100%;
+  }
+  .fincontrol .historico-controles label {
+    flex: 1 1 140px;
+  }
+  .fincontrol .historico-controles select {
+    width: 100%;
+  }
+}
