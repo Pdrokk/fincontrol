@@ -90,6 +90,10 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.querySelector('.central-pagamentos')) {
             throw new Error('Central de Pagamentos ausente.');
           }
+          const filtroCartao = document.querySelector('#central-cartao-filtro');
+          if (!filtroCartao || filtroCartao.options[0]?.textContent !== 'Todos os cartões') {
+            throw new Error('Filtro contextual de cartão ausente ou incorreto.');
+          }
           const aba = (texto) => [...document.querySelectorAll('.cartoes-navegacao button')]
             .find((b) => b.textContent?.includes(texto));
           const compras = aba('Compras e parcelas');
