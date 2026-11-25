@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.6.0')) {
+          if (!document.body.textContent?.includes('Versão 1.6.1')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -258,7 +258,15 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(550);
       if (!document.querySelector('.invest-ativo')?.textContent?.includes('BOVA11')) throw new Error('Ativo não aparece na carteira.');
       if (!document.querySelector('.invest-alocacao')) throw new Error('Alocação não aparece.');
-      if (!document.querySelector('.carteira-grafico-patrimonio') || carteira.evolucao.at(-1)?.valorCentavos !== 1200) throw new Error('Evolução patrimonial não representa a posição.');
+      if (document.querySelector('.carteira-grafico-patrimonio')) throw new Error('Gráfico patrimonial duplicado na carteira.');
+      if (carteira.evolucao.at(-1)?.valorCentavos !== 1200) throw new Error('Evolução patrimonial não representa a posição.');
+      botaoPagina('Visão Geral')?.click();
+      await dormir(550);
+      const painelInvest = document.querySelector('.dashboard-investimentos');
+      if (!painelInvest || !painelInvest.querySelector('.carteira-grafico-patrimonio') || !painelInvest.querySelector('.dashboard-investimentos-valor')?.textContent.includes('12,00')) throw new Error('Gráfico ou patrimônio ausente na visão geral.');
+      painelInvest.querySelector('button[aria-label="Abrir carteira de investimentos"]').click();
+      await dormir(450);
+      if (document.querySelector('.dashboard-investimentos') || !document.querySelector('.invest-ativo')) throw new Error('Atalho da carteira não funciona.');
       const abrirFicha = document.querySelector('button[aria-label="Abrir ficha de BOVA11"]');
       if (!abrirFicha) throw new Error('Ficha individual indisponível.');
       abrirFicha.click();

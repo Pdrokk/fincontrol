@@ -2682,3 +2682,12 @@ body::-webkit-scrollbar-corner,
 .carteira-fundamentos .carteira-ficha-dados { grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
 .carteira-fundamentos .invest-detalhe { line-height:1.5; }
 .carteira-fundamentos dd { font-size:17px; }
+
+/* Evolução na visão geral, sem duplicar a carteira. */
+.fincontrol .dashboard-investimentos { --carteira-linha:#2563eb; min-width:0; }
+.fincontrol[data-theme='dark'] .dashboard-investimentos { --carteira-linha:#60a5fa; }
+.dashboard-investimentos .carteira-grafico { padding:14px 0 0; border-bottom:0; }
+.dashboard-investimentos .carteira-grafico h4 { font-size:14px; }
+.dashboard-investimentos .dashboard-secao-titulo { flex-wrap:wrap; }
+.dashboard-investimentos-valor { display:block; font-size:23px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:8px; }
+.dashboard-investimentos .carteira-cabecalho { flex-wrap:wrap; }

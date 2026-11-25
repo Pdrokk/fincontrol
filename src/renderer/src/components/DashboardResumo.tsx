@@ -1,5 +1,6 @@
 import { ArrowRight, CreditCard, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import GraficosFinanceiros from './GraficosFinanceiros'
+import DashboardInvestimentos from './DashboardInvestimentos'
 
 type Transacao = {
   id: string
@@ -27,6 +28,8 @@ interface Props {
   filtroAno: string
   transacoesRecentes: Transacao[]
   faturas: Fatura[]
+  revisaoFinanceira: number
+  onInvestimentos: () => void
   onPagamentos: () => void
   onTransacoes: () => void
 }
@@ -38,7 +41,7 @@ const dataBR = (data: string): string => data.split('-').reverse().join('/')
 
 export default function DashboardResumo({
   saldoContasCentavos, receitasCentavos, despesasCentavos, transacoes, previsoes,
-  filtroMes, filtroAno, transacoesRecentes, faturas, onPagamentos, onTransacoes
+  filtroMes, filtroAno, transacoesRecentes, faturas, revisaoFinanceira, onInvestimentos, onPagamentos, onTransacoes
 }: Props): React.JSX.Element {
   const emAberto = faturas.filter((f) => !f.paga && f.saldoPendenteCentavos > 0)
   const proximas = [...emAberto].sort((a, b) => a.vencimento.localeCompare(b.vencimento)).slice(0, 3)
@@ -76,6 +79,8 @@ export default function DashboardResumo({
         </div>
       </div>
       <GraficosFinanceiros transacoes={transacoes} previsoes={previsoes} filtroMes={filtroMes} filtroAno={filtroAno} compacto />
+
+      <DashboardInvestimentos revisaoFinanceira={revisaoFinanceira} onInvestimentos={onInvestimentos} />
 
       <div className="dashboard-duas-colunas">
         <section className="painel dashboard-lista">

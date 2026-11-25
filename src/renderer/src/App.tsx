@@ -687,6 +687,8 @@ function App(): React.JSX.Element {
             filtroAno={anoFiltro}
             transacoesRecentes={transacoesRecentes}
             faturas={faturasPrevistas}
+            revisaoFinanceira={revisaoFinanceira}
+            onInvestimentos={(): void => setPagina('investimentos')}
             onPagamentos={(): void => setPagina('cartoes')}
             onTransacoes={(): void => setPagina('transacoes')}
           />
@@ -1002,7 +1004,7 @@ function App(): React.JSX.Element {
             <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão 1.6.0 · aplicativo desktop offline</p>
+              <p>Versão 1.6.1 · aplicativo desktop offline</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>
