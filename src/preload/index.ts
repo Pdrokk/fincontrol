@@ -25,6 +25,7 @@ const fincontrolAPI = {
   sincronizarCotacoes: (forcar = false): Promise<unknown> => ipcRenderer.invoke('investimentos:sincronizar', forcar),
   configurarChaveCotacoes: (chave: string): Promise<void> => ipcRenderer.invoke('investimentos:chave', chave),
   chaveCotacoesConfigurada: (): Promise<boolean> => ipcRenderer.invoke('investimentos:chave-configurada'),
+  reativarAtivoInvestimento: (id: string): Promise<void> => ipcRenderer.invoke('investimentos:reativar', id),
   excluirAtivoInvestimento: (id: string): Promise<void> => ipcRenderer.invoke('investimentos:excluir', id),
   atualizarQuantidadeMercado: (id: string, quantidade: number): Promise<void> => ipcRenderer.invoke('investimentos:quantidade', id, quantidade),
   listarInvestimentos: (): Promise<unknown> => ipcRenderer.invoke('investimentos:listar'),

@@ -2628,3 +2628,9 @@ body::-webkit-scrollbar-corner,
   .carteira-acoes button { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .fincontrol .botao-secundario { transition: none; } }
+
+/* Carteira unificada: operações contextuais sem seletor duplicado. */
+.carteira-v3 .carteira-acoes-linha { flex-wrap:wrap; }
+.carteira-v3 .carteira-tabela th:last-child { min-width:220px; }
+.carteira-v3 .carteira-operacao { margin-top:20px; border-bottom:0; }
+.carteira-v3 .carteira-operacao .formulario { margin-bottom:0; }

@@ -1,6 +1,6 @@
 import { sincronizarCotacoes, configurarChave, chaveConfigurada } from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdtempSync } from 'node:fs'
@@ -159,13 +159,13 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         }
         if (nome === 'Investimentos') {
           if (!document.querySelector('.investimentos') || !document.querySelector('input[name="codigo"]') ||
-              !document.querySelector('select[name="ativo"]')) throw new Error('Interface de investimentos incompleta.');
+              !document.querySelector('input[name="quantidadeInicial"]')) throw new Error('Interface de investimentos incompleta.');
         }
         if (nome === 'Configurações') {
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.3.2')) {
+          if (!document.body.textContent?.includes('Versão 1.4.0')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -281,6 +281,29 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if (!(await window.fincontrol.listarInvestimentos()).posicoes.some(a=>a.id===idZerado)) throw new Error('Filtro apagou posição.');
       const coresCategorias = [...document.querySelectorAll('.carteira-categoria .invest-barra > span')].map(a=>getComputedStyle(a).backgroundColor);
       if (coresCategorias.length < 2 || new Set(coresCategorias).size < 2) throw new Error('Categorias da carteira não têm cores distintas.');
+      if (document.querySelector('button[aria-label="Remover USD"]')) throw new Error('Posição ativa pode ser removida.');
+      const definir = document.querySelector('button[aria-label="Definir quantidade de USD"]');
+      if (!definir) throw new Error('Conversão de posição antiga indisponível.');
+      definir.click();
+      await dormir(100);
+      const quantidadeLegada = document.querySelector('input[aria-label="Quantidade de USD"]');
+      quantidadeLegada.value='20';
+      quantidadeLegada.form.requestSubmit();
+      await dormir(350);
+      const vender = document.querySelector('button[aria-label="Vender USD"]');
+      if (!vender) throw new Error('Venda não aparece na carteira unificada.');
+      vender.click();
+      await dormir(150);
+      const formularioVenda = document.querySelector('.carteira-operacao form');
+      if (!formularioVenda || document.querySelector('select[name="ativo"]')) throw new Error('Operação não está vinculada à linha do ativo.');
+      formularioVenda.querySelector('select[name="conta"]').value=contaTeste.id;
+      formularioVenda.querySelector('input[name="quantidade"]').value='20';
+      formularioVenda.querySelector('input[name="valor"]').value='60';
+      formularioVenda.requestSubmit();
+      await dormir(450);
+      const posicaoVendida=(await window.fincontrol.listarInvestimentos()).posicoes.find(a=>a.id===idPatrimonio);
+      if (posicaoVendida?.quantidade!==0) throw new Error('Venda total não zerou a posição.');
+      if ((await window.fincontrol.listarContas()).find(c=>c.id===contaTeste.id).saldoAtualCentavos!==saldoPatrimonioAntes+6000) throw new Error('Venda não creditou a conta.');
       const removerAtivo = document.querySelector('button[aria-label="Remover USD"]');
       if (!removerAtivo) throw new Error('Remoção de posição sem histórico ausente.');
       removerAtivo.click();
@@ -293,9 +316,10 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(150);
       document.querySelector('.fc-dialogo .fc-confirmar').click();
       await dormir(450);
-      if ((await window.fincontrol.listarInvestimentos()).posicoes.some(a=>a.id===idPatrimonio)) throw new Error('Ativo não foi removido.');
+      if (!(await window.fincontrol.listarInvestimentos()).posicoes.find(a=>a.id===idPatrimonio)?.arquivado) throw new Error('Ativo não foi arquivado.');
+      if (!(await window.fincontrol.listarInvestimentos()).movimentos.some(m=>m.ativoId===idPatrimonio && m.tipo==='venda')) throw new Error('Histórico da venda foi perdido.');
       if (!document.querySelector('.carteira-toast')?.textContent.includes('Ativo removido.')) throw new Error('Notificação de sucesso ausente.');
-      if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes) throw new Error('Remoção alterou o caixa.');
+      if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes+6000) throw new Error('Remoção alterou o caixa.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);
       botaoPagina('Transações')?.click();
@@ -601,6 +625,7 @@ app.whenReady().then(() => {
   ipcMain.handle('investimentos:sincronizar', (_evento, forcar: boolean) => sincronizarCotacoes(forcar === true))
   ipcMain.handle('investimentos:chave', (_evento, chave: string) => configurarChave(chave))
   ipcMain.handle('investimentos:chave-configurada', () => chaveConfigurada())
+  ipcMain.handle('investimentos:reativar', (_evento, id: string) => reativarAtivo(obterBanco(), id))
   ipcMain.handle('investimentos:excluir', (_evento, id: string) => excluirAtivo(obterBanco(), id))
   ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
   ipcMain.handle('investimentos:listar', () => ({ posicoes: listarPosicoes(obterBanco()), movimentos: listarMovimentos(obterBanco()) }))

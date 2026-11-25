@@ -4,7 +4,7 @@ Aplicativo desktop Electron + React + TypeScript, SQLite local, Windows x64 port
 
 ## Regras de revisão
 - P0/P1: perda de histórico, saldo duplicado, compra/venda incorreta, migração destrutiva, quebra de backup ou execução no Windows.
-- Investimentos de acompanhamento não movimentam conta; apenas operações explícitas do controle detalhado alteram caixa.
+- O cadastro de posição inicial não movimenta conta; compras, vendas e proventos explícitos alteram caixa. Posições iniciais sem custo conhecido não exibem lucro presumido. Remoção exige posição zerada e mantém histórico.
 - Dados de cotação são indicativos: validar símbolo, moeda, valor e timestamp; preservar cache em erro; nunca representar valor desconhecido como zero.
 - Chaves de API nunca em código, logs, backups ou renderer persistente. Usar processo main e armazenamento seguro local.
 - Respeitar contratos IPC, validar entradas no main e manter testes de regressão.
