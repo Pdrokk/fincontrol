@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.2.1')) {
+          if (!document.body.textContent?.includes('Versão 1.3.0')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }

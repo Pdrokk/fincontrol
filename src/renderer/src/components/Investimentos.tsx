@@ -89,7 +89,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
         </div>
       </header>
       <div className="carteira-balanco">
-        <div><span>Patrimônio em investimentos {semCotacao ? '(parcial)' : ''}</span><strong>{carregando?'—':moeda(valor)}</strong><small>{posicoes.length} ativo(s) · {semCotacao} sem cotação</small></div>
+        <div><span>Patrimônio em investimentos {semCotacao ? '(parcial)' : ''}</span><strong>{carregando || (semCotacao>0 && posicoes.every(a=>a.valorAtualCentavos===null))?'—':moeda(valor)}</strong><small>{posicoes.length} ativo(s) · {semCotacao} sem cotação</small></div>
         {categorias.length>0 && <div className="invest-alocacao"><span>Distribuição por categoria</span>{categorias.map(t=><div key={t.tipo} className="carteira-categoria"><span>{t.tipo}</span><div className="invest-barra" aria-hidden="true"><span style={{width:(t.valor/valor*100)+'%'}}/></div><strong>{(t.valor/valor*100).toFixed(1)}%</strong></div>)}</div>}
       </div>
       <div className="carteira-fonte"><span>BRAPI · BCB PTAX · Dados com atraso; últimos valores disponíveis offline.</span><button className="botao-texto" type="button" onClick={():void=>setConfigurando(v=>!v)} aria-expanded={configurando}>{chaveAtiva?'Gerenciar chave BRAPI':'Configurar fonte de dados'}</button></div>

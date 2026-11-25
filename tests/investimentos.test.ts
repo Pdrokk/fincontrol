@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, type Operacao } from '../src/main/investimentos.ts'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, salvarCotacaoMercado, atualizarQuantidadeMercado, type Operacao } from '../src/main/investimentos.ts'
 
 function ambiente(): { db: DatabaseSync; id: string; saldo: () => number; operar: (dados: Partial<Operacao>) => void } {
   const db = new DatabaseSync(':memory:')
@@ -70,4 +70,25 @@ test('carteira de acompanhamento: cadastro, atualização e nenhuma movimentaç�
     criarTabelasInvestimentos(db)
     assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,300000)
   } finally {db.close()}
+})
+
+test('posição acompanhada por quantidade, cache de cotação e edição não alteram caixa', () => {
+  const {db,saldo,operar}=ambiente()
+  try {
+    const id=cadastrarAtivo(db,{codigo:'PETR4',nome:'Petrobras',tipo:'Ação',instituicao:'',quantidadeMercado:10.5})
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,null)
+    salvarCotacaoMercado(db,id,{preco:31.25,data:'2026-11-24T18:00:00Z',fonte:'BRAPI'})
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,32813)
+    atualizarQuantidadeMercado(db,id,12)
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,37500)
+    assert.throws(()=>atualizarQuantidadeMercado(db,id,-1))
+    assert.throws(()=>operar({ativoId:id}))
+    assert.equal(saldo(),100000)
+    assert.equal(listarMovimentos(db).length,0)
+    criarTabelasInvestimentos(db)
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.fonteCotacao,'BRAPI')
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,37500)
+    assert.throws(()=>cadastrarAtivo(db,{codigo:'^BVSP',nome:'Índice',tipo:'ETF',instituicao:'',quantidadeMercado:10}))
+    assert.throws(()=>cadastrarAtivo(db,{codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',quantidadeMercado:10,valorInformadoCentavos:100}))
+  } finally { db.close() }
 })
