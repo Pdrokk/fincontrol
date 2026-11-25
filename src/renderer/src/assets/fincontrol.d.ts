@@ -143,6 +143,10 @@ interface SalarioRecorrenteFinanceiro {
 declare global {
   interface Window {
     fincontrol: {
+      sincronizarCotacoes: (forcar?: boolean) => Promise<{ atualizadas: number; falhas: { codigo: string; motivo: string }[] }>
+      configurarChaveCotacoes: (chave: string) => Promise<void>
+      chaveCotacoesConfigurada: () => Promise<boolean>
+      atualizarQuantidadeMercado: (id: string, quantidade: number) => Promise<void>
       listarInvestimentos: () => Promise<{ posicoes: Posicao[]; movimentos: Movimento[] }>
       atualizarValorAtivo: (id: string, centavos: number) => Promise<void>
       cadastrarAtivo: (dados: NovoAtivo) => Promise<string>

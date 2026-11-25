@@ -1,5 +1,6 @@
+import { sincronizarCotacoes, configurarChave, chaveConfigurada } from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdtempSync } from 'node:fs'
@@ -553,6 +554,10 @@ app.whenReady().then(() => {
   }, 60_000)
   app.once('before-quit', () => clearInterval(verificadorSalarios))
 
+  ipcMain.handle('investimentos:sincronizar', (_evento, forcar: boolean) => sincronizarCotacoes(forcar === true))
+  ipcMain.handle('investimentos:chave', (_evento, chave: string) => configurarChave(chave))
+  ipcMain.handle('investimentos:chave-configurada', () => chaveConfigurada())
+  ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
   ipcMain.handle('investimentos:listar', () => ({ posicoes: listarPosicoes(obterBanco()), movimentos: listarMovimentos(obterBanco()) }))
   ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))
   ipcMain.handle('investimentos:valor', (_evento, id: string, centavos: number) => atualizarValorAtivo(obterBanco(), id, centavos))
