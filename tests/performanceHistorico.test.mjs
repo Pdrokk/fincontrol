@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type -- benchmark JavaScript puro */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { performance } from 'node:perf_hooks'
