@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, salvarCotacaoMercado, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, valorMercado, type Operacao } from '../src/main/investimentos.ts'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, salvarCotacaoMercado, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, valorMercado, registrarObservacaoCarteira, listarEvolucaoPatrimonio, listarHistoricoCotacoes, type Operacao } from '../src/main/investimentos.ts'
 
 function ambiente(): { db: DatabaseSync; id: string; saldo: () => number; operar: (dados: Partial<Operacao>) => void } {
   const db = new DatabaseSync(':memory:')
@@ -174,5 +174,55 @@ test('posição manual inicial, conversão de valor legado e venda sem perda de 
     assert.equal(listarPosicoes(db).find(a=>a.id===novo)?.valorAtualCentavos,3000)
     assert.equal(saldo(),108000)
     assert.equal(listarMovimentos(db).length,2)
+  } finally {db.close()}
+})
+
+test('evolução usa observações reais, substitui o mesmo dia e preserva dias incompletos',()=>{
+  const {db,id,saldo,operar}=ambiente()
+  try {
+    operar({})
+    registrarObservacaoCarteira(db,'2026-11-23')
+    assert.deepEqual(listarEvolucaoPatrimonio(db),[{data:'2026-11-23',valorCentavos:null,conhecidoCentavos:0,semCotacao:1}])
+    atualizarCotacao(db,id,600)
+    registrarObservacaoCarteira(db,'2026-11-23')
+    atualizarCotacao(db,id,650)
+    registrarObservacaoCarteira(db,'2026-11-23')
+    assert.equal(listarEvolucaoPatrimonio(db).length,1)
+    assert.equal(listarEvolucaoPatrimonio(db)[0].valorCentavos,1300)
+    assert.equal(listarHistoricoCotacoes(db,id).length,1)
+    assert.equal(listarHistoricoCotacoes(db,id)[0].preco,6.5)
+    const mercado=cadastrarAtivo(db,{codigo:'PETR4',nome:'Petrobras',tipo:'Ação',instituicao:'',quantidadeMercado:2})
+    registrarObservacaoCarteira(db,'2026-11-24')
+    assert.equal(listarEvolucaoPatrimonio(db)[1].valorCentavos,null)
+    assert.equal(listarEvolucaoPatrimonio(db)[1].conhecidoCentavos,1300)
+    salvarCotacaoMercado(db,mercado,{preco:40,data:'2026-11-24T18:00:00Z',fonte:'BRAPI'},'2026-11-24T19:00:00Z')
+    registrarObservacaoCarteira(db,'2026-11-25')
+    assert.equal(listarEvolucaoPatrimonio(db)[2].valorCentavos,9300)
+    assert.equal(listarHistoricoCotacoes(db,mercado).length,1)
+    assert.equal(listarHistoricoCotacoes(db,mercado)[0].data,'2026-11-24')
+    registrarObservacaoCarteira(db,'2026-11-26')
+    assert.equal(listarHistoricoCotacoes(db,mercado).length,1)
+    assert.equal(listarEvolucaoPatrimonio(db).length,4)
+    assert.throws(()=>registrarObservacaoCarteira(db,'2026-02-30'))
+    assert.equal(saldo(),99000)
+    criarTabelasInvestimentos(db)
+    assert.equal(listarEvolucaoPatrimonio(db).length,4)
+    assert.equal(listarHistoricoCotacoes(db,mercado)[0].preco,40)
+  } finally {db.close()}
+})
+test('carteira vazia não fabrica histórico e exclusão não apaga observações patrimoniais',()=>{
+  const {db,id}=ambiente()
+  try {
+    excluirAtivo(db,id)
+    registrarObservacaoCarteira(db,'2026-11-23')
+    assert.equal(listarEvolucaoPatrimonio(db).length,0)
+    const zero=cadastrarAtivo(db,{codigo:'PETR4',nome:'Petrobras',tipo:'Ação',instituicao:'',quantidadeMercado:0})
+    salvarCotacaoMercado(db,zero,{preco:40,data:'2026-11-24T18:00:00Z',fonte:'BRAPI'},'2026-11-24T19:00:00Z')
+    registrarObservacaoCarteira(db,'2026-11-24')
+    excluirAtivo(db,zero)
+    assert.equal(listarHistoricoCotacoes(db,zero).length,0)
+    registrarObservacaoCarteira(db,'2026-11-25')
+    assert.equal(listarEvolucaoPatrimonio(db).length,2)
+    assert.equal(listarEvolucaoPatrimonio(db)[1].valorCentavos,0)
   } finally {db.close()}
 })

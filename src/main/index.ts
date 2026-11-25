@@ -1,6 +1,6 @@
 import { sincronizarCotacoes, configurarChave, chaveConfigurada } from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, registrarOperacao, registrarObservacaoCarteira, listarEvolucaoPatrimonio, listarHistoricoCotacoes, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdtempSync } from 'node:fs'
@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.4.1')) {
+          if (!document.body.textContent?.includes('Versão 1.5.0')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -258,6 +258,18 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(550);
       if (!document.querySelector('.invest-ativo')?.textContent?.includes('BOVA11')) throw new Error('Ativo não aparece na carteira.');
       if (!document.querySelector('.invest-alocacao')) throw new Error('Alocação não aparece.');
+      if (!document.querySelector('.carteira-grafico-patrimonio') || carteira.evolucao.at(-1)?.valorCentavos !== 1200) throw new Error('Evolução patrimonial não representa a posição.');
+      const abrirFicha = document.querySelector('button[aria-label="Abrir ficha de BOVA11"]');
+      if (!abrirFicha) throw new Error('Ficha individual indisponível.');
+      abrirFicha.click();
+      await dormir(450);
+      const ficha = document.querySelector('.carteira-ficha');
+      if (!ficha || !ficha.textContent.includes('Histórico de cotações') || !ficha.textContent.includes('Resultado não realizado')) throw new Error('Ficha do ativo incompleta.');
+      const historicoCotacao = await window.fincontrol.listarHistoricoCotacoes(ativoTeste);
+      if (historicoCotacao.length !== 1 || historicoCotacao[0].preco !== 6) throw new Error('Histórico de cotação manual incorreto.');
+      ficha.querySelector('button[aria-label="Fechar ficha do ativo"]').click();
+      await dormir(150);
+      if (document.querySelector('.carteira-ficha')) throw new Error('Ficha não foi fechada.');
       botaoPagina('Minhas contas')?.click();
       await dormir(450);
       if (!document.querySelector('.icone-banco')) throw new Error('Identificador de banco ausente.');
@@ -649,7 +661,22 @@ app.whenReady().then(() => {
   ipcMain.handle('investimentos:reativar', (_evento, id: string) => reativarAtivo(obterBanco(), id))
   ipcMain.handle('investimentos:excluir', (_evento, id: string) => excluirAtivo(obterBanco(), id))
   ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
-  ipcMain.handle('investimentos:listar', () => ({ posicoes: listarPosicoes(obterBanco()), movimentos: listarMovimentos(obterBanco()) }))
+  ipcMain.handle('investimentos:listar', () => {
+    const db=obterBanco()
+    const posicoes=listarPosicoes(db)
+    registrarObservacaoCarteira(db,hojeLocalISO(),posicoes)
+    return { posicoes, movimentos:listarMovimentos(db), evolucao:listarEvolucaoPatrimonio(db) }
+  })
+  ipcMain.handle('investimentos:historico-cotacoes', (_evento,id:string) => listarHistoricoCotacoes(obterBanco(),id))
+  ipcMain.handle('investimentos:fonte-oficial', async (_evento,fonte: string) => {
+    const fontes: Record<string,string> = {
+      cvm:'https://sistemas.cvm.gov.br/central-index.asp',
+      sec:'https://www.sec.gov/search-filings',
+      bcb:'https://ptax.bcb.gov.br/ptax_internet/consultaBoletim.do?method=consultarBoletim'
+    }
+    if (typeof fonte!=='string'||!Object.hasOwn(fontes,fonte)) throw new Error('Fonte oficial inválida.')
+    await shell.openExternal(fontes[fonte])
+  })
   ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))
   ipcMain.handle('investimentos:valor', (_evento, id: string, centavos: number) => atualizarValorAtivo(obterBanco(), id, centavos))
   ipcMain.handle('investimentos:cotacao', (_evento, id: string, centavos: number) => atualizarCotacao(obterBanco(), id, centavos))

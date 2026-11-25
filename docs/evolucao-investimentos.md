@@ -1,0 +1,5 @@
+# Evolução e ficha do ativo — FinControl 1.5.0
+
+A carteira salva uma observação por dia local em que é consultada. A observação do mesmo dia é substituída pelo estado mais recente. Não são reconstruídas posições ou preços anteriores à implantação, nem preenchidos dias sem registro. Valor total desconhecido é nulo, não zero; valores conhecidos parciais são registrados separadamente. O patrimônio inclui aportes/retiradas e não equivale à rentabilidade. A cotação automática é registrada na data do provedor; o valor manual na data de observação. O gráfico consulta até 730 observações recentes, com seleção de 30/90 dias ou todas as disponíveis.
+
+A ficha apresenta cotação, quantidade, custo quando conhecido, resultado da posição, proventos e operações. O custo inicial desconhecido impede apresentar resultado fictício. Links públicos oficiais abrem CVM, SEC EDGAR e BCB PTAX em navegador externo. Não há associação automática de emissores, indicadores fundamentalistas ou importação de documentos nesta versão. A migração é aditiva, e os dados entram no backup SQLite existente.

@@ -2652,3 +2652,28 @@ body::-webkit-scrollbar-corner,
 .carteira-busca-campo input:focus { outline:none; box-shadow:none; }
 .carteira-busca-campo input::placeholder { color:var(--muted); opacity:1; }
 .carteira-busca select { min-height:44px; padding:8px 12px; border:1px solid var(--border-color); border-radius:9px; background:var(--input-bg); color:var(--text); font:inherit; max-width:100%; }
+
+/* Análise da carteira: observações reais, mesma linguagem dos relatórios. */
+.carteira-v3 { --carteira-linha:#2563eb; }
+.fincontrol[data-theme='dark'] .carteira-v3 { --carteira-linha:#60a5fa; }
+.carteira-grafico { padding:18px 0; border-bottom:1px solid var(--border-color); min-width:0; }
+.carteira-grafico h4,.carteira-ficha h4 { margin:0; font-size:15px; font-weight:600; }
+.carteira-grafico-area { width:100%; min-width:0; margin-top:12px; }
+.carteira-grafico-vazio { min-height:104px; display:grid; align-content:center; text-align:center; padding:12px; color:var(--muted); }
+.carteira-grafico .invest-detalhe { margin:8px 0 0; line-height:1.5; }
+.carteira-dados-grafico { margin-top:10px; color:var(--muted); font-size:13px; }
+.carteira-dados-grafico summary { cursor:pointer; padding:8px 0; }
+.carteira-dados-grafico .invest-historico { max-height:220px; overflow:auto; }
+.fincontrol .carteira-link-ativo { appearance:none; background:none; border:0; padding:0; color:var(--carteira-linha); font:inherit; font-weight:700; min-height:24px; justify-content:flex-start; cursor:pointer; text-align:left; }
+.fincontrol .carteira-link-ativo:hover { text-decoration:underline; text-underline-offset:3px; }
+.fincontrol .carteira-link-ativo:focus-visible { outline:2px solid var(--carteira-linha); outline-offset:3px; border-radius:3px; }
+.carteira-ficha { margin-top:20px; padding-top:18px; border-bottom:0; }
+.carteira-ficha .carteira-cabecalho p { margin:0; }
+.carteira-ficha-dados { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:16px 24px; margin:18px 0; }
+.carteira-ficha-dados>div { min-width:0; }
+.carteira-ficha-dados dt { font-size:13px; color:var(--muted); }
+.carteira-ficha-dados dd { margin:5px 0 0; color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.carteira-ficha-dados dd small { font-weight:400; }
+.carteira-ficha-historico { max-height:280px; overflow:auto; margin:8px 0; }
+.carteira-ficha>h4 { margin-top:18px; }
+.carteira-fontes-oficiais { margin-top:18px; border-top:1px solid var(--border-color); padding-top:16px; }
