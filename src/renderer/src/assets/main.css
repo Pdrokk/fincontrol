@@ -2634,3 +2634,21 @@ body::-webkit-scrollbar-corner,
 .carteira-v3 .carteira-tabela th:last-child { min-width:220px; }
 .carteira-v3 .carteira-operacao { margin-top:20px; border-bottom:0; }
 .carteira-v3 .carteira-operacao .formulario { margin-bottom:0; }
+
+/* Distribuição compacta: área proporcional, legenda independente da largura dos segmentos. */
+.carteira-distribuicao { align-content:start; min-width:0; }
+.carteira-distribuicao-titulo { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; }
+.carteira-barra-unica { display:flex; height:12px; overflow:hidden; border-radius:6px; background:var(--border-color); }
+.carteira-barra-unica>span { display:block; flex-basis:0; flex-shrink:1; min-width:0; height:100%; background:var(--ativo-cor); }
+.carteira-legenda { display:flex; flex-wrap:wrap; gap:6px 16px; padding:0; margin:2px 0 0; list-style:none; }
+.carteira-legenda li { display:inline-flex; align-items:center; gap:6px; min-width:0; font-size:13px; }
+.carteira-legenda li i { flex:0 0 8px; width:8px; height:8px; border-radius:2px; background:var(--ativo-cor); }
+.carteira-legenda li strong { font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+.carteira-busca { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:4px 0 10px; }
+.carteira-busca-campo { display:flex; flex:1 1 220px; align-items:center; gap:8px; padding:0 12px; border:1px solid var(--border-color); border-radius:9px; background:var(--input-bg); color:var(--muted); min-height:44px; }
+.carteira-busca-campo:focus-within { outline:2px solid #60a5fa; outline-offset:2px; }
+.carteira-busca-campo>svg { flex-shrink:0; }
+.carteira-busca-campo input { appearance:none; flex:1; width:100%; min-width:0; border:0; background:transparent; color:var(--text); font:inherit; padding:8px 0; }
+.carteira-busca-campo input:focus { outline:none; box-shadow:none; }
+.carteira-busca-campo input::placeholder { color:var(--muted); opacity:1; }
+.carteira-busca select { min-height:44px; padding:8px 12px; border:1px solid var(--border-color); border-radius:9px; background:var(--input-bg); color:var(--text); font:inherit; max-width:100%; }

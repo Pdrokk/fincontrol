@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.4.0')) {
+          if (!document.body.textContent?.includes('Versão 1.4.1')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -279,8 +279,29 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(150);
       if (linhaZerada()) throw new Error('Filtro não ocultou posição zerada.');
       if (!(await window.fincontrol.listarInvestimentos()).posicoes.some(a=>a.id===idZerado)) throw new Error('Filtro apagou posição.');
-      const coresCategorias = [...document.querySelectorAll('.carteira-categoria .invest-barra > span')].map(a=>getComputedStyle(a).backgroundColor);
+      const segmentos = [...document.querySelectorAll('.carteira-barra-unica > span')];
+      const coresCategorias = segmentos.map(a=>getComputedStyle(a).backgroundColor);
+      const barra = document.querySelector('.carteira-barra-unica');
+      if (document.querySelectorAll('.carteira-barra-unica').length !== 1 || !barra || Math.abs(segmentos.reduce((s,a)=>s+a.getBoundingClientRect().width,0)-barra.getBoundingClientRect().width)>2) throw new Error('Distribuição não ocupa uma única barra proporcional.');
+      if (document.querySelectorAll('.carteira-legenda li').length !== segmentos.length) throw new Error('Legenda não corresponde à distribuição.');
       if (coresCategorias.length < 2 || new Set(coresCategorias).size < 2) throw new Error('Categorias da carteira não têm cores distintas.');
+      const legendaAntes=document.querySelector('.carteira-legenda').textContent;
+      const filtroCategoria=document.querySelector('select[aria-label="Filtrar por categoria"]');
+      filtroCategoria.value='Moeda';
+      filtroCategoria.dispatchEvent(new Event('change',{bubbles:true}));
+      await dormir(150);
+      if ([...document.querySelectorAll('.invest-ativo')].some(a=>a.textContent.includes('BOVA11'))) throw new Error('Filtro de categoria não funciona.');
+      if (document.querySelector('.carteira-legenda').textContent!==legendaAntes) throw new Error('Filtro alterou distribuição total.');
+      filtroCategoria.value='';
+      filtroCategoria.dispatchEvent(new Event('change',{bubbles:true}));
+      await dormir(150);
+      const buscar=document.querySelector('input[aria-label="Buscar ativos"]');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(buscar,'Dolar');
+      buscar.dispatchEvent(new Event('input',{bubbles:true}));
+      await dormir(150);
+      if ([...document.querySelectorAll('.invest-ativo')].some(a=>a.textContent.includes('BOVA11')) || ![...document.querySelectorAll('.invest-ativo')].some(a=>a.textContent.includes('USD'))) throw new Error('Busca por nome sem acento não funciona.');
+      [...document.querySelectorAll('.carteira-busca button')].find(b=>b.textContent.includes('Limpar filtros')).click();
+      await dormir(150);
       if (document.querySelector('button[aria-label="Remover USD"]')) throw new Error('Posição ativa pode ser removida.');
       const definir = document.querySelector('button[aria-label="Definir quantidade de USD"]');
       if (!definir) throw new Error('Conversão de posição antiga indisponível.');
