@@ -67,6 +67,31 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         if (document.body.textContent?.includes('Não foi possível carregar esta tela')) {
           throw new Error('React caiu ao entrar em ' + nome);
         }
+        if (nome === 'Transações') {
+          const ordenacao = document.querySelector('#historico-ordenacao');
+          const tamanho = document.querySelector('#historico-tamanho');
+          const resumo = document.querySelector('.historico-resumo');
+          if (!ordenacao || !tamanho || !resumo) {
+            throw new Error('Controles de histórico ou resumo de resultados ausentes.');
+          }
+          if (ordenacao.options.length !== 4 || tamanho.options.length !== 3) {
+            throw new Error('Ordenação ou tamanho da página não apresentam todas as opções.');
+          }
+          tamanho.value = '30';
+          tamanho.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(150);
+          if (document.querySelector('#historico-tamanho')?.value !== '30') {
+            throw new Error('Alterar o tamanho da página falhou.');
+          }
+          ordenacao.value = 'maior';
+          ordenacao.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(150);
+          if (document.querySelector('#historico-ordenacao')?.value !== 'maior') {
+            throw new Error('Ordenação por maior valor não foi aplicada.');
+          }
+          const pesquisa = document.querySelector('#busca');
+          if (!pesquisa) throw new Error('Busca do histórico ausente.');
+        }
         if (nome === 'Relatórios') {
           if (!document.querySelector('.graficos-relatorio')) {
             throw new Error('Gráficos ausentes na página Relatórios.');
