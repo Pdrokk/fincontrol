@@ -73,7 +73,7 @@ test('carteira de acompanhamento: cadastro, atualização e nenhuma movimentaç�
 })
 
 test('posição acompanhada por quantidade, cache de cotação e edição não alteram caixa', () => {
-  const {db,saldo,operar}=ambiente()
+  const {db,saldo}=ambiente()
   try {
     const id=cadastrarAtivo(db,{codigo:'PETR4',nome:'Petrobras',tipo:'Ação',instituicao:'',quantidadeMercado:10.5})
     assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,null)
