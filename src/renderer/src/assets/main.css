@@ -2141,3 +2141,51 @@ body::-webkit-scrollbar-corner,
     width: 100%;
   }
 }
+
+/* Etapa 4 — feedback acessível e estados de foco consistentes. */
+.fincontrol .fincontrol-feedback {
+  --feedback-accent: var(--border-color);
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--feedback-accent);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.fincontrol .fincontrol-feedback--erro { --feedback-accent: #dc2626; }
+.fincontrol .fincontrol-feedback--sucesso { --feedback-accent: #16a34a; }
+.fincontrol .fincontrol-feedback--informacao { --feedback-accent: #2563eb; }
+.fincontrol :is(input, select, textarea, button):focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+.fincontrol :is(input, select, textarea):disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+.fincontrol ::selection {
+  color: var(--text);
+  background: rgba(96, 165, 250, .28);
+}
+.fincontrol input,
+.fincontrol textarea {
+  accent-color: #2563eb;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fincontrol, .fincontrol *, .fincontrol *::before, .fincontrol *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  .fincontrol .fincontrol-feedback {
+    border-color: CanvasText;
+  }
+  .fincontrol :is(input, select, textarea, button):focus-visible {
+    outline-color: Highlight;
+  }
+}

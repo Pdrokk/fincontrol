@@ -91,6 +91,11 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           }
           const pesquisa = document.querySelector('#busca');
           if (!pesquisa) throw new Error('Busca do histórico ausente.');
+          const valorTransacao = [...document.querySelectorAll('.formulario input')]
+            .find((input) => input.placeholder === '0,00');
+          if (valorTransacao?.type !== 'text' || valorTransacao?.inputMode !== 'decimal') {
+            throw new Error('Campo de valor precisa aceitar vírgula decimal brasileira.');
+          }
         }
         if (nome === 'Relatórios') {
           if (!document.querySelector('.graficos-relatorio')) {
@@ -168,7 +173,51 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if (esquema !== depois) {
         throw new Error('Tema nativo do Chromium não acompanhou o React.');
       }
-      return { paginas: verificadas, tema: 'OK', scrollbar: 'OK' };
+      // Exercita paginação com dados de teste exclusivos deste perfil descartável.
+      const contaTeste = await window.fincontrol.cadastrarConta({
+        banco: 'Banco de Teste', nome: 'Conta de testes UI', tipo: 'corrente',
+        cor: '#2563eb', saldoInicialCentavos: 1000000
+      });
+      if (!contaTeste?.id) throw new Error('Conta de teste não foi criada.');
+      const hojeTeste = new Date();
+      const dataTeste = [
+        hojeTeste.getFullYear(),
+        String(hojeTeste.getMonth() + 1).padStart(2, '0'),
+        String(hojeTeste.getDate()).padStart(2, '0')
+      ].join('-');
+      for (let n = 1; n <= 34; n++) {
+        await window.fincontrol.salvarTransacao({
+          descricao: 'Regressão UI ' + n,
+          valorCentavos: n * 100,
+          tipo: 'despesa',
+          categoria: 'Outros',
+          data: dataTeste,
+          contaId: contaTeste.id
+        });
+      }
+      const botaoPagina = (nome) => [...document.querySelectorAll('.sidebar nav button')]
+        .find((b) => b.getAttribute('title') === nome);
+      botaoPagina('Visão Geral')?.click();
+      await dormir(350);
+      botaoPagina('Transações')?.click();
+      await dormir(850);
+      const tamanhoTeste = document.querySelector('#historico-tamanho');
+      if (!tamanhoTeste) throw new Error('Paginação desapareceu após recarregar dados.');
+      tamanhoTeste.value = '15';
+      tamanhoTeste.dispatchEvent(new Event('change', { bubbles: true }));
+      await dormir(300);
+      if (document.querySelectorAll('.lista .transacao').length !== 15) {
+        throw new Error('Histórico não respeita o limite de 15 transações por página.');
+      }
+      const proxima = [...document.querySelectorAll('.historico-paginacao button')]
+        .find((b) => b.textContent?.includes('Próxima'));
+      if (!proxima || proxima.disabled) throw new Error('Próxima página inacessível.');
+      proxima.click();
+      await dormir(250);
+      if (!document.querySelector('.historico-paginacao')?.textContent?.includes('Página 2')) {
+        throw new Error('Histórico não avançou para a segunda página.');
+      }
+      return { paginas: verificadas, tema: 'OK', scrollbar: 'OK', paginacao: 'OK' };
     })()
   `)
   console.info('FINCONTROL_UI_SMOKE_OK:', JSON.stringify(resultado))

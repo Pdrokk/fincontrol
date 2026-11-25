@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Archive, ArrowDownRight, CheckCircle2, CreditCard, RotateCcw, Undo2 } from 'lucide-react'
+import Feedback from './Feedback'
 
 interface ContaPagamento {
   id: string
@@ -153,6 +154,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
     if (!window.confirm(
       `Confirmar pagamento de ${escolhidas.length} parcela(s), total ${moeda(valorEscolhido)}, usando ${conta.nome}?`
     )) return
+    let confirmado = false
     try {
       setSalvando(true)
       await window.fincontrol.pagarParcelasSelecionadas({
@@ -160,14 +162,24 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         contaId,
         dataPagamento
       })
-      await carregar()
+      confirmado = true
       setMensagem('Pagamento registrado com sucesso. Saldos e limite atualizados.')
-      if (onPagamento) await onPagamento()
+      await carregar()
     } catch (falha) {
       console.error(falha)
-      setErro(falha instanceof Error ? falha.message : 'Não foi possível confirmar o pagamento.')
+      setErro(confirmado
+        ? 'Pagamento concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
+        : falha instanceof Error ? falha.message : 'Não foi possível confirmar o pagamento.')
     } finally {
       setSalvando(false)
+    }
+    if (confirmado && onPagamento) {
+      try {
+        await onPagamento()
+      } catch (falha) {
+        console.error('Pagamento confirmado; falha ao atualizar outros painéis:', falha)
+        setErro('Pagamento concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.')
+      }
     }
   }
 
@@ -188,6 +200,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
     if (!window.confirm(
       `Estornar ${moeda(valor)}? O valor voltará à conta pagadora e o limite disponível do cartão será reduzido. ${parcela.pagamentoTipo === 'fatura' ? 'Isso estornará toda a fatura.' : 'Isso estornará esta parcela.'}`
     )) return
+    let estornoConfirmado = false
     try {
       setSalvando(true)
       await window.fincontrol.estornarPagamento({
@@ -195,14 +208,24 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         tipo: parcela.pagamentoTipo,
         motivo: motivo.trim()
       })
-      await carregar()
+      estornoConfirmado = true
       setMensagem('Estorno registrado. O saldo retornou à conta e o limite foi recalculado.')
-      if (onPagamento) await onPagamento()
+      await carregar()
     } catch (falha) {
       console.error(falha)
-      setErro(falha instanceof Error ? falha.message : 'Não foi possível estornar.')
+      setErro(estornoConfirmado
+        ? 'Estorno concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
+        : falha instanceof Error ? falha.message : 'Não foi possível estornar.')
     } finally {
       setSalvando(false)
+    }
+    if (estornoConfirmado && onPagamento) {
+      try {
+        await onPagamento()
+      } catch (falha) {
+        console.error('Estorno confirmado; falha ao atualizar outros painéis:', falha)
+        setErro('Estorno concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.')
+      }
     }
   }
 
@@ -212,6 +235,8 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       setSalvando(true)
       await window.fincontrol.arquivarParcela(id, arquivar)
       await carregar()
+      setErro('')
+      setMensagem(arquivar ? 'Parcela arquivada sem apagar o histórico.' : 'Parcela restaurada ao histórico.')
     } catch (falha) {
       console.error(falha)
       setErro('Não foi possível atualizar a visibilidade da parcela. Tente novamente.')
@@ -257,8 +282,8 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       </div>
 
       {carregando && <p>Carregando pagamentos...</p>}
-      {erro && <p className="cartoes-mensagem cartoes-mensagem-erro" role="alert">{erro}</p>}
-      {mensagem && <p className="cartoes-mensagem cartoes-mensagem-sucesso" role="status">{mensagem}</p>}
+      <Feedback mensagem={erro} tipo="erro" />
+      <Feedback mensagem={mensagem} tipo="sucesso" />
 
       {aba === 'pendentes' && (
         <>

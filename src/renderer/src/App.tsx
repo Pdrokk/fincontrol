@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
 import DashboardResumo from './components/DashboardResumo'
+import Feedback from './components/Feedback'
 import './assets/main.css'
 import {
   LayoutDashboard,
@@ -118,6 +119,10 @@ function App(): React.JSX.Element {
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [erroBanco, setErroBanco] = useState('')
   const [backupOcupado, setBackupOcupado] = useState(false)
+  const [mensagemOperacao, setMensagemOperacao] = useState('')
+  const [erroOperacao, setErroOperacao] = useState('')
+  const [mensagemBackup, setMensagemBackup] = useState('')
+  const [erroBackup, setErroBackup] = useState('')
 
   const [tema, setTema] = useState<'light' | 'dark'>(() => {
     return localStorage.getItem('fincontrol-tema') === 'dark' ? 'dark' : 'light'
@@ -126,11 +131,13 @@ function App(): React.JSX.Element {
   async function exportarBackupUI(): Promise<void> {
     if (backupOcupado) return
     try {
+      setErroBackup('')
+      setMensagemBackup('')
       setBackupOcupado(true)
       const arquivo = await window.fincontrol.exportarBackup()
-      if (arquivo) alert(`Backup criado: ${arquivo}`)
+      if (arquivo) setMensagemBackup(`Backup criado em: ${arquivo}`)
     } catch (falha) {
-      alert(falha instanceof Error ? falha.message : 'Falha ao exportar backup.')
+      setErroBackup(falha instanceof Error ? falha.message : 'Falha ao exportar backup.')
     } finally {
       setBackupOcupado(false)
     }
@@ -139,11 +146,13 @@ function App(): React.JSX.Element {
   async function restaurarBackupUI(): Promise<void> {
     if (backupOcupado) return
     try {
+      setErroBackup('')
+      setMensagemBackup('')
       setBackupOcupado(true)
       await window.fincontrol.restaurarBackup()
       // O processo principal recarrega esta janela após uma restauração bem-sucedida.
     } catch (falha) {
-      alert(falha instanceof Error ? falha.message : 'Falha ao restaurar backup.')
+      setErroBackup(falha instanceof Error ? falha.message : 'Falha ao restaurar backup.')
     } finally {
       setBackupOcupado(false)
     }
@@ -392,17 +401,22 @@ function App(): React.JSX.Element {
       return
     }
 
-    const numero = Number(valor.replace(',', '.'))
-    const centavos = Math.round(numero * 100)
+    setErroOperacao('')
+    setMensagemOperacao('')
+    const valorNormalizado = valor.trim()
+    const valorValido = /^\d+([,.]\d{1,2})?$/.test(valorNormalizado)
+    const numero = Number(valorNormalizado.replace(',', '.'))
+    const centavos = valorValido ? Math.round(numero * 100) : 0
 
     if (
       !descricao.trim() ||
+      !valorValido ||
       !Number.isFinite(numero) ||
       !Number.isSafeInteger(centavos) ||
       centavos <= 0 ||
       !data || (!editandoId && !contaId && contas.length === 0)
     ) {
-      alert('Preencha os campos corretamente.')
+      setErroOperacao('Confira a descrição, a conta, a data e o valor. Use até duas casas decimais (ex.: 125,50).')
       return
     }
 
@@ -431,10 +445,11 @@ function App(): React.JSX.Element {
       }
 
       cancelarEdicao()
+      setMensagemOperacao(editandoId ? 'Transação atualizada com sucesso.' : 'Transação registrada com sucesso.')
       setPagina('transacoes')
     } catch (erro) {
       console.error('Erro ao salvar transação:', erro)
-      alert('Não foi possível salvar a transação.')
+      setErroOperacao('Não foi possível salvar a transação. Confira os dados e tente novamente.')
     } finally {
       setSalvando(false)
     }
@@ -449,9 +464,11 @@ function App(): React.JSX.Element {
       await window.fincontrol.removerTransacao(id)
 
       setTransacoes((anteriores) => anteriores.filter((transacao) => transacao.id !== id))
+      setErroOperacao('')
+      setMensagemOperacao('Transação excluída com sucesso.')
     } catch (erro) {
       console.error('Erro ao excluir:', erro)
-      alert('Não foi possível excluir a transação.')
+      setErroOperacao('Não foi possível excluir a transação. Tente novamente.')
     }
   }
 
@@ -651,6 +668,8 @@ function App(): React.JSX.Element {
           <>
             <section className="painel">
               <h3>{editandoId ? 'Editar movimentação' : 'Adicionar movimentação'}</h3>
+              <Feedback mensagem={erroOperacao} tipo="erro" />
+              <Feedback mensagem={mensagemOperacao} tipo="sucesso" />
 
               <div className="filtros-avancados">
                 <div className="filtro-campo">
@@ -737,9 +756,8 @@ function App(): React.JSX.Element {
                 <label>
                   Valor (R$)
                   <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={valor}
                     onChange={(e): void => setValor(e.target.value)}
                     placeholder="0,00"
@@ -944,6 +962,8 @@ function App(): React.JSX.Element {
               <h3>Backup e restauração</h3>
               <p>Exporte uma cópia SQLite dos seus dados para outro local ou restaure um backup validado.</p>
               <p>Ao restaurar, os dados atuais serão substituídos. O FinControl cria um backup de emergência antes dessa troca.</p>
+              <Feedback mensagem={erroBackup} tipo="erro" />
+              <Feedback mensagem={mensagemBackup} tipo="sucesso" />
               <div className="configuracoes-backup">
                 <button type="button" className="botao-primario" disabled={backupOcupado}
                   onClick={(): void => { void exportarBackupUI() }}>
@@ -958,7 +978,7 @@ function App(): React.JSX.Element {
             <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão em desenvolvimento — preparação para FinControl 1.0</p>
+              <p>Versão 1.0 · aplicativo desktop offline</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Save, SlidersHorizontal, CirclePlus, X } from 'lucide-react'
 import { corBanco } from '../utils/coresBancos'
+import Feedback from './Feedback'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
 interface Conta {
@@ -50,11 +51,13 @@ export default function GerenciarConta({ conta, modo, onFechar, onAtualizar }: P
   const [data, setData] = useState(hoje)
   const [categoria, setCategoria] = useState('Outros')
   const [ocupado, setOcupado] = useState(false)
+  const [erroOperacao, setErroOperacao] = useState('')
 
   async function enviar(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (ocupado) return
     try {
+      setErroOperacao('')
       setOcupado(true)
       if (modo === 'editar') {
         await window.fincontrol.editarConta(conta.id, {
@@ -90,7 +93,7 @@ export default function GerenciarConta({ conta, modo, onFechar, onAtualizar }: P
       await onAtualizar()
       onFechar()
     } catch (falha) {
-      alert(falha instanceof Error ? falha.message : 'Não foi possível realizar a operação.')
+      setErroOperacao(falha instanceof Error ? falha.message : 'Não foi possível realizar a operação.')
       console.error(falha)
     } finally {
       setOcupado(false)
@@ -107,6 +110,7 @@ export default function GerenciarConta({ conta, modo, onFechar, onAtualizar }: P
         <button type="button" className="botao-limpar" onClick={onFechar} aria-label="Fechar edição"><X size={18} /></button>
       </div>
 
+      <Feedback mensagem={erroOperacao} tipo="erro" />
       <form className="formulario" onSubmit={(e): void => { void enviar(e) }}>
         {modo === 'editar' ? (
           <>

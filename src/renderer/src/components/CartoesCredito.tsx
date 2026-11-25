@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CreditCard, Plus, Pencil } from 'lucide-react'
+import Feedback from './Feedback'
 import { gradienteBanco } from '../utils/coresBancos'
 import CentralPagamentos from './CentralPagamentos'
 
@@ -198,8 +199,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
       }
       await atualizar()
       limparFormularioCartao()
-      setAviso('Cartão salvo com sucesso. Os limites já foram atualizados.')
-      setAviso('Compra registrada. As parcelas já aparecem na Central de pagamentos.')
+      setAviso('Cartão salvo com sucesso. Os limites foram atualizados.')
       setSecao('pagamentos')
     } catch (falha) {
       console.error(falha)
@@ -233,6 +233,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
       setDescricao('')
       setValor('')
       setParcelas('1')
+      setAviso('Compra registrada com sucesso. As parcelas já estão na Central de pagamentos.')
       setSecao('pagamentos')
     } catch (falha) {
       console.error(falha)
@@ -295,8 +296,8 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
         </div>
       </section>
 
-      {aviso && <p className="cartoes-mensagem cartoes-mensagem-sucesso" role="status">{aviso}</p>}
-      {erroFormulario && <p className="cartoes-mensagem cartoes-mensagem-erro" role="alert">{erroFormulario}</p>}
+      <Feedback mensagem={aviso} tipo="sucesso" />
+      <Feedback mensagem={erroFormulario} tipo="erro" />
 
       <nav className="cartoes-navegacao" aria-label="Áreas dos cartões">
         <button type="button" className={secao === 'pagamentos' ? 'ativo' : ''}
