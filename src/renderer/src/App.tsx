@@ -109,6 +109,9 @@ function App(): React.JSX.Element {
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
   const [busca, setBusca] = useState('')
+  const [ordenacaoHistorico, setOrdenacaoHistorico] = useState<'recentes' | 'antigas' | 'maior' | 'menor'>('recentes')
+  const [paginaHistorico, setPaginaHistorico] = useState(0)
+  const [itensPorPagina, setItensPorPagina] = useState(15)
 
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
@@ -294,14 +297,30 @@ function App(): React.JSX.Element {
 
     const correspondeCategoria = categoriaFiltro === 'todas' || t.categoria === categoriaFiltro
 
-    const correspondeBusca = t.descricao
-      .toLocaleLowerCase('pt-BR')
-      .includes(busca.trim().toLocaleLowerCase('pt-BR'))
+    const conta = contas.find((c) => c.id === t.contaId)
+    const textoPesquisa = [t.descricao, t.categoria, conta?.nome, conta?.banco]
+      .filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
+    const correspondeBusca = textoPesquisa.includes(busca.trim().toLocaleLowerCase('pt-BR'))
 
     return correspondeTipo && correspondeCategoria && correspondeBusca
   })
 
-  const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => b.data.localeCompare(a.data))
+  const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => {
+    if (ordenacaoHistorico === 'maior' || ordenacaoHistorico === 'menor') {
+      const diferenca = ordenacaoHistorico === 'maior'
+        ? b.valorCentavos - a.valorCentavos
+        : a.valorCentavos - b.valorCentavos
+      if (diferenca !== 0) return diferenca
+    }
+    const data = ordenacaoHistorico === 'antigas'
+      ? a.data.localeCompare(b.data)
+      : b.data.localeCompare(a.data)
+    return data || a.id.localeCompare(b.id)
+  })
+  const totalPaginasHistorico = Math.max(1, Math.ceil(transacoesOrdenadas.length / itensPorPagina))
+  const paginaHistoricoAtual = Math.min(paginaHistorico, totalPaginasHistorico - 1)
+  const inicioHistorico = paginaHistoricoAtual * itensPorPagina
+  const transacoesPagina = transacoesOrdenadas.slice(inicioHistorico, inicioHistorico + itensPorPagina)
 
   // Categorias reais vêm das transações, não somente das opções fixas da UI.
   const totaisCategorias = new Map<string, number>()
@@ -639,9 +658,9 @@ function App(): React.JSX.Element {
                   <input
                     id="busca"
                     type="text"
-                    placeholder="Buscar descrição..."
+                    placeholder="Descrição, categoria ou conta..."
                     value={busca}
-                    onChange={(e): void => setBusca(e.target.value)}
+                    onChange={(e): void => { setBusca(e.target.value); setPaginaHistorico(0) }}
                   />
                 </div>
 
@@ -653,6 +672,7 @@ function App(): React.JSX.Element {
                     onChange={(e): void => {
                       setTipoFiltro(e.target.value)
                       setCategoriaFiltro('todas')
+                      setPaginaHistorico(0)
                     }}
                   >
                     <option value="todos">Todos</option>
@@ -667,7 +687,7 @@ function App(): React.JSX.Element {
                   <select
                     id="categoriaFiltro"
                     value={categoriaFiltro}
-                    onChange={(e): void => setCategoriaFiltro(e.target.value)}
+                    onChange={(e): void => { setCategoriaFiltro(e.target.value); setPaginaHistorico(0) }}
                   >
                     <option value="todas">Todas as categorias</option>
 
@@ -691,6 +711,7 @@ function App(): React.JSX.Element {
                     setBusca('')
                     setTipoFiltro('todos')
                     setCategoriaFiltro('todas')
+                    setPaginaHistorico(0)
                   }}
                 >
                   Limpar busca
@@ -791,9 +812,66 @@ function App(): React.JSX.Element {
             </section>
 
             <section className="painel">
-              <h3>Histórico de transações</h3>
-
-              {listaTransacoes(transacoesOrdenadas)}
+              <div className="historico-cabecalho">
+                <div>
+                  <h3>Histórico de transações</h3>
+                  <p className="historico-resumo" role="status">
+                    {transacoesOrdenadas.length === 0
+                      ? 'Nenhum resultado para os filtros atuais.'
+                      : `Mostrando ${inicioHistorico + 1}–${Math.min(inicioHistorico + itensPorPagina, transacoesOrdenadas.length)} de ${transacoesOrdenadas.length} transações`}
+                  </p>
+                </div>
+                <div className="historico-controles">
+                  <label htmlFor="historico-ordenacao">Ordenar por
+                    <select id="historico-ordenacao" value={ordenacaoHistorico}
+                      onChange={(e): void => {
+                        setOrdenacaoHistorico(e.target.value as typeof ordenacaoHistorico)
+                        setPaginaHistorico(0)
+                      }}>
+                      <option value="recentes">Mais recentes</option>
+                      <option value="antigas">Mais antigas</option>
+                      <option value="maior">Maior valor</option>
+                      <option value="menor">Menor valor</option>
+                    </select>
+                  </label>
+                  <label htmlFor="historico-tamanho">Por página
+                    <select id="historico-tamanho" value={itensPorPagina}
+                      onChange={(e): void => { setItensPorPagina(Number(e.target.value)); setPaginaHistorico(0) }}>
+                      <option value={15}>15</option>
+                      <option value={30}>30</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              {transacoesOrdenadas.length === 0
+                ? <div className="historico-sem-resultados">
+                    <p className="vazio">
+                      {transacoes.length === 0
+                        ? 'Nenhuma transação cadastrada. Registre sua primeira movimentação acima.'
+                        : 'Nenhuma transação corresponde aos filtros selecionados.'}
+                    </p>
+                    {transacoes.length > 0 && (
+                      <button type="button" className="botao-limpar" onClick={(): void => {
+                        setBusca(''); setTipoFiltro('todos'); setCategoriaFiltro('todas')
+                        setMesFiltro('todos'); setAnoFiltro('todos'); setPaginaHistorico(0)
+                      }}>Limpar todos os filtros</button>
+                    )}
+                  </div>
+                : listaTransacoes(transacoesPagina)}
+              {totalPaginasHistorico > 1 && (
+                <nav className="historico-paginacao" aria-label="Paginação do histórico">
+                  <button type="button" disabled={paginaHistoricoAtual === 0}
+                    onClick={(): void => setPaginaHistorico((p) => Math.max(0, p - 1))}>
+                    Anterior
+                  </button>
+                  <span>Página {paginaHistoricoAtual + 1} de {totalPaginasHistorico}</span>
+                  <button type="button" disabled={paginaHistoricoAtual === totalPaginasHistorico - 1}
+                    onClick={(): void => setPaginaHistorico((p) => Math.min(totalPaginasHistorico - 1, p + 1))}>
+                    Próxima
+                  </button>
+                </nav>
+              )}
             </section>
           </>
         )}
