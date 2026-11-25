@@ -37,6 +37,12 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const [mensagem, setMensagem] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [carregando, setCarregando] = useState(true)
+  const [agora, setAgora] = useState(() => Date.now())
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => setAgora(Date.now()), 60_000)
+    return (): void => window.clearInterval(intervalo)
+  }, [])
 
   async function carregar(): Promise<void> {
     const [dados, bancos, chave] = await Promise.all([window.fincontrol.listarInvestimentos(), window.fincontrol.listarContas(),window.fincontrol.chaveCotacoesConfigurada()])
@@ -79,7 +85,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const categorias = tipos.map(t => ({tipo:t,valor:posicoes.filter(a=>a.tipo===t).reduce((n,a)=>n+(a.valorAtualCentavos??0),0)})).filter(t=>t.valor>0).sort((a,b)=>b.valor-a.valor)
   const mercado = posicoes.filter(a=>a.quantidadeMercado!==null)
   const ativosComHistorico = new Set(movimentos.map(m=>m.ativoId))
-  const cotacoesAntigas = mercado.filter(a=>a.cotacaoEm && Date.now()-Date.parse(a.cotacaoEm)>72*3600000).length
+  const cotacoesAntigas = mercado.filter(a=>a.cotacaoEm && agora-Date.parse(a.cotacaoEm)>72*3600000).length
   return <div className="investimentos carteira-v3">
     <Feedback mensagem={erro} tipo="erro" />
     <Feedback mensagem={mensagem} tipo="sucesso" />
@@ -135,7 +141,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
             <th scope="row"><span className="carteira-ativo-nome"><Icone size={19} aria-hidden="true"/><span><strong>{a.codigo}</strong><small>{a.tipo}{a.instituicao?' · '+a.instituicao:''}</small></span></span></th>
             <td>{manual?'—':qtd(a.quantidade)}</td>
             <td>{automatico?a.precoMercado===null?'—':preco(a.precoMercado):manual?'—':a.cotacaoCentavos===null?'—':moeda(a.cotacaoCentavos)}
-              <small>{automatico?a.cotacaoEm? a.fonteCotacao+' · '+hora(a.cotacaoEm)+(Date.now()-Date.parse(a.cotacaoEm)>72*3600000?' · Antiga':''):'Aguardando cotação':manual?'Valor informado':'Controle detalhado'}</small>
+              <small>{automatico?a.cotacaoEm? a.fonteCotacao+' · '+hora(a.cotacaoEm)+(agora-Date.parse(a.cotacaoEm)>72*3600000?' · Antiga':''):'Aguardando cotação':manual?'Valor informado':'Controle detalhado'}</small>
             </td>
             <td><strong>{a.valorAtualCentavos===null?'Indisponível':moeda(a.valorAtualCentavos)}</strong>{!manual&&!automatico&&a.quantidade>0&&<small>Preço médio: {moeda(a.custoCentavos/a.quantidade)}</small>}</td>
             <td>{editando===a.id?<form className="invest-cotacao carteira-editor" onSubmit={(e):void=>{e.preventDefault();const f=new FormData(e.currentTarget);void executar(async()=>{if(automatico)await window.fincontrol.atualizarQuantidadeMercado(a.id,Number(campo(f,'edicao')));else if(manual)await window.fincontrol.atualizarValorAtivo(a.id,centavos(f,'edicao'));else await window.fincontrol.atualizarCotacao(a.id,centavos(f,'edicao'));setEditando(null)},'Posição atualizada.')}}>
