@@ -1,6 +1,6 @@
 import { confirmarFinControl } from '../utils/dialogos'
 import { useEffect, useState } from 'react'
-import { TrendingUp, Plus, ArrowDownLeft, ArrowUpRight, Coins, Landmark, Building2, Wallet, ChartNoAxesCombined, RefreshCw, Pencil, X, Trash2, CheckCircle2 } from 'lucide-react'
+import { TrendingUp, Plus, ArrowDownLeft, ArrowUpRight, Coins, Landmark, Building2, Wallet, ChartNoAxesCombined, RefreshCw, Pencil, X, Trash2, CheckCircle2, Search } from 'lucide-react'
 import Feedback from './Feedback'
 import type { Operacao, Posicao, Movimento } from '../../../main/investimentos'
 
@@ -39,6 +39,8 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const [sincronizando,setSincronizando] = useState(false)
   const [statusCotacoes,setStatusCotacoes] = useState<AvisoCotacao | null>(null)
   const [mostrarZeradas,setMostrarZeradas] = useState(false)
+  const [busca,setBusca] = useState('')
+  const [categoriaFiltro,setCategoriaFiltro] = useState('')
   const [erro, setErro] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -111,7 +113,10 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const arquivadas = posicoes.filter(a=>a.arquivado)
   const zeradas = ativas.filter(a=>a.valorAtualCentavos===0 && (a.valorInformadoCentavos!==null || a.quantidade===0))
   const idsZeradas = new Set(zeradas.map(a=>a.id))
-  const visiveis = [...(mostrarZeradas ? ativas : ativas.filter(a=>!idsZeradas.has(a.id))), ...(mostrarArquivadas ? arquivadas : [])]
+  const baseVisivel = [...(mostrarZeradas ? ativas : ativas.filter(a=>!idsZeradas.has(a.id))), ...(mostrarArquivadas ? arquivadas : [])]
+  const normalizar = (texto: string): string => texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()
+  const consulta = normalizar(busca)
+  const visiveis = baseVisivel.filter(a=>(!categoriaFiltro||a.tipo===categoriaFiltro)&&(!consulta||normalizar([a.codigo,a.nome,a.instituicao].join(' ')).includes(consulta)))
   const mercado = ativas.filter(a=>a.quantidadeMercado!==null)
   const ativosComHistorico = new Set(movimentos.map(m=>m.ativoId))
   const cotacoesAntigas = mercado.filter(a=>a.cotacaoEm && agora-Date.parse(a.cotacaoEm)>72*3600000).length
@@ -133,7 +138,15 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
       </header>
       <div className="carteira-balanco">
         <div><span>Patrimônio em investimentos {semCotacao ? '(parcial)' : ''}</span><strong>{carregando || (semCotacao>0 && posicoes.every(a=>a.valorAtualCentavos===null))?'—':moeda(valor)}</strong><small>{ativas.length-zeradas.length} {ativas.length-zeradas.length===1?'posição ativa':'posições ativas'} · {semCotacao} sem cotação{cotacoesAntigas ? ' · '+cotacoesAntigas+' com cotação antiga' : ''}</small></div>
-        {categorias.length>0 && <div className="invest-alocacao"><span>Distribuição por categoria</span>{categorias.map(t=><div key={t.tipo} className="carteira-categoria" data-categoria={t.tipo}><span className="carteira-categoria-rotulo"><i aria-hidden="true"/>{t.tipo}</span><div className="invest-barra" aria-hidden="true"><span style={{width:(t.valor/valor*100)+'%'}}/></div><strong>{(t.valor/valor*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong></div>)}</div>}
+        {categorias.length>0 && <div className="invest-alocacao carteira-distribuicao">
+          <div className="carteira-distribuicao-titulo"><span>Distribuição por categoria</span>{semCotacao>0&&<small>Somente valores conhecidos</small>}</div>
+          <div className="carteira-barra-unica" aria-hidden="true">
+            {categorias.map(t=><span key={t.tipo} data-categoria={t.tipo} style={{flexGrow:t.valor}} title={t.tipo+' · '+moeda(t.valor)}/>)}
+          </div>
+          <ul className="carteira-legenda" aria-label="Participação de cada categoria no patrimônio conhecido">
+            {categorias.map(t=><li key={t.tipo} data-categoria={t.tipo}><i aria-hidden="true"/><span>{t.tipo}</span><strong>{(t.valor/valor*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong></li>)}
+          </ul>
+        </div>}
       </div>
       <div className="carteira-fonte"><span>BRAPI · BCB PTAX · Dados com atraso; últimos valores disponíveis offline.</span><button className="botao-texto" type="button" onClick={():void=>setConfigurando(v=>!v)} aria-expanded={configurando}>{chaveAtiva?'Gerenciar chave BRAPI':'Configurar fonte de dados'}</button></div>
       {configurando && <form className="carteira-edicao formulario" onSubmit={(e):void=>{e.preventDefault();const f=e.currentTarget;const dados=new FormData(f);void executar(()=>window.fincontrol.configurarChaveCotacoes(campo(dados,'chave')),'Chave configurada neste dispositivo.',f)}}>
@@ -166,7 +179,12 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
         <p className="invest-detalhe">O cadastro registra uma posição que você já possui, sem movimentar contas. Para uma nova compra ou venda, use as ações na linha do ativo.</p>
       </section>
       {!carregando && posicoes.length>0 && <div className="carteira-filtro"><h4>Posições <span>{visiveis.length}</span></h4>{zeradas.length>0 && <label className="carteira-filtro-zeradas"><input type="checkbox" checked={mostrarZeradas} onChange={(e):void=>setMostrarZeradas(e.target.checked)} /> Mostrar posições zeradas ({zeradas.length})</label>}{arquivadas.length>0&&<label className="carteira-filtro-zeradas"><input type="checkbox" checked={mostrarArquivadas} onChange={(e):void=>setMostrarArquivadas(e.target.checked)}/> Arquivadas ({arquivadas.length})</label>}</div>}
-      {carregando?<p role="status">Carregando carteira…</p>:!posicoes.length?<div className="carteira-vazia"><Wallet size={28}/><strong>Sua carteira está vazia</strong><p>Adicione um ativo pelo código e a quantidade que possui.</p></div>:!visiveis.length?<div className="carteira-vazia"><Wallet size={28}/><strong>Nenhuma posição ativa</strong><p>Marque a opção acima para consultar as posições zeradas ou adicione outro ativo.</p></div>:<div className="carteira-tabela"><table>
+      {!carregando&&posicoes.length>0&&<div className="carteira-busca">
+        <label className="carteira-busca-campo"><Search size={17} aria-hidden="true"/><input type="search" aria-label="Buscar ativos" placeholder="Buscar por código, nome ou instituição" value={busca} onChange={(e):void=>setBusca(e.target.value)}/></label>
+        <select aria-label="Filtrar por categoria" value={categoriaFiltro} onChange={(e):void=>setCategoriaFiltro(e.target.value)}><option value="">Todas as categorias</option>{tipos.map(t=><option key={t} value={t}>{t}</option>)}</select>
+        {(busca||categoriaFiltro)&&<button type="button" className="botao-secundario" onClick={():void=>{setBusca('');setCategoriaFiltro('')}}>Limpar filtros</button>}
+      </div>}
+      {carregando?<p role="status">Carregando carteira…</p>:!posicoes.length?<div className="carteira-vazia"><Wallet size={28}/><strong>Sua carteira está vazia</strong><p>Adicione um ativo pelo código e a quantidade que possui.</p></div>:!visiveis.length?<div className="carteira-vazia"><Wallet size={28}/><strong>{busca||categoriaFiltro?'Nenhum ativo encontrado':'Nenhuma posição ativa'}</strong><p>{busca||categoriaFiltro?'Altere ou limpe os filtros para consultar sua carteira.':'Marque a opção acima para consultar as posições zeradas ou adicione outro ativo.'}</p></div>:<div className="carteira-tabela"><table>
         <thead><tr><th scope="col">Ativo</th><th scope="col">Quantidade</th><th scope="col">Cotação (R$)</th><th scope="col">Valor da posição</th><th scope="col">Ações</th></tr></thead>
         <tbody>{visiveis.map(a=>{
           const Icone=icones[a.tipo as keyof typeof icones]??Wallet
