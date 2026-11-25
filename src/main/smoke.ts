@@ -11,7 +11,7 @@ import {
   excluirConta
 } from './contas'
 import {
-  cadastrarCartao, atualizarCartao, cadastrarCompra, listarCartoes,
+  cadastrarCartao, atualizarCartao, excluirCartao, cadastrarCompra, listarCartoes,
   listarParcelasPagamento, listarFaturasPrevistas, pagarParcelasSelecionadas,
   listarDespesasCartaoRealizadas, estornarPagamento, pagarFatura,
   definirArquivoParcela, listarEstornosPagamentos
@@ -85,6 +85,16 @@ export async function executarSmokeInstalado(): Promise<void> {
     excluirConta(vazia.id)
     assert.ok(!listarContas().some(c => c.id === vazia.id))
 
+    assert.throws(() => excluirCartao('cartao-inexistente'), /Cartão não encontrado/)
+    const cartaoSemHistorico = cadastrarCartao({
+      contaId: a.id, banco: 'Banco Teste', nome: 'Cartão temporário',
+      limiteCentavos: 10_000, diaFechamento: 25, diaVencimento: 10
+    })
+    assert.ok(listarCartoes().some(c => c.id === cartaoSemHistorico.id))
+    excluirCartao(cartaoSemHistorico.id)
+    assert.ok(!listarCartoes().some(c => c.id === cartaoSemHistorico.id))
+    assert.throws(() => excluirCartao(cartaoSemHistorico.id), /Cartão não encontrado/)
+
     const cartao = cadastrarCartao({
       contaId: a.id, banco: 'Nubank', nome: 'Crédito',
       limiteCentavos: 100_000, diaFechamento: 25, diaVencimento: 10
@@ -97,6 +107,8 @@ export async function executarSmokeInstalado(): Promise<void> {
       cartaoId: cartao.id, descricao: 'Notebook', categoria: 'Eletrônicos',
       data: hoje, valorCentavos: 60_000, numeroParcelas: 3
     })
+    assert.throws(() => excluirCartao(cartao.id), /histórico de compras/)
+    assert.ok(listarCartoes().some(c => c.id === cartao.id))
     assert.equal(listarCartoes().find(c => c.id === cartao.id)?.limiteDisponivelCentavos, 40_000)
     const parcelas = listarParcelasPagamento().filter(p => p.cartaoId === cartao.id)
     assert.equal(parcelas.length, 3)
