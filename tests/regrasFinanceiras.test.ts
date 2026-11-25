@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {
-  hojeLocalISO, naoEhFuturo, validarOperacaoImediata,
-  inicioDeSalarioRetroativo, podeExcluirConta
-} from '../src/main/regrasFinanceiras.ts'
+import { hojeLocalISO, naoEhFuturo, validarOperacaoImediata,
+  inicioDeSalarioRetroativo, podeExcluirConta, ehCategoriaSalario } from '../src/main/regrasFinanceiras.ts'
 
 test('datas locais ISO mantêm o calendário da máquina', () => {
   const d = new Date(2026, 10, 19, 23, 59)
@@ -30,4 +28,13 @@ test('contas com saldo diferente de zero não podem ser excluídas', () => {
   assert.equal(podeExcluirConta(0), true)
   assert.equal(podeExcluirConta(50000), false)
   assert.equal(podeExcluirConta(-1), false)
+})
+
+
+test('proteção de salário recorrente reconhece categoria com espaços e maiúsculas', () => {
+  assert.equal(ehCategoriaSalario('Salário'), true)
+  assert.equal(ehCategoriaSalario(' SALÁRIO  '), true)
+  assert.equal(ehCategoriaSalario('salário'), true)
+  assert.equal(ehCategoriaSalario('Salários'), false)
+  assert.equal(ehCategoriaSalario('Outros'), false)
 })

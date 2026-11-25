@@ -202,7 +202,7 @@ export default function CartoesCredito(): React.JSX.Element {
       setSecao('pagamentos')
     } catch (falha) {
       console.error(falha)
-      alert('Não foi possível cadastrar a compra. Verifique o valor e a quantidade de parcelas.')
+      alert(falha instanceof Error ? falha.message : 'Não foi possível cadastrar a compra.')
     } finally { setSalvando(false) }
   }
 
