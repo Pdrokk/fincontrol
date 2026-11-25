@@ -302,15 +302,17 @@ function App(): React.JSX.Element {
     .filter((t) => t.tipo === 'despesa')
     .reduce((soma, t) => soma + t.valorCentavos, 0)
 
+  const contasPorId = new Map(contas.map((conta) => [conta.id, conta]))
+  const buscaNormalizada = busca.trim().toLocaleLowerCase('pt-BR')
   const transacoesFiltradas = transacoesBancariasPeriodo.filter((t) => {
     const correspondeTipo = tipoFiltro === 'todos' || t.tipo === tipoFiltro
 
     const correspondeCategoria = categoriaFiltro === 'todas' || t.categoria === categoriaFiltro
 
-    const conta = contas.find((c) => c.id === t.contaId)
+    const conta = contasPorId.get(t.contaId ?? '')
     const textoPesquisa = [t.descricao, t.categoria, conta?.nome, conta?.banco]
       .filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
-    const correspondeBusca = textoPesquisa.includes(busca.trim().toLocaleLowerCase('pt-BR'))
+    const correspondeBusca = textoPesquisa.includes(buscaNormalizada)
 
     return correspondeTipo && correspondeCategoria && correspondeBusca
   })
@@ -502,7 +504,7 @@ function App(): React.JSX.Element {
               <span>
                 {t.categoria} • {t.data.split('-').reverse().join('/')} •{' '}
                 {t.contaId
-                  ? (contas.find((conta) => conta.id === t.contaId)?.nome ?? 'Conta vinculada')
+                  ? (contasPorId.get(t.contaId)?.nome ?? 'Conta vinculada')
                   : 'Sem conta'}
               </span>
             </div>
