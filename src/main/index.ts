@@ -101,6 +101,13 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.querySelector('.graficos-relatorio')) {
             throw new Error('Gráficos ausentes na página Relatórios.');
           }
+          const detalhes = document.querySelector('.graficos-dados');
+          const resumoDados = detalhes?.querySelector('summary');
+          const tabelas = detalhes?.querySelectorAll('table');
+          if (!resumoDados || !tabelas?.length ||
+              ![...tabelas].some((t) => t.querySelector('th[scope="col"]'))) {
+            throw new Error('Alternativa acessível dos gráficos em tabela ausente.');
+          }
           const filtro = document.querySelector('#mesFiltro');
           if (!filtro) throw new Error('Filtro de mês ausente nos Relatórios.');
           filtro.value = '01';
@@ -155,6 +162,29 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       }
 
       const aplicativo = document.querySelector('.fincontrol');
+      const contraste = (frente, fundo) => {
+        const luminancia = (hex) => {
+          const numeros = hex.trim().replace('#', '').match(/.{2}/g);
+          if (!numeros || numeros.length !== 3) throw new Error('Token de cor inválido: ' + hex);
+          const rgb = numeros.map((v) => {
+            const c = parseInt(v, 16) / 255;
+            return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+          });
+          return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+        };
+        const x = luminancia(frente), y = luminancia(fundo);
+        return (Math.max(x, y) + .05) / (Math.min(x, y) + .05);
+      };
+      const verificarContraste = () => {
+        const estilo = getComputedStyle(aplicativo);
+        const mut = estilo.getPropertyValue('--muted').trim();
+        const bg = estilo.getPropertyValue('--bg').trim();
+        if (contraste(mut, bg) < 4.5) {
+          throw new Error('Texto secundário com contraste inferior a 4,5:1 no tema ' +
+            aplicativo.getAttribute('data-theme'));
+        }
+      };
+      verificarContraste();
       const antes = aplicativo?.getAttribute('data-theme');
       const trilhoAntes = getComputedStyle(document.documentElement)
         .getPropertyValue('--fc-scroll-track').trim();
@@ -164,6 +194,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(250);
       const depois = aplicativo?.getAttribute('data-theme');
       if (antes === depois) throw new Error('Tema não foi alterado.');
+      verificarContraste();
       const trilhoDepois = getComputedStyle(document.documentElement)
         .getPropertyValue('--fc-scroll-track').trim();
       if (!trilhoAntes || !trilhoDepois || trilhoAntes === trilhoDepois) {
@@ -246,6 +277,9 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       const proxima = [...document.querySelectorAll('.historico-paginacao button')]
         .find((b) => b.textContent?.includes('Próxima'));
       if (!proxima || proxima.disabled) throw new Error('Próxima página inacessível.');
+      if (proxima.getBoundingClientRect().height < 44) {
+        throw new Error('Botão de paginação tem área de toque inferior a 44px.');
+      }
       proxima.click();
       await dormir(250);
       if (!document.querySelector('.historico-paginacao')?.textContent?.includes('Página 2')) {

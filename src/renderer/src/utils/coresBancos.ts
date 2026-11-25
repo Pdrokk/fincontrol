@@ -41,5 +41,6 @@ export function corBanco(nome: string): string {
 
 export function gradienteBanco(nome: string): string {
   const { principal, secundario } = paletaBanco(nome)
-  return `linear-gradient(130deg, ${principal}, ${secundario})`
+  // A camada escura mantém texto branco legível também em marcas amarelas/laranjas.
+  return `linear-gradient(130deg, rgba(3, 7, 18, .58), rgba(3, 7, 18, .72)), linear-gradient(130deg, ${principal}, ${secundario})`
 }
