@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, registrarOperacao, type Operacao } from '../src/main/investimentos.ts'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, type Operacao } from '../src/main/investimentos.ts'
 
 function ambiente(): { db: DatabaseSync; id: string; saldo: () => number; operar: (dados: Partial<Operacao>) => void } {
   const db = new DatabaseSync(':memory:')
@@ -53,5 +53,21 @@ test('proventos, ordem cronológica, cotação ausente, migração idempotente e
     assert.equal(listarMovimentos(db).length,2)
     assert.throws(()=>db.exec("DELETE FROM contas WHERE id='a'"))
     assert.equal(db.prepare('PRAGMA integrity_check').get()?.integrity_check,'ok')
+  } finally {db.close()}
+})
+
+test('carteira de acompanhamento: cadastro, atualização e nenhuma movimentação bancária', () => {
+  const {db,saldo,operar}=ambiente()
+  try {
+    const id=cadastrarAtivo(db,{codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',valorInformadoCentavos:250000})
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,250000)
+    atualizarValorAtivo(db,id,300000)
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,300000)
+    assert.throws(()=>operar({ativoId:id}))
+    assert.throws(()=>atualizarValorAtivo(db,id,-1))
+    assert.equal(saldo(),100000)
+    assert.equal(listarMovimentos(db).length,0)
+    criarTabelasInvestimentos(db)
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,300000)
   } finally {db.close()}
 })

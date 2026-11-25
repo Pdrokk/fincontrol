@@ -164,7 +164,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.2.0')) {
+          if (!document.body.textContent?.includes('Versão 1.2.1')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -260,6 +260,11 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       botaoPagina('Minhas contas')?.click();
       await dormir(450);
       if (!document.querySelector('.icone-banco')) throw new Error('Identificador de banco ausente.');
+      const idPatrimonio = await window.fincontrol.cadastrarAtivo({codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',valorInformadoCentavos:5000});
+      const saldoPatrimonioAntes = (await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos;
+      await window.fincontrol.atualizarValorAtivo(idPatrimonio,6000);
+      if ((await window.fincontrol.listarInvestimentos()).posicoes.find(a => a.id === idPatrimonio)?.valorAtualCentavos !== 6000) throw new Error('Valor patrimonial incorreto.');
+      if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes) throw new Error('Acompanhamento não deve movimentar saldo.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);
       botaoPagina('Transações')?.click();
