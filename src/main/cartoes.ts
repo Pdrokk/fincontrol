@@ -388,6 +388,42 @@ export function atualizarCartao(id: string, dados: NovoCartao): Cartao {
   }
 }
 
+/**
+ * Exclui somente cartões sem qualquer histórico financeiro.
+ * Compras, parcelas e pagamentos (inclusive estornados) devem permanecer auditáveis.
+ */
+export function excluirCartao(id: string): void {
+  if (typeof id !== 'string' || !id.trim()) throw new Error('Cartão inválido.')
+
+  const db = obterBanco()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    if (!db.prepare('SELECT 1 FROM cartoes WHERE id = ?').get(id)) {
+      throw new Error('Cartão não encontrado.')
+    }
+
+    const vinculos = db.prepare(`
+      SELECT
+        EXISTS(SELECT 1 FROM compras_cartao WHERE cartao_id = ?) AS compras,
+        EXISTS(SELECT 1 FROM parcelas_cartao WHERE cartao_id = ?) AS parcelas,
+        EXISTS(SELECT 1 FROM pagamentos_fatura WHERE cartao_id = ?) AS pagamentos
+    `).get(id, id, id) as { compras: number; parcelas: number; pagamentos: number }
+
+    if (vinculos.compras || vinculos.parcelas || vinculos.pagamentos) {
+      throw new Error(
+        'Este cartão possui histórico de compras, parcelas ou pagamentos. ' +
+        'A exclusão foi bloqueada para preservar os registros financeiros.'
+      )
+    }
+
+    db.prepare('DELETE FROM cartoes WHERE id = ?').run(id)
+    db.exec('COMMIT')
+  } catch (erro) {
+    db.exec('ROLLBACK')
+    throw erro
+  }
+}
+
 export function cadastrarCompra(dados: NovaCompra): Compra {
   if (!dados || typeof dados !== 'object') throw new Error('Compra inválida.')
   if (typeof dados.cartaoId !== 'string' || !dados.cartaoId)
