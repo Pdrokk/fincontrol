@@ -1,8 +1,8 @@
-name: FinControl 1.0 - Windows portátil
+name: FinControl - Windows portátil (main)
 on:
   push:
     branches:
-      - 'portable/**'
+      - main
   workflow_dispatch:
 
 permissions:
@@ -84,9 +84,9 @@ jobs:
       - name: Disponibilizar executável portátil
         uses: actions/upload-artifact@v4
         with:
-          name: FinControl-1.0.0-Portatil-Windows-x64
+          name: FinControl-Portatil-Windows-x64-${{ github.run_number }}
           path: |
-            dist/FinControl-1.0.0-portable.exe
+            dist/FinControl-*-portable.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
