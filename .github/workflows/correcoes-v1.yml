@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - 'portable/fincontrol-v1.0.0'
+      - develop
   workflow_dispatch:
 
 permissions:
