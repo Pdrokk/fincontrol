@@ -2682,3 +2682,30 @@ body::-webkit-scrollbar-corner,
 .carteira-fundamentos .carteira-ficha-dados { grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
 .carteira-fundamentos .invest-detalhe { line-height:1.5; }
 .carteira-fundamentos dd { font-size:17px; }
+
+/* Rosca de composição: no máximo seis fatias, legenda compacta e acessível. */
+.carteira-composicao { min-width:0; align-content:start; }
+.carteira-composicao h4 { margin:0; font-size:14px; font-weight:600; }
+.carteira-composicao p { margin:4px 0; }
+.carteira-rosca-conteudo { display:grid; grid-template-columns:128px minmax(0,1fr); gap:16px; align-items:center; }
+.carteira-rosca { width:128px; height:128px; display:block; }
+.carteira-rosca-legenda { list-style:none; margin:0; padding:0; display:grid; gap:6px; min-width:0; }
+.carteira-rosca-legenda li { display:grid; grid-template-columns:8px minmax(45px,1fr) auto minmax(42px,auto); align-items:center; gap:8px; font-size:13px; font-variant-numeric:tabular-nums; }
+.carteira-rosca-legenda i { display:block; width:8px; height:8px; background:var(--fatia-cor); border-radius:2px; }
+.carteira-rosca-legenda .carteira-rosca-nome { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+.carteira-rosca-legenda strong { text-align:right; font-weight:600; }
+.carteira-cor-0 { --fatia-cor:#2563eb; }
+.carteira-cor-1 { --fatia-cor:#0f766e; }
+.carteira-cor-2 { --fatia-cor:#a16207; }
+.carteira-cor-3 { --fatia-cor:#7c3aed; }
+.carteira-cor-4 { --fatia-cor:#be185d; }
+.carteira-cor-5 { --fatia-cor:#c2410c; }
+.carteira-cor-6 { --fatia-cor:#64748b; }
+.fincontrol[data-theme='dark'] .carteira-cor-0 { --fatia-cor:#60a5fa; }
+.fincontrol[data-theme='dark'] .carteira-cor-1 { --fatia-cor:#2dd4bf; }
+.fincontrol[data-theme='dark'] .carteira-cor-2 { --fatia-cor:#fbbf24; }
+.fincontrol[data-theme='dark'] .carteira-cor-3 { --fatia-cor:#a78bfa; }
+.fincontrol[data-theme='dark'] .carteira-cor-4 { --fatia-cor:#f472b6; }
+.fincontrol[data-theme='dark'] .carteira-cor-5 { --fatia-cor:#fb923c; }
+.fincontrol[data-theme='dark'] .carteira-cor-6 { --fatia-cor:#94a3b8; }
+@media(max-width:1200px) { .carteira-rosca-conteudo { grid-template-columns:1fr; gap:8px; } .carteira-rosca { justify-self:center; } }

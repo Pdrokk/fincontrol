@@ -2,9 +2,9 @@ import { confirmarFinControl } from '../utils/dialogos'
 import { useEffect, useState } from 'react'
 import { TrendingUp, Plus, ArrowDownLeft, ArrowUpRight, Coins, Landmark, Building2, Wallet, ChartNoAxesCombined, RefreshCw, Pencil, X, Trash2, CheckCircle2, Search } from 'lucide-react'
 import Feedback from './Feedback'
-import GraficoHistoricoInvest from './GraficoHistoricoInvest'
+import ComposicaoCarteira from './ComposicaoCarteira'
 import FichaAtivo from './FichaAtivo'
-import type { Operacao, Posicao, Movimento, ObservacaoPatrimonio } from '../../../main/investimentos'
+import type { Operacao, Posicao, Movimento } from '../../../main/investimentos'
 
 type Conta = Awaited<ReturnType<typeof window.fincontrol.listarContas>>[number]
 type Modo = 'mercado' | 'manual'
@@ -28,7 +28,6 @@ function resumoCotacoes(r: Awaited<ReturnType<typeof window.fincontrol.sincroniz
 
 export default function Investimentos({ onAlteracao }: { onAlteracao: () => void }): React.JSX.Element {
   const [posicoes, setPosicoes] = useState<Posicao[]>([])
-  const [evolucao,setEvolucao] = useState<ObservacaoPatrimonio[]>([])
   const [fichaId,setFichaId] = useState<string|null>(null)
   const [movimentos, setMovimentos] = useState<Movimento[]>([])
   const [contas, setContas] = useState<Conta[]>([])
@@ -76,19 +75,19 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
 
   async function carregar(): Promise<void> {
     const [dados, bancos, chave] = await Promise.all([window.fincontrol.listarInvestimentos(), window.fincontrol.listarContas(),window.fincontrol.chaveCotacoesConfigurada()])
-    setPosicoes(dados.posicoes); setEvolucao(dados.evolucao); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave)
+    setPosicoes(dados.posicoes); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave)
   }
   useEffect(() => {
     let ativo = true
     void Promise.all([window.fincontrol.listarInvestimentos(), window.fincontrol.listarContas(),window.fincontrol.chaveCotacoesConfigurada()])
       .then(async ([dados, bancos, chave]) => {
         if (!ativo) return
-        setPosicoes(dados.posicoes); setEvolucao(dados.evolucao); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave); setCarregando(false)
+        setPosicoes(dados.posicoes); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave); setCarregando(false)
         if (!dados.posicoes.some(a=>!a.arquivado && a.quantidadeMercado!==null)) return
         setSincronizando(true)
         const r = await window.fincontrol.sincronizarCotacoes(false)
         const novos = await window.fincontrol.listarInvestimentos()
-        if (ativo) {setPosicoes(novos.posicoes);setEvolucao(novos.evolucao);setMovimentos(novos.movimentos);setStatusCotacoes(resumoCotacoes(r))}
+        if (ativo) {setPosicoes(novos.posicoes);setMovimentos(novos.movimentos);setStatusCotacoes(resumoCotacoes(r))}
       })
       .catch((e: unknown) => { if (ativo) setErro(e instanceof Error ? e.message : 'Falha ao carregar investimentos.') })
       .finally(() => { if (ativo) {setCarregando(false);setSincronizando(false)} })
@@ -112,7 +111,6 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   }
   const valor = posicoes.reduce((n, a) => n + (a.valorAtualCentavos ?? 0), 0)
   const semCotacao = posicoes.filter(a => a.quantidade > 0 && a.valorAtualCentavos === null).length
-  const categorias = tipos.map(t => ({tipo:t,valor:posicoes.filter(a=>a.tipo===t).reduce((n,a)=>n+(a.valorAtualCentavos??0),0)})).filter(t=>t.valor>0).sort((a,b)=>b.valor-a.valor)
   const ativas = posicoes.filter(a=>!a.arquivado)
   const arquivadas = posicoes.filter(a=>a.arquivado)
   const zeradas = ativas.filter(a=>a.valorAtualCentavos===0 && (a.valorInformadoCentavos!==null || a.quantidade===0))
@@ -143,17 +141,8 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
       </header>
       <div className="carteira-balanco">
         <div><span>Patrimônio em investimentos {semCotacao ? '(parcial)' : ''}</span><strong>{carregando || (semCotacao>0 && posicoes.every(a=>a.valorAtualCentavos===null))?'—':moeda(valor)}</strong><small>{ativas.length-zeradas.length} {ativas.length-zeradas.length===1?'posição ativa':'posições ativas'} · {semCotacao} sem cotação{cotacoesAntigas ? ' · '+cotacoesAntigas+' com cotação antiga' : ''}</small></div>
-        {categorias.length>0 && <div className="invest-alocacao carteira-distribuicao">
-          <div className="carteira-distribuicao-titulo"><span>Distribuição por categoria</span>{semCotacao>0&&<small>Somente valores conhecidos</small>}</div>
-          <div className="carteira-barra-unica" aria-hidden="true">
-            {categorias.map(t=><span key={t.tipo} data-categoria={t.tipo} style={{flexGrow:t.valor}} title={t.tipo+' · '+moeda(t.valor)}/>)}
-          </div>
-          <ul className="carteira-legenda" aria-label="Participação de cada categoria no patrimônio conhecido">
-            {categorias.map(t=><li key={t.tipo} data-categoria={t.tipo}><i aria-hidden="true"/><span>{t.tipo}</span><strong>{(t.valor/valor*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong></li>)}
-          </ul>
-        </div>}
+        {!carregando&&<ComposicaoCarteira posicoes={ativas} />}
       </div>
-      <GraficoHistoricoInvest titulo="Evolução do patrimônio" classe="carteira-grafico-patrimonio" pontos={evolucao.map(p=>({data:p.data,valor:p.valorCentavos===null?null:p.valorCentavos/100}))} agora={agora} carregando={carregando} descricao="Último valor observado em cada dia de uso. Inclui aportes e retiradas; não é rentabilidade. Dias incompletos ficam sem valor total; cotações em cache podem estar desatualizadas." />
       <div className="carteira-fonte"><span>BRAPI · BCB PTAX · Dados com atraso; últimos valores disponíveis offline.</span><button className="botao-texto" type="button" onClick={():void=>setConfigurando(v=>!v)} aria-expanded={configurando}>{chaveAtiva?'Gerenciar chave BRAPI':'Configurar fonte de dados'}</button></div>
       {configurando && <form className="carteira-edicao formulario" onSubmit={(e):void=>{e.preventDefault();const f=e.currentTarget;const dados=new FormData(f);void executar(()=>window.fincontrol.configurarChaveCotacoes(campo(dados,'chave')),'Chave configurada neste dispositivo.',f)}}>
         <p>Obtenha uma chave gratuita em brapi.dev/dashboard. PETR4, VALE3, MGLU3 e ITUB4 podem funcionar sem chave. A chave é protegida localmente; não faz parte do backup.</p>
