@@ -323,6 +323,16 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           !excluirAcessivel?.getAttribute('aria-label')?.includes(descricaoAcessivel)) {
         throw new Error('Ações do histórico não identificam a transação específica.');
       }
+      excluirAcessivel.click();
+      await dormir(150);
+      const confirmacao = document.querySelector('.fc-dialogo[open]');
+      if (!confirmacao || confirmacao.querySelector('h2')?.textContent !== 'Excluir transação') {
+        throw new Error('Diálogo de confirmação temático ausente.');
+      }
+      confirmacao.querySelector('.fc-cancelar').click();
+      await dormir(100);
+      if (document.querySelector('.fc-dialogo[open]')) throw new Error('Cancelar não fechou o diálogo.');
+      if (!document.querySelector('.lista .transacao')) throw new Error('Cancelar alterou o histórico.');
       return { paginas: verificadas, tema: 'OK', scrollbar: 'OK', paginacao: 'OK', acoes: 'OK' };
     })()
   `)
