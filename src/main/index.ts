@@ -154,9 +154,13 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
             throw new Error('Voltar a Pagamentos falhou.');
           }
         }
-        if (nome === 'Configurações' &&
-            !document.body.textContent?.includes('Backup e restauração')) {
-          throw new Error('Configurações sem backup/restauração.');
+        if (nome === 'Configurações') {
+          if (!document.body.textContent?.includes('Backup e restauração')) {
+            throw new Error('Configurações sem backup/restauração.');
+          }
+          if (!document.body.textContent?.includes('Versão 1.1.0')) {
+            throw new Error('Versão exibida em Configurações desatualizada.');
+          }
         }
         verificadas.push(nome);
       }
@@ -285,7 +289,16 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if (!document.querySelector('.historico-paginacao')?.textContent?.includes('Página 2')) {
         throw new Error('Histórico não avançou para a segunda página.');
       }
-      return { paginas: verificadas, tema: 'OK', scrollbar: 'OK', paginacao: 'OK' };
+      const transacaoExibida = document.querySelector('.lista .transacao');
+      const editarAcessivel = transacaoExibida?.querySelector('.botao-editar');
+      const excluirAcessivel = transacaoExibida?.querySelector('.botao-excluir');
+      const descricaoAcessivel = transacaoExibida?.querySelector('.transacao-info strong')?.textContent;
+      if (!descricaoAcessivel ||
+          !editarAcessivel?.getAttribute('aria-label')?.includes(descricaoAcessivel) ||
+          !excluirAcessivel?.getAttribute('aria-label')?.includes(descricaoAcessivel)) {
+        throw new Error('Ações do histórico não identificam a transação específica.');
+      }
+      return { paginas: verificadas, tema: 'OK', scrollbar: 'OK', paginacao: 'OK', acoes: 'OK' };
     })()
   `)
   console.info('FINCONTROL_UI_SMOKE_OK:', JSON.stringify(resultado))
@@ -361,6 +374,22 @@ async function verificarResponsividadeInstalada(janela: BrowserWindow): Promise<
               const graficos = document.querySelector('.graficos-financeiros');
               if (!graficos || graficos.getBoundingClientRect().width > principal.width + 2) {
                 throw new Error('Gráficos excederam a área útil.');
+              }
+              const abaAtiva = document.querySelector('.graficos-abas button.ativo');
+              const corAtiva = abaAtiva ? getComputedStyle(abaAtiva).color : '';
+              const esperada = temaEsperado === 'light' ? 'rgb(29, 78, 216)' : 'rgb(191, 219, 254)';
+              if (corAtiva !== esperada) {
+                throw new Error('Contraste do seletor de gráficos incorreto: ' +
+                  temaEsperado + ', cor=' + corAtiva);
+              }
+            }
+            if (nome === 'Cartões e faturas') {
+              const botoesHistorico = [...document.querySelectorAll('.central-historico .central-icone')];
+              if (botoesHistorico.some((b) => {
+                return b.getBoundingClientRect().width < 44 ||
+                  !b.getAttribute('aria-label')?.includes('parcela:');
+              })) {
+                throw new Error('Ações da Central não apresentam alvo ou rótulo acessível.');
               }
             }
             larguras.push(nome + '/' + temaEsperado);

@@ -1705,7 +1705,10 @@ button:disabled {
 
 .fincontrol .graficos-abas button.ativo {
   background: #2563eb20;
-  color: #60a5fa;
+  color: #1d4ed8;
+}
+.fincontrol[data-theme='dark'] .graficos-abas button.ativo {
+  color: #bfdbfe;
 }
 
 .fincontrol .graficos-paginacao {
@@ -2418,5 +2421,73 @@ body::-webkit-scrollbar-corner,
   .fincontrol :is(.botao-editar, .botao-excluir, .acoes-conta button,
     .cartoes-navegacao button, .central-abas button) {
     min-height: 44px;
+  }
+}
+
+/* Impeccable polish final — estados coerentes no tema claro e escuro. */
+.fincontrol .vazio {
+  color: var(--muted);
+  line-height: 1.55;
+}
+.fincontrol .graficos-abas button:hover:not(.ativo),
+.fincontrol .central-abas button:hover:not(.selecionada),
+.fincontrol .cartoes-navegacao button:hover:not(.ativo) {
+  background: var(--bg);
+  color: var(--text);
+}
+.fincontrol .graficos-abas button:focus-visible,
+.fincontrol .central-abas button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+.fincontrol .botao-texto {
+  min-height: 44px;
+  padding: 10px 4px;
+  text-underline-offset: 3px;
+}
+.fincontrol .botao-texto:hover {
+  text-decoration: underline;
+}
+.fincontrol .central-icone {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.fincontrol .graficos-dados table caption {
+  padding: 10px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.fincontrol .graficos-dados-tabela + .graficos-dados-tabela {
+  margin-top: 16px;
+}
+.fincontrol .graficos-dados tr:hover {
+  background: var(--bg);
+}
+.fincontrol .graficos-dados th:first-child {
+  overflow-wrap: anywhere;
+}
+.fincontrol :is(.categoria-texto, .central-pagamento-total) {
+  min-width: 0;
+}
+.fincontrol :is(.categoria-texto > span, .central-pagamento-total > span) {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 720px) {
+  .fincontrol .central-parcela.historico > span {
+    flex: 1 1 160px;
+  }
+  .fincontrol .historico-cabecalho {
+    align-items: stretch;
+  }
+  .fincontrol .graficos-dados td,
+  .fincontrol .graficos-dados th {
+    padding: 10px 6px;
   }
 }

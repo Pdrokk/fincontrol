@@ -522,13 +522,16 @@ function App(): React.JSX.Element {
               {formatarMoeda(t.valorCentavos)}
             </strong>
 
-            <button className="botao-editar" type="button" onClick={(): void => iniciarEdicao(t)}>
+            <button className="botao-editar" type="button"
+              aria-label={`Editar transação: ${t.descricao}`}
+              onClick={(): void => iniciarEdicao(t)}>
               Editar
             </button>
 
             <button
               className="botao-excluir"
               type="button"
+              aria-label={`Excluir transação: ${t.descricao}`}
               onClick={(): void => {
                 void excluirTransacao(t.id)
               }}
@@ -584,11 +587,7 @@ function App(): React.JSX.Element {
 
       <main className="content">
         {carregando && <p role="status">Carregando dados financeiros...</p>}
-        {erroBanco && (
-          <p role="alert" style={{ color: '#dc2626' }}>
-            {erroBanco}
-          </p>
-        )}
+        <Feedback mensagem={erroBanco} tipo="erro" />
         <header className="cabecalho">
           <div>
             <h2>{nomesPaginas[pagina]}</h2>
@@ -997,7 +996,7 @@ function App(): React.JSX.Element {
             <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão 1.0 · aplicativo desktop offline</p>
+              <p>Versão 1.1.0 · aplicativo desktop offline</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>

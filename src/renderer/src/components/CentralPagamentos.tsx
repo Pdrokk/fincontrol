@@ -369,13 +369,13 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
               <button type="button" className="central-icone"
                 disabled={salvando || !parcela.pagamentoId}
                 title={parcela.arquivada ? 'Restaurar ao histórico' : 'Ocultar do histórico'}
-                aria-label={parcela.arquivada ? 'Restaurar parcela' : 'Arquivar parcela'}
+                aria-label={`${parcela.arquivada ? 'Restaurar' : 'Arquivar'} parcela: ${parcela.descricao}`}
                 onClick={(): void => { void alterarArquivo(parcela.id, !parcela.arquivada) }}>
                 {parcela.arquivada ? <RotateCcw size={17} /> : <Archive size={17} />}
               </button>
               {parcela.pagamentoId && (
                 <button type="button" className="central-icone" title="Estornar pagamento"
-                  aria-label="Estornar pagamento" disabled={salvando}
+                  aria-label={`Estornar pagamento da parcela: ${parcela.descricao}`} disabled={salvando}
                   onClick={(): void => { void estornarParcela(parcela) }}>
                   <Undo2 size={17} />
                 </button>
