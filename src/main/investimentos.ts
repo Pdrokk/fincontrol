@@ -165,11 +165,12 @@ export function salvarCotacaoMercado(db: DatabaseSync, id: string, cotacao: Cota
 }
 /** Corrige posição inicial somente antes de qualquer operação; não movimenta caixa. */
 export function atualizarQuantidadeMercado(db: DatabaseSync, id: string, quantidade: number): void {
-  const unidades = validarQuantidadeMercado(quantidade)
+  const unidades = validarQuantidadeMercado(quantidade, true)
   const ativo = listarPosicoes(db).find(a=>a.id===id && !a.arquivado)
   if (!ativo) throw new Error('Posição não encontrada.')
   if (db.prepare('SELECT 1 FROM movimentos_investimento WHERE ativo_id=? LIMIT 1').get(id)) throw new Error('Use compras e vendas para alterar uma posição com histórico.')
   if (ativo.valorInformadoCentavos !== null) {
+    if (quantidade === 0) throw new Error('Informe uma quantidade positiva para converter o valor anterior.')
     const preco = Math.round(ativo.valorInformadoCentavos/quantidade)
     if (preco < 1 && ativo.valorInformadoCentavos > 0) throw new Error('Valor unitário abaixo de um centavo. Confira a quantidade.')
     db.prepare('UPDATE ativos_investimento SET quantidade_inicial=?,cotacao_centavos=?,valor_informado_centavos=NULL WHERE id=?').run(unidades,preco || null,id)

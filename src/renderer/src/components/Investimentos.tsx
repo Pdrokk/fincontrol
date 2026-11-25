@@ -61,6 +61,13 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
     return (): void => window.clearTimeout(timeout)
   }, [statusCotacoes])
 
+  useEffect(() => {
+    if (!operacao) return
+    const painel = document.querySelector('.carteira-operacao')
+    painel?.scrollIntoView({block:'nearest'})
+    painel?.querySelector<HTMLSelectElement>('select[name="conta"]')?.focus({preventScroll:true})
+  }, [operacao])
+
   async function carregar(): Promise<void> {
     const [dados, bancos, chave] = await Promise.all([window.fincontrol.listarInvestimentos(), window.fincontrol.listarContas(),window.fincontrol.chaveCotacoesConfigurada()])
     setPosicoes(dados.posicoes); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave)

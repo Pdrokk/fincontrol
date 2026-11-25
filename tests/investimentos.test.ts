@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, salvarCotacaoMercado, atualizarQuantidadeMercado, excluirAtivo, valorMercado, type Operacao } from '../src/main/investimentos.ts'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, salvarCotacaoMercado, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, valorMercado, type Operacao } from '../src/main/investimentos.ts'
 
 function ambiente(): { db: DatabaseSync; id: string; saldo: () => number; operar: (dados: Partial<Operacao>) => void } {
   const db = new DatabaseSync(':memory:')
@@ -82,7 +82,6 @@ test('posição acompanhada por quantidade, cache de cotação e edição não a
     atualizarQuantidadeMercado(db,id,12)
     assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,37500)
     assert.throws(()=>atualizarQuantidadeMercado(db,id,-1))
-    assert.throws(()=>operar({ativoId:id}))
     assert.equal(saldo(),100000)
     assert.equal(listarMovimentos(db).length,0)
     criarTabelasInvestimentos(db)
@@ -113,12 +112,67 @@ test('exclusão de posição sem histórico preserva saldos e bloqueia perda de 
   try {
     operar({})
     const caixa=saldo()
-    assert.throws(()=>excluirAtivo(db,id),/histórico/)
-    const novo=cadastrarAtivo(db,{codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',quantidadeMercado:50})
+    assert.throws(()=>excluirAtivo(db,id),/Zere/)
+    const novo=cadastrarAtivo(db,{codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',quantidadeMercado:0})
     excluirAtivo(db,novo)
     assert.equal(salvarCotacaoMercado(db,novo,{preco:5,data:'2026-11-25T12:00:00Z',fonte:'BCB PTAX'},'2026-11-25T12:05:00Z'),false)
     assert.throws(()=>excluirAtivo(db,novo))
     assert.equal(saldo(),caixa)
     assert.equal(listarMovimentos(db).length,1)
+  } finally {db.close()}
+})
+
+test('PETR4 e USD já cadastrados: venda parcial, compra, venda total e arquivamento',()=>{
+  const {db,saldo,operar}=ambiente()
+  try {
+    const petr=cadastrarAtivo(db,{codigo:'PETR4',nome:'Petrobras',tipo:'Ação',instituicao:'',quantidadeMercado:10})
+    const usd=cadastrarAtivo(db,{codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',quantidadeMercado:20})
+    salvarCotacaoMercado(db,petr,{preco:40,data:'2026-11-24T18:00:00Z',fonte:'BRAPI'},'2026-11-25T12:00:00Z')
+    salvarCotacaoMercado(db,usd,{preco:5.8,data:'2026-11-24T18:00:00Z',fonte:'BCB PTAX'},'2026-11-25T12:00:00Z')
+    assert.equal(saldo(),100000)
+    assert.throws(()=>excluirAtivo(db,petr),/Zere/)
+    operar({ativoId:petr,tipo:'venda',quantidade:4,valorCentavos:16000,taxasCentavos:100})
+    let p=listarPosicoes(db).find(a=>a.id===petr)!
+    assert.equal(p.quantidade,6)
+    assert.equal(p.valorAtualCentavos,24000)
+    assert.equal(p.realizadoCentavos,null)
+    assert.equal(saldo(),115900)
+    assert.throws(()=>operar({ativoId:petr,tipo:'venda',quantidade:7}))
+    assert.throws(()=>atualizarQuantidadeMercado(db,petr,50))
+    operar({ativoId:petr,tipo:'compra',quantidade:2,valorCentavos:8000})
+    operar({ativoId:usd,tipo:'venda',quantidade:20,valorCentavos:11600})
+    assert.equal(saldo(),119500)
+    assert.equal(listarPosicoes(db).find(a=>a.id===usd)?.quantidade,0)
+    excluirAtivo(db,usd)
+    assert.equal(listarPosicoes(db).find(a=>a.id===usd)?.arquivado,true)
+    assert.equal(listarMovimentos(db).length,3)
+    assert.throws(()=>operar({ativoId:usd,tipo:'compra'}),/Reative/)
+    reativarAtivo(db,usd)
+    operar({ativoId:usd,tipo:'compra',quantidade:1,valorCentavos:580})
+    assert.equal(listarPosicoes(db).find(a=>a.id===usd)?.quantidade,1)
+    assert.equal(listarPosicoes(db).find(a=>a.id===petr)?.quantidade,8)
+    assert.equal(saldo(),118920)
+    criarTabelasInvestimentos(db)
+    p=listarPosicoes(db).find(a=>a.id===petr)!
+    assert.equal(p.quantidade,8)
+  } finally {db.close()}
+})
+test('posição manual inicial, conversão de valor legado e venda sem perda de histórico',()=>{
+  const {db,saldo,operar}=ambiente()
+  try {
+    const legado=cadastrarAtivo(db,{codigo:'LEGADO',nome:'Legado',tipo:'Outro',instituicao:'',valorInformadoCentavos:6000})
+    assert.throws(()=>operar({ativoId:legado}),/Defina a quantidade/)
+    atualizarQuantidadeMercado(db,legado,20)
+    assert.equal(listarPosicoes(db).find(a=>a.id===legado)?.valorAtualCentavos,6000)
+    operar({ativoId:legado,tipo:'venda',quantidade:20,valorCentavos:6000})
+    excluirAtivo(db,legado)
+    assert.equal(listarPosicoes(db).find(a=>a.id===legado)?.arquivado,true)
+    assert.equal(saldo(),106000)
+    const novo=cadastrarAtivo(db,{codigo:'MANUAL',nome:'Manual',tipo:'Outro',instituicao:'',quantidadeInicial:5,cotacaoInicialCentavos:1000})
+    assert.equal(listarPosicoes(db).find(a=>a.id===novo)?.valorAtualCentavos,5000)
+    operar({ativoId:novo,tipo:'venda',quantidade:2,valorCentavos:2000})
+    assert.equal(listarPosicoes(db).find(a=>a.id===novo)?.valorAtualCentavos,3000)
+    assert.equal(saldo(),108000)
+    assert.equal(listarMovimentos(db).length,2)
   } finally {db.close()}
 })
