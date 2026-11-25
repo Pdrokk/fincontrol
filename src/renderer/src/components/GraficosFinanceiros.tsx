@@ -132,7 +132,7 @@ export default function GraficosFinanceiros({
           <h3>{modo === 'realizado' ? 'Receitas x despesas realizadas' : 'Despesas previstas'}</h3>
           <p>{filtroMes !== 'todos' ? 'Mês selecionado' : filtroAno !== 'todos' ? 'Ano selecionado' : 'Janela de até seis meses'}</p>
           {dados.length ? (
-            <div className="grafico-area">
+            <div className="grafico-area" aria-hidden="true">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dados}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -154,7 +154,7 @@ export default function GraficosFinanceiros({
           <p>Referente aos meses exibidos acima</p>
           {dadosCategorias.length ? (
             <>
-              <div className="grafico-area">
+              <div className="grafico-area" aria-hidden="true">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={dadosCategorias} dataKey="valor" nameKey="nome"
@@ -183,7 +183,7 @@ export default function GraficosFinanceiros({
               ? 'Receitas menos despesas realizadas, iniciando em zero nesta página; não é o saldo das contas.'
               : 'Soma de parcelas pendentes nesta página, sem considerar receitas futuras.'}</p>
             {dados.length ? (
-              <div className="grafico-area">
+              <div className="grafico-area" aria-hidden="true">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dados}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -200,6 +200,51 @@ export default function GraficosFinanceiros({
           </section>
         )}
       </div>
+      <details className="graficos-dados">
+        <summary>Consultar os valores dos gráficos em tabela</summary>
+        <div className="graficos-dados-tabela">
+          <table>
+            <caption>{modo === 'realizado' ? 'Receitas e despesas realizadas por mês' : 'Despesas previstas por mês'}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Mês</th>
+                {modo === 'realizado' && <th scope="col">Receitas</th>}
+                <th scope="col">Despesas</th>
+                <th scope="col">{modo === 'realizado' ? 'Resultado da janela' : 'Compromissos acumulados'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dados.map((item) => (
+                <tr key={item.mes}>
+                  <th scope="row">{item.mes}</th>
+                  {modo === 'realizado' && <td>{moeda(item.receitas)}</td>}
+                  <td>{moeda(item.despesas)}</td>
+                  <td>{moeda(item.resultado)}</td>
+                </tr>
+              ))}
+              {dados.length === 0 && (
+                <tr><td colSpan={modo === 'realizado' ? 4 : 3}>Sem dados neste período.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {dadosCategorias.length > 0 && (
+          <div className="graficos-dados-tabela">
+            <table>
+              <caption>Despesas por categoria no período exibido</caption>
+              <thead><tr><th scope="col">Categoria</th><th scope="col">Valor</th></tr></thead>
+              <tbody>
+                {dadosCategorias.map((item) => (
+                  <tr key={item.nome}>
+                    <th scope="row">{item.nome}</th>
+                    <td>{moeda(item.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </details>
     </div>
   )
 }
