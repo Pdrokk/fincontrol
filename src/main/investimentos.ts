@@ -2,9 +2,9 @@ import { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'node:crypto'
 
 export const TIPOS_ATIVO = ['Ação', 'ETF', 'FII', 'Moeda', 'Cripto', 'Renda fixa', 'Outro'] as const
-export interface NovoAtivo { codigo: string; nome: string; tipo: string; instituicao: string; valorInformadoCentavos?: number | null; quantidadeMercado?: number | null }
+export interface NovoAtivo { codigo: string; nome: string; tipo: string; instituicao: string; valorInformadoCentavos?: number | null; quantidadeMercado?: number | null; quantidadeInicial?: number; cotacaoInicialCentavos?: number | null }
 export interface Operacao { ativoId: string; contaId: string; tipo: 'compra' | 'venda' | 'provento'; quantidade: number; valorCentavos: number; taxasCentavos: number; data: string }
-export interface Posicao extends NovoAtivo { valorInformadoCentavos: number | null; quantidadeMercado: number | null; precoMercado: number | null; cotacaoEm: string | null; consultaEm: string | null; fonteCotacao: string | null; id: string; quantidade: number; custoCentavos: number; cotacaoCentavos: number | null; valorAtualCentavos: number | null; realizadoCentavos: number; proventosCentavos: number }
+export interface Posicao extends NovoAtivo { arquivado: boolean; quantidadeInicial: number; custoConhecido: boolean; valorInformadoCentavos: number | null; quantidadeMercado: number | null; precoMercado: number | null; cotacaoEm: string | null; consultaEm: string | null; fonteCotacao: string | null; id: string; quantidade: number; custoCentavos: number; cotacaoCentavos: number | null; valorAtualCentavos: number | null; realizadoCentavos: number | null; proventosCentavos: number }
 export interface Movimento extends Operacao { id: string; caixaCentavos: number; custoBaixadoCentavos: number }
 
 export function criarTabelasInvestimentos(db: DatabaseSync): void {
@@ -29,7 +29,7 @@ export function criarTabelasInvestimentos(db: DatabaseSync): void {
   `)
   const colunas = db.prepare('PRAGMA table_info(ativos_investimento)').all() as { name: string }[]
   if (!colunas.some(c => c.name === 'valor_informado_centavos')) db.exec('ALTER TABLE ativos_investimento ADD COLUMN valor_informado_centavos INTEGER')
-  for (const [nome, tipo] of [['quantidade_mercado','INTEGER'],['preco_mercado','REAL'],['cotacao_em','TEXT'],['consulta_em','TEXT'],['fonte_cotacao','TEXT']]) {
+  for (const [nome, tipo] of [['quantidade_mercado','INTEGER'],['preco_mercado','REAL'],['cotacao_em','TEXT'],['consulta_em','TEXT'],['fonte_cotacao','TEXT'],['quantidade_inicial','INTEGER NOT NULL DEFAULT 0'],['arquivado','INTEGER NOT NULL DEFAULT 0']]) {
     if (!colunas.some(c => c.name === nome)) db.exec('ALTER TABLE ativos_investimento ADD COLUMN '+nome+' '+tipo)
   }
 }
@@ -47,17 +47,28 @@ export function cadastrarAtivo(db: DatabaseSync, dados: NovoAtivo): string {
   const valor = dados.valorInformadoCentavos ?? null
   if (valor !== null && !inteiro(valor)) throw new Error('Valor patrimonial inválido.')
   const quantidade = dados.quantidadeMercado ?? null
-  const unidades = quantidade === null ? null : validarQuantidadeMercado(quantidade)
+  const unidades = quantidade === null ? null : validarQuantidadeMercado(quantidade, true)
+  const inicial = validarQuantidadeMercado(dados.quantidadeInicial ?? 0, true)
+  const cotacao = dados.cotacaoInicialCentavos ?? null
+  if (cotacao !== null && !inteiro(cotacao,1)) throw new Error('Cotação manual inválida.')
+  if ((unidades !== null && (inicial !== 0 || cotacao !== null)) || (valor !== null && (inicial !== 0 || cotacao !== null))) throw new Error('Informe uma única posição inicial.')
   if (unidades !== null && (valor !== null || !ativoComCotacao(dados.codigo, dados.tipo))) throw new Error('Escolha um ativo da B3 ou USD/EUR para acompanhamento por quantidade.')
-  if (db.prepare('SELECT 1 FROM ativos_investimento WHERE codigo=? AND instituicao=?').get(dados.codigo.trim().toUpperCase(),dados.instituicao.trim())) throw new Error('Este ativo já está cadastrado nesta instituição. Edite a posição existente.')
+  const existente = db.prepare('SELECT id,arquivado FROM ativos_investimento WHERE codigo=? AND instituicao=?').get(dados.codigo.trim().toUpperCase(),dados.instituicao.trim()) as {id:string;arquivado:number}|undefined
+  if (existente) {
+    if (existente.arquivado && (unidades ?? inicial) === 0 && (valor ?? 0) === 0) {
+      reativarAtivo(db,existente.id)
+      return existente.id
+    }
+    throw new Error(existente.arquivado ? 'Ativo arquivado. Reative-o pelo filtro de arquivados e registre uma compra.' : 'Este ativo já está cadastrado nesta instituição. Edite a posição existente.')
+  }
   const id = randomUUID()
-  db.prepare('INSERT INTO ativos_investimento (id,codigo,nome,tipo,instituicao,valor_informado_centavos,quantidade_mercado) VALUES (?,?,?,?,?,?,?)')
-    .run(id, dados.codigo.trim().toUpperCase(), dados.nome.trim(), dados.tipo, dados.instituicao.trim(), valor, unidades)
+  db.prepare('INSERT INTO ativos_investimento (id,codigo,nome,tipo,instituicao,valor_informado_centavos,quantidade_mercado,quantidade_inicial,cotacao_centavos) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run(id, dados.codigo.trim().toUpperCase(), dados.nome.trim(), dados.tipo, dados.instituicao.trim(), valor, unidades, inicial, cotacao)
   return id
 }
 export function listarPosicoes(db: DatabaseSync): Posicao[] {
   const linhas = db.prepare(`
-    SELECT a.id,a.codigo,a.nome,a.tipo,a.instituicao,a.cotacao_centavos AS cotacaoCentavos,a.valor_informado_centavos AS valorInformadoCentavos,a.quantidade_mercado / 100000000.0 AS quantidadeMercado,
+    SELECT a.id,a.codigo,a.nome,a.tipo,a.instituicao,a.arquivado,COALESCE(a.quantidade_mercado,a.quantidade_inicial)/100000000.0 AS quantidadeInicial,a.cotacao_centavos AS cotacaoCentavos,a.valor_informado_centavos AS valorInformadoCentavos,a.quantidade_mercado / 100000000.0 AS quantidadeMercado,
       a.preco_mercado AS precoMercado,a.cotacao_em AS cotacaoEm,a.consulta_em AS consultaEm,a.fonte_cotacao AS fonteCotacao,
       COALESCE(SUM(CASE m.tipo WHEN 'compra' THEN m.quantidade WHEN 'venda' THEN -m.quantidade ELSE 0 END),0) AS unidades,
       COALESCE(SUM(CASE m.tipo WHEN 'compra' THEN -m.caixa_centavos WHEN 'venda' THEN -m.custo_baixado_centavos ELSE 0 END),0) AS custoCentavos,
@@ -65,11 +76,16 @@ export function listarPosicoes(db: DatabaseSync): Posicao[] {
       COALESCE(SUM(CASE WHEN m.tipo='provento' THEN m.caixa_centavos ELSE 0 END),0) AS proventosCentavos
     FROM ativos_investimento a LEFT JOIN movimentos_investimento m ON m.ativo_id=a.id
     GROUP BY a.id ORDER BY a.codigo
-  `).all() as unknown as (Omit<Posicao,'quantidade'|'valorAtualCentavos'> & { unidades: number })[]
-  return linhas.map(({ unidades, ...a }) => ({
-    ...a, quantidade: a.quantidadeMercado ?? unidades / 1e8,
-    valorAtualCentavos: a.quantidadeMercado !== null ? valorMercado(a.quantidadeMercado,a.precoMercado) : a.valorInformadoCentavos ?? (unidades === 0 ? 0 : a.cotacaoCentavos === null ? null : Math.round(unidades / 1e8 * a.cotacaoCentavos))
-  }))
+  `).all() as unknown as (Omit<Posicao,'quantidade'|'valorAtualCentavos'|'custoConhecido'|'arquivado'> & { unidades: number; arquivado: number })[]
+  return linhas.map(({ unidades, ...a }) => {
+    const quantidade = (Math.round(a.quantidadeInicial*1e8)+unidades)/1e8
+    const custoConhecido = a.quantidadeInicial === 0
+    return {
+      ...a, arquivado:Boolean(a.arquivado), quantidade, custoConhecido,
+      realizadoCentavos:custoConhecido ? a.realizadoCentavos : null,
+      valorAtualCentavos: a.valorInformadoCentavos ?? (quantidade === 0 ? 0 : a.quantidadeMercado !== null ? valorMercado(quantidade,a.precoMercado) : a.cotacaoCentavos === null ? null : Math.round(quantidade*a.cotacaoCentavos))
+    }
+  })
 }
 export function listarMovimentos(db: DatabaseSync): Movimento[] {
   return db.prepare(`SELECT id,ativo_id AS ativoId,conta_id AS contaId,tipo,quantidade/100000000.0 AS quantidade,
@@ -104,7 +120,8 @@ export function registrarOperacao(db: DatabaseSync, dados: Operacao, saldo: (id:
     const ativo = listarPosicoes(db).find(a => a.id === dados.ativoId)
     const disponivel = saldo(dados.contaId)
     if (!ativo || disponivel === undefined) throw new Error('Ativo ou conta não encontrado.')
-    if (ativo.valorInformadoCentavos !== null || ativo.quantidadeMercado !== null) throw new Error('Este ativo é apenas de acompanhamento e não movimenta contas.')
+    if (ativo.arquivado) throw new Error('Reative o ativo antes de registrar uma operação.')
+    if (ativo.valorInformadoCentavos !== null) throw new Error('Defina a quantidade da posição antiga antes de comprar ou vender.')
     const ultima = db.prepare('SELECT MAX(data) AS data FROM movimentos_investimento WHERE ativo_id=?').get(dados.ativoId) as { data: string | null }
     if (ultima.data && dados.data < ultima.data) throw new Error('Registre operações de cada ativo em ordem cronológica.')
     if (caixa < 0 && disponivel < -caixa) throw new Error('Saldo insuficiente.')
@@ -124,9 +141,9 @@ export function ativoComCotacao(codigo: string, tipo: string): boolean {
   const c = codigo.trim().toUpperCase()
   return (['Ação','ETF','FII'].includes(tipo) && /^[A-Z]{4}[0-9]{1,2}$/.test(c)) || (tipo === 'Moeda' && ['USD','EUR'].includes(c))
 }
-function validarQuantidadeMercado(q: number): number {
+function validarQuantidadeMercado(q: number, permitirZero = false): number {
   const unidades = Math.round(q * 1e8)
-  if (!Number.isFinite(q) || !inteiro(unidades,1) || Math.abs(unidades / 1e8 - q) > 1e-12) throw new Error('Quantidade inválida (até 10.000 unidades e 8 casas decimais).')
+  if (!Number.isFinite(q) || !inteiro(unidades,permitirZero ? 0 : 1) || Math.abs(unidades / 1e8 - q) > 1e-12) throw new Error('Quantidade inválida (até 10.000 unidades e 8 casas decimais).')
   return unidades
 }
 export function valorMercado(q: number, preco: number | null): number | null {
@@ -139,22 +156,45 @@ export function salvarCotacaoMercado(db: DatabaseSync, id: string, cotacao: Cota
   const data = Date.parse(cotacao.data)
   const consulta = Date.parse(consultadaEm)
   if (!Number.isFinite(cotacao.preco) || cotacao.preco <= 0 || cotacao.preco > 1e9 || !Number.isFinite(data) || !Number.isFinite(consulta) || data > consulta + 300000 || !['BRAPI','BCB PTAX'].includes(cotacao.fonte)) throw new Error('Cotação inválida.')
-  const atual = db.prepare('SELECT tipo,cotacao_em AS data FROM ativos_investimento WHERE id=? AND quantidade_mercado IS NOT NULL').get(id) as {tipo:string;data:string|null}|undefined
+  const atual = db.prepare('SELECT tipo,cotacao_em AS data FROM ativos_investimento WHERE id=? AND quantidade_mercado IS NOT NULL AND arquivado=0').get(id) as {tipo:string;data:string|null}|undefined
   if (!atual) return false
   if (cotacao.fonte !== (atual.tipo === 'Moeda' ? 'BCB PTAX' : 'BRAPI')) throw new Error('Fonte incompatível com o ativo.')
   if (atual.data && Date.parse(atual.data) > data) return false
-  return Boolean(db.prepare('UPDATE ativos_investimento SET preco_mercado=?,cotacao_em=?,consulta_em=?,fonte_cotacao=? WHERE id=? AND quantidade_mercado IS NOT NULL')
+  return Boolean(db.prepare('UPDATE ativos_investimento SET preco_mercado=?,cotacao_em=?,consulta_em=?,fonte_cotacao=? WHERE id=? AND quantidade_mercado IS NOT NULL AND arquivado=0')
     .run(cotacao.preco,new Date(data).toISOString(),new Date(consulta).toISOString(),cotacao.fonte,id).changes)
 }
+/** Corrige posição inicial somente antes de qualquer operação; não movimenta caixa. */
 export function atualizarQuantidadeMercado(db: DatabaseSync, id: string, quantidade: number): void {
   const unidades = validarQuantidadeMercado(quantidade)
-  if (!db.prepare('UPDATE ativos_investimento SET quantidade_mercado=? WHERE id=? AND quantidade_mercado IS NOT NULL').run(unidades,id).changes)
-    throw new Error('Posição de mercado não encontrada.')
+  const ativo = listarPosicoes(db).find(a=>a.id===id && !a.arquivado)
+  if (!ativo) throw new Error('Posição não encontrada.')
+  if (db.prepare('SELECT 1 FROM movimentos_investimento WHERE ativo_id=? LIMIT 1').get(id)) throw new Error('Use compras e vendas para alterar uma posição com histórico.')
+  if (ativo.valorInformadoCentavos !== null) {
+    const preco = Math.round(ativo.valorInformadoCentavos/quantidade)
+    if (preco < 1 && ativo.valorInformadoCentavos > 0) throw new Error('Valor unitário abaixo de um centavo. Confira a quantidade.')
+    db.prepare('UPDATE ativos_investimento SET quantidade_inicial=?,cotacao_centavos=?,valor_informado_centavos=NULL WHERE id=?').run(unidades,preco || null,id)
+  } else if (ativo.quantidadeMercado !== null) {
+    db.prepare('UPDATE ativos_investimento SET quantidade_mercado=? WHERE id=?').run(unidades,id)
+  } else {
+    db.prepare('UPDATE ativos_investimento SET quantidade_inicial=? WHERE id=?').run(unidades,id)
+  }
 }
 
-/** Remove somente posições sem operações financeiras, sem alterar o caixa. */
+/** Exclui apenas posições zeradas; preserva vínculos históricos. */
 export function excluirAtivo(db: DatabaseSync, id: string): void {
   if (typeof id !== 'string' || !id.trim()) throw new Error('Ativo inválido.')
-  if (db.prepare('SELECT 1 FROM movimentos_investimento WHERE ativo_id=? LIMIT 1').get(id)) throw new Error('Este ativo tem operações financeiras. O histórico precisa ser preservado.')
-  if (!db.prepare('DELETE FROM ativos_investimento WHERE id=?').run(id).changes) throw new Error('Ativo não encontrado.')
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const ativo = listarPosicoes(db).find(a=>a.id===id && !a.arquivado)
+    if (!ativo) throw new Error('Ativo não encontrado.')
+    if (ativo.quantidade !== 0 || (ativo.valorInformadoCentavos ?? 0) !== 0) throw new Error('Zere a posição antes de remover o ativo. O histórico é preservado.')
+    if (db.prepare('SELECT 1 FROM movimentos_investimento WHERE ativo_id=? LIMIT 1').get(id)) {
+      db.prepare('UPDATE ativos_investimento SET arquivado=1 WHERE id=?').run(id)
+    } else db.prepare('DELETE FROM ativos_investimento WHERE id=?').run(id)
+    db.exec('COMMIT')
+  } catch (erro) { db.exec('ROLLBACK'); throw erro }
+}
+
+export function reativarAtivo(db: DatabaseSync, id: string): void {
+  if (!db.prepare('UPDATE ativos_investimento SET arquivado=0 WHERE id=? AND arquivado=1').run(id).changes) throw new Error('Ativo arquivado não encontrado.')
 }

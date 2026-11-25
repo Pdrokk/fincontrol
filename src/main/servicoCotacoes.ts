@@ -31,7 +31,7 @@ interface Resultado { atualizadas: number; falhas: { codigo: string; motivo: str
 let pendente: Promise<Resultado> | null = null
 async function atualizar(forcar: boolean): Promise<Resultado> {
   const db = obterBanco()
-  const posicoes = listarPosicoes(db).filter(a => a.quantidadeMercado !== null && (forcar || !a.consultaEm || Date.now()-Date.parse(a.consultaEm)>30*60000))
+  const posicoes = listarPosicoes(db).filter(a => !a.arquivado && a.quantidadeMercado !== null && (forcar || !a.consultaEm || Date.now()-Date.parse(a.consultaEm)>30*60000))
   const resultado: Resultado = {atualizadas:0,falhas:[]}
   const token = chave()
   const grupos = new Map<string, typeof posicoes>()
