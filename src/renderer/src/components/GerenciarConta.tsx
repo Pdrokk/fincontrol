@@ -1,3 +1,4 @@
+import { confirmarFinControl } from '../utils/dialogos'
 import { useState } from 'react'
 import { Save, SlidersHorizontal, CirclePlus, X } from 'lucide-react'
 import { corBanco } from '../utils/coresBancos'
@@ -80,7 +81,7 @@ export default function GerenciarConta({ conta, modo, onFechar, onAtualizar }: P
         if (saldoDesejadoCentavos === null) throw new Error('Saldo inválido.')
         if (saldoDesejadoCentavos === conta.saldoAtualCentavos)
           throw new Error('O novo saldo precisa ser diferente do atual.')
-        if (!window.confirm(
+        if (!await confirmarFinControl(
           `Ajustar saldo de ${moeda(conta.saldoAtualCentavos)} para ${moeda(saldoDesejadoCentavos)}? Isso NÃO será uma receita ou despesa.`
         )) return
         await window.fincontrol.ajustarSaldo({

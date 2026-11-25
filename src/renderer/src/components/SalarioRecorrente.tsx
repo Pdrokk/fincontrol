@@ -1,3 +1,4 @@
+import { confirmarFinControl } from '../utils/dialogos'
 import { useEffect, useState } from 'react'
 import { CalendarClock, Plus, Ban } from 'lucide-react'
 import Feedback from './Feedback'
@@ -81,7 +82,7 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     })()
     const permitirRetroativo = inicio < hoje
-    if (permitirRetroativo && !window.confirm(
+    if (permitirRetroativo && !await confirmarFinControl(
       'O início escolhido é anterior a hoje. Isso lançará imediatamente os salários vencidos e aumentará o saldo. Confirma os recebimentos retroativos?'
     )) return
     try {
@@ -104,7 +105,7 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
   }
 
   async function parar(id: string): Promise<void> {
-    if (!window.confirm('Desativar novos pagamentos automáticos deste salário? Receitas anteriores serão mantidas.')) return
+    if (!await confirmarFinControl('Desativar novos pagamentos automáticos deste salário? Receitas anteriores serão mantidas.')) return
     if (parando) return
     try {
       setParando(true)

@@ -1,5 +1,6 @@
+import { sincronizarCotacoes, configurarChave, chaveConfigurada } from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdtempSync } from 'node:fs'
@@ -164,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.2.0')) {
+          if (!document.body.textContent?.includes('Versão 1.3.0')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -260,6 +261,11 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       botaoPagina('Minhas contas')?.click();
       await dormir(450);
       if (!document.querySelector('.icone-banco')) throw new Error('Identificador de banco ausente.');
+      const idPatrimonio = await window.fincontrol.cadastrarAtivo({codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',valorInformadoCentavos:5000});
+      const saldoPatrimonioAntes = (await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos;
+      await window.fincontrol.atualizarValorAtivo(idPatrimonio,6000);
+      if ((await window.fincontrol.listarInvestimentos()).posicoes.find(a => a.id === idPatrimonio)?.valorAtualCentavos !== 6000) throw new Error('Valor patrimonial incorreto.');
+      if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes) throw new Error('Acompanhamento não deve movimentar saldo.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);
       botaoPagina('Transações')?.click();
@@ -318,6 +324,16 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           !excluirAcessivel?.getAttribute('aria-label')?.includes(descricaoAcessivel)) {
         throw new Error('Ações do histórico não identificam a transação específica.');
       }
+      excluirAcessivel.click();
+      await dormir(150);
+      const confirmacao = document.querySelector('.fc-dialogo[open]');
+      if (!confirmacao || confirmacao.querySelector('h2')?.textContent !== 'Excluir transação') {
+        throw new Error('Diálogo de confirmação temático ausente.');
+      }
+      confirmacao.querySelector('.fc-cancelar').click();
+      await dormir(100);
+      if (document.querySelector('.fc-dialogo[open]')) throw new Error('Cancelar não fechou o diálogo.');
+      if (!document.querySelector('.lista .transacao')) throw new Error('Cancelar alterou o histórico.');
       return { paginas: verificadas, tema: 'OK', scrollbar: 'OK', paginacao: 'OK', acoes: 'OK' };
     })()
   `)
@@ -538,8 +554,13 @@ app.whenReady().then(() => {
   }, 60_000)
   app.once('before-quit', () => clearInterval(verificadorSalarios))
 
+  ipcMain.handle('investimentos:sincronizar', (_evento, forcar: boolean) => sincronizarCotacoes(forcar === true))
+  ipcMain.handle('investimentos:chave', (_evento, chave: string) => configurarChave(chave))
+  ipcMain.handle('investimentos:chave-configurada', () => chaveConfigurada())
+  ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
   ipcMain.handle('investimentos:listar', () => ({ posicoes: listarPosicoes(obterBanco()), movimentos: listarMovimentos(obterBanco()) }))
   ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))
+  ipcMain.handle('investimentos:valor', (_evento, id: string, centavos: number) => atualizarValorAtivo(obterBanco(), id, centavos))
   ipcMain.handle('investimentos:cotacao', (_evento, id: string, centavos: number) => atualizarCotacao(obterBanco(), id, centavos))
   ipcMain.handle('investimentos:operacao', (_evento, dados: Operacao) => registrarOperacao(obterBanco(), dados, id => listarContas().find(c => c.id === id)?.saldoAtualCentavos, hojeLocalISO()))
   ipcMain.handle('cartoes:listar', () => listarCartoes())

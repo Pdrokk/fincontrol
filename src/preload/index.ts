@@ -22,8 +22,13 @@ if (process.contextIsolated) {
 }
 
 const fincontrolAPI = {
+  sincronizarCotacoes: (forcar = false): Promise<unknown> => ipcRenderer.invoke('investimentos:sincronizar', forcar),
+  configurarChaveCotacoes: (chave: string): Promise<void> => ipcRenderer.invoke('investimentos:chave', chave),
+  chaveCotacoesConfigurada: (): Promise<boolean> => ipcRenderer.invoke('investimentos:chave-configurada'),
+  atualizarQuantidadeMercado: (id: string, quantidade: number): Promise<void> => ipcRenderer.invoke('investimentos:quantidade', id, quantidade),
   listarInvestimentos: (): Promise<unknown> => ipcRenderer.invoke('investimentos:listar'),
   cadastrarAtivo: (dados: unknown): Promise<string> => ipcRenderer.invoke('investimentos:cadastrar', dados),
+  atualizarValorAtivo: (id: string, centavos: number): Promise<void> => ipcRenderer.invoke('investimentos:valor', id, centavos),
   atualizarCotacao: (id: string, centavos: number): Promise<void> => ipcRenderer.invoke('investimentos:cotacao', id, centavos),
   registrarInvestimento: (dados: unknown): Promise<void> => ipcRenderer.invoke('investimentos:operacao', dados),
   exportarBackup: (): Promise<string | null> => ipcRenderer.invoke('backup:exportar'),

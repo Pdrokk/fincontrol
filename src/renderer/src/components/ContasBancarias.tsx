@@ -1,3 +1,4 @@
+import { confirmarFinControl } from '../utils/dialogos'
 import IconeBanco from './IconeBanco'
 import { useEffect, useState } from 'react'
 import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
@@ -176,7 +177,7 @@ export default function ContasBancarias(): React.JSX.Element {
   }
 
   async function removerConta(conta: Conta): Promise<void> {
-    if (!window.confirm(
+    if (!await confirmarFinControl(
       `Excluir a conta "${conta.banco} · ${conta.nome}"? Apenas contas sem histórico, cartões ou salários vinculados podem ser excluídas.`
     )) return
     try {

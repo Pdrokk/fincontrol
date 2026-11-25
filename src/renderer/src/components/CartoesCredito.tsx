@@ -1,3 +1,4 @@
+import { confirmarFinControl } from '../utils/dialogos'
 import IconeBanco from './IconeBanco'
 import { useEffect, useState } from 'react'
 import { CreditCard, Plus, Pencil, Trash2 } from 'lucide-react'
@@ -7,6 +8,7 @@ import CentralPagamentos from './CentralPagamentos'
 
 interface Cartao {
   id: string
+  arquivado: boolean
   contaId: string | null
   nome: string
   banco: string
@@ -213,10 +215,10 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
 
   async function removerCartao(cartao: Cartao): Promise<void> {
     if (salvando || cartaoExcluindoId || carregando || erro) return
-    const confirmado = window.confirm(
+    const confirmado = await confirmarFinControl(
       `Excluir o cartão "${cartao.banco} · ${cartao.nome}"?\n\n` +
-      'Esta ação não pode ser desfeita. Cartões com compras, parcelas ou pagamentos ' +
-      'registrados não podem ser excluídos para preservar o histórico financeiro.'
+      'Todas as parcelas precisam estar quitadas. O cartão sairá da lista ativa e o histórico financeiro será mantido.',
+      'Excluir cartão', 'Excluir', true
     )
     if (!confirmado) return
 
@@ -232,7 +234,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
         setFocoVersao((anterior) => anterior + 1)
       }
       await atualizar()
-      setAviso('Cartão excluído com sucesso.')
+      setAviso('Cartão removido da lista ativa. O histórico financeiro foi preservado.')
     } catch (falha) {
       console.error(falha)
       setErroFormulario(
@@ -279,6 +281,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
     const c = cartoes.find((item) => item.id === id)
     return c ? `${c.banco} · ${c.nome}` : 'Cartão não encontrado'
   }
+  const ativos = cartoes.filter(c => !c.arquivado)
   const totalAberto = faturas.filter((f) => !f.paga)
     .reduce((soma, fatura) => soma + fatura.saldoPendenteCentavos, 0)
 
@@ -303,7 +306,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
         {erro && <p role="alert">{erro}</p>}
 
         <div className="grade-contas">
-          {cartoes.map((c) => (
+          {ativos.map((c) => (
             <article className="cartao-conta" key={c.id} style={{ background: gradienteBanco(c.banco) }}>
               <div className="cartao-conta-topo"><IconeBanco banco={c.banco} /><strong>{c.banco}</strong></div>
               <span>{c.nome}</span>
@@ -335,8 +338,8 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
             </article>
           ))}
         </div>
-        {!carregando && !erro && cartoes.length === 0 && (
-          <p className="vazio">Nenhum cartão cadastrado até o momento.</p>
+        {!carregando && !erro && ativos.length === 0 && (
+          <p className="vazio">Nenhum cartão ativo. Cartões excluídos com histórico continuam nos registros de pagamentos.</p>
         )}
       </section>
 
@@ -412,7 +415,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
           <label>Cartão utilizado
             <select value={cartaoId} onChange={(e): void => setCartaoId(e.target.value)} required>
               <option value="">Selecione</option>
-              {cartoes.map((c) => <option key={c.id} value={c.id}>{c.banco} · {c.nome}</option>)}
+              {ativos.map((c) => <option key={c.id} value={c.id}>{c.banco} · {c.nome}</option>)}
             </select>
           </label>
           <label>Descrição
@@ -432,7 +435,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
           <label>Data da compra
             <input type="date" value={data} onChange={(e): void => setData(e.target.value)} required />
           </label>
-          <button className="botao-primario" type="submit" disabled={salvando || carregando || Boolean(erro) || cartoes.length === 0}>
+          <button className="botao-primario" type="submit" disabled={salvando || carregando || Boolean(erro) || ativos.length === 0}>
             <Plus size={17} /> Registrar compra e gerar parcelas
           </button>
         </form>

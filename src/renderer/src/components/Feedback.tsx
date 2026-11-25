@@ -14,7 +14,7 @@ export default function Feedback({
       className={`fincontrol-feedback fincontrol-feedback--${tipo}`}
       role={tipo === 'erro' ? 'alert' : 'status'}
     >
-      {mensagem}
+      {mensagem.replace(/^Error invoking remote method '[^']+': Error:\s*/, '')}
     </p>
   )
 }

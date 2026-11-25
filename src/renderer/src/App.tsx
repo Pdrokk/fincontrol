@@ -1,3 +1,4 @@
+import { confirmarFinControl } from './utils/dialogos'
 import Investimentos from './components/Investimentos'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
@@ -485,7 +486,7 @@ function App(): React.JSX.Element {
   }
 
   async function excluirTransacao(id: string): Promise<void> {
-    if (!window.confirm('Deseja excluir esta transação?')) {
+    if (!await confirmarFinControl('Deseja excluir esta transação?', 'Excluir transação', 'Excluir', true)) {
       return
     }
 
@@ -1001,7 +1002,7 @@ function App(): React.JSX.Element {
             <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão 1.2.0 · aplicativo desktop offline</p>
+              <p>Versão 1.3.0 · aplicativo desktop offline</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>

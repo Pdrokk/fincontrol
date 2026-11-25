@@ -109,7 +109,7 @@ export async function executarSmokeInstalado(): Promise<void> {
       cartaoId: cartao.id, descricao: 'Notebook', categoria: 'Eletrônicos',
       data: hoje, valorCentavos: 60_000, numeroParcelas: 3
     })
-    assert.throws(() => excluirCartao(cartao.id), /histórico de compras/)
+    assert.throws(() => excluirCartao(cartao.id), /Quite todas/)
     assert.ok(listarCartoes().some(c => c.id === cartao.id))
     assert.equal(listarCartoes().find(c => c.id === cartao.id)?.limiteDisponivelCentavos, 40_000)
     const parcelas = listarParcelasPagamento().filter(p => p.cartaoId === cartao.id)
@@ -294,6 +294,20 @@ export async function executarSmokeInstalado(): Promise<void> {
     const chaves = obterBanco().prepare('PRAGMA foreign_key_check').all()
     assert.equal(chaves.length, 0, 'Não deve haver referências SQLite órfãs')
 
+    const quitado = cadastrarCartao({ contaId: a.id, banco: 'Teste', nome: 'Quitado', limiteCentavos: 5000, diaFechamento: 25, diaVencimento: 10 })
+    cadastrarCompra({ cartaoId: quitado.id, descricao: 'Teste quitado', categoria: 'Outros', data: hoje, valorCentavos: 100, numeroParcelas: 1 })
+    const pQuitada = listarParcelasPagamento().find(p => p.cartaoId === quitado.id)!
+    const saldoQuitado = dinheiro(a.id)
+    pagarParcelasSelecionadas({ contaId: a.id, parcelaIds: [pQuitada.id], dataPagamento: hoje })
+    excluirCartao(quitado.id)
+    assert.equal(listarCartoes().find(c => c.id === quitado.id)?.arquivado, true)
+    assert.equal(dinheiro(a.id), saldoQuitado - 100)
+    assert.equal(listarFaturasPrevistas().find(f => f.cartaoId === quitado.id)?.paga, true)
+    assert.throws(() => cadastrarCompra({ cartaoId: quitado.id, descricao:'Bloqueada', categoria:'Outros', data:hoje, valorCentavos:100, numeroParcelas:1 }))
+    const pagamentoQuitado = listarParcelasPagamento().find(p => p.id === pQuitada.id)!
+    estornarPagamento({ tipo:'parcela', pagamentoId:pagamentoQuitado.pagamentoId!, motivo:'Teste de reabertura' })
+    assert.equal(listarCartoes().find(c => c.id === quitado.id)?.arquivado, false)
+    assert.equal(dinheiro(a.id), saldoQuitado)
     const ativo = cadastrarAtivo(obterBanco(), { codigo: 'BOVA11', nome: 'ETF teste', tipo: 'ETF', instituicao: 'Teste' })
     const saldoInvest = dinheiro(a.id)
     registrarOperacao(obterBanco(), { ativoId: ativo, contaId: a.id, tipo: 'compra', quantidade: 2, valorCentavos: 1000, taxasCentavos: 20, data: hoje }, dinheiro, hoje)
