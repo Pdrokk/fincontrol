@@ -2,9 +2,9 @@ import { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'node:crypto'
 
 export const TIPOS_ATIVO = ['Ação', 'ETF', 'FII', 'Moeda', 'Cripto', 'Renda fixa', 'Outro'] as const
-export interface NovoAtivo { codigo: string; nome: string; tipo: string; instituicao: string }
+export interface NovoAtivo { codigo: string; nome: string; tipo: string; instituicao: string; valorInformadoCentavos?: number | null }
 export interface Operacao { ativoId: string; contaId: string; tipo: 'compra' | 'venda' | 'provento'; quantidade: number; valorCentavos: number; taxasCentavos: number; data: string }
-export interface Posicao extends NovoAtivo { id: string; quantidade: number; custoCentavos: number; cotacaoCentavos: number | null; valorAtualCentavos: number | null; realizadoCentavos: number; proventosCentavos: number }
+export interface Posicao extends NovoAtivo { valorInformadoCentavos: number | null; id: string; quantidade: number; custoCentavos: number; cotacaoCentavos: number | null; valorAtualCentavos: number | null; realizadoCentavos: number; proventosCentavos: number }
 export interface Movimento extends Operacao { id: string; caixaCentavos: number; custoBaixadoCentavos: number }
 
 export function criarTabelasInvestimentos(db: DatabaseSync): void {
@@ -27,6 +27,8 @@ export function criarTabelasInvestimentos(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS idx_invest_ativo ON movimentos_investimento(ativo_id, data);
     CREATE INDEX IF NOT EXISTS idx_invest_conta ON movimentos_investimento(conta_id, data);
   `)
+  const colunas = db.prepare('PRAGMA table_info(ativos_investimento)').all() as { name: string }[]
+  if (!colunas.some(c => c.name === 'valor_informado_centavos')) db.exec('ALTER TABLE ativos_investimento ADD COLUMN valor_informado_centavos INTEGER')
 }
 
 function inteiro(n: number, minimo = 0): boolean {
@@ -39,14 +41,16 @@ export function cadastrarAtivo(db: DatabaseSync, dados: NovoAtivo): string {
   if (!dados || !texto(dados.codigo, 30) || !texto(dados.nome, 100) ||
       !texto(dados.instituicao, 100, false) || !TIPOS_ATIVO.some(t => t === dados.tipo))
     throw new Error('Dados do ativo inválidos.')
+  const valor = dados.valorInformadoCentavos ?? null
+  if (valor !== null && !inteiro(valor)) throw new Error('Valor patrimonial inválido.')
   const id = randomUUID()
-  db.prepare('INSERT INTO ativos_investimento (id,codigo,nome,tipo,instituicao) VALUES (?,?,?,?,?)')
-    .run(id, dados.codigo.trim().toUpperCase(), dados.nome.trim(), dados.tipo, dados.instituicao.trim())
+  db.prepare('INSERT INTO ativos_investimento (id,codigo,nome,tipo,instituicao,valor_informado_centavos) VALUES (?,?,?,?,?,?)')
+    .run(id, dados.codigo.trim().toUpperCase(), dados.nome.trim(), dados.tipo, dados.instituicao.trim(), valor)
   return id
 }
 export function listarPosicoes(db: DatabaseSync): Posicao[] {
   const linhas = db.prepare(`
-    SELECT a.id,a.codigo,a.nome,a.tipo,a.instituicao,a.cotacao_centavos AS cotacaoCentavos,
+    SELECT a.id,a.codigo,a.nome,a.tipo,a.instituicao,a.cotacao_centavos AS cotacaoCentavos,a.valor_informado_centavos AS valorInformadoCentavos,
       COALESCE(SUM(CASE m.tipo WHEN 'compra' THEN m.quantidade WHEN 'venda' THEN -m.quantidade ELSE 0 END),0) AS unidades,
       COALESCE(SUM(CASE m.tipo WHEN 'compra' THEN -m.caixa_centavos WHEN 'venda' THEN -m.custo_baixado_centavos ELSE 0 END),0) AS custoCentavos,
       COALESCE(SUM(CASE WHEN m.tipo='venda' THEN m.caixa_centavos-m.custo_baixado_centavos ELSE 0 END),0) AS realizadoCentavos,
@@ -56,7 +60,7 @@ export function listarPosicoes(db: DatabaseSync): Posicao[] {
   `).all() as unknown as (Omit<Posicao,'quantidade'|'valorAtualCentavos'> & { unidades: number })[]
   return linhas.map(({ unidades, ...a }) => ({
     ...a, quantidade: unidades / 1e8,
-    valorAtualCentavos: unidades === 0 ? 0 : a.cotacaoCentavos === null ? null : Math.round(unidades / 1e8 * a.cotacaoCentavos)
+    valorAtualCentavos: a.valorInformadoCentavos ?? (unidades === 0 ? 0 : a.cotacaoCentavos === null ? null : Math.round(unidades / 1e8 * a.cotacaoCentavos))
   }))
 }
 export function listarMovimentos(db: DatabaseSync): Movimento[] {
@@ -64,6 +68,10 @@ export function listarMovimentos(db: DatabaseSync): Movimento[] {
     valor_centavos AS valorCentavos,taxas_centavos AS taxasCentavos,data,caixa_centavos AS caixaCentavos,
     custo_baixado_centavos AS custoBaixadoCentavos FROM movimentos_investimento ORDER BY data DESC,rowid DESC`)
     .all() as unknown as Movimento[]
+}
+export function atualizarValorAtivo(db: DatabaseSync, id: string, centavos: number): void {
+  if (!inteiro(centavos)) throw new Error('Valor patrimonial inválido.')
+  if (!db.prepare('UPDATE ativos_investimento SET valor_informado_centavos=? WHERE id=? AND valor_informado_centavos IS NOT NULL').run(centavos,id).changes) throw new Error('Ativo de acompanhamento não encontrado.')
 }
 export function atualizarCotacao(db: DatabaseSync, id: string, centavos: number): void {
   if (!inteiro(centavos, 1)) throw new Error('Cotação inválida.')
@@ -88,6 +96,7 @@ export function registrarOperacao(db: DatabaseSync, dados: Operacao, saldo: (id:
     const ativo = listarPosicoes(db).find(a => a.id === dados.ativoId)
     const disponivel = saldo(dados.contaId)
     if (!ativo || disponivel === undefined) throw new Error('Ativo ou conta não encontrado.')
+    if (ativo.valorInformadoCentavos !== null) throw new Error('Este ativo é apenas de acompanhamento e não movimenta contas.')
     const ultima = db.prepare('SELECT MAX(data) AS data FROM movimentos_investimento WHERE ativo_id=?').get(dados.ativoId) as { data: string | null }
     if (ultima.data && dados.data < ultima.data) throw new Error('Registre operações de cada ativo em ordem cronológica.')
     if (caixa < 0 && disponivel < -caixa) throw new Error('Saldo insuficiente.')

@@ -5,6 +5,7 @@ import { validarOperacaoImediata } from './regrasFinanceiras'
 
 export interface Cartao {
   id: string
+  arquivado: boolean
   contaId: string | null
   nome: string
   banco: string
@@ -15,7 +16,7 @@ export interface Cartao {
   diaVencimento: number
 }
 
-export type NovoCartao = Omit<Cartao, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>
+export type NovoCartao = Omit<Cartao, 'id' | 'arquivado' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>
 
 export interface Compra {
   id: string
@@ -115,6 +116,9 @@ export function criarTabelasCartoes(): void {
       criado_em TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS cartoes_arquivados (
+      cartao_id TEXT PRIMARY KEY REFERENCES cartoes(id) ON DELETE CASCADE
+    );
     CREATE TABLE IF NOT EXISTS compras_cartao (
       id TEXT PRIMARY KEY,
       cartao_id TEXT NOT NULL REFERENCES cartoes(id),
@@ -267,6 +271,7 @@ export function criarTabelasCartoes(): void {
 export function listarCartoes(): Cartao[] {
   const registros = obterBanco().prepare(`
     SELECT c.id, c.conta_id AS contaId, c.nome, c.banco,
+      EXISTS(SELECT 1 FROM cartoes_arquivados a WHERE a.cartao_id=c.id) AS arquivado,
       c.limite_centavos AS limiteCentavos,
       c.dia_fechamento AS diaFechamento,
       c.dia_vencimento AS diaVencimento,
@@ -283,6 +288,7 @@ export function listarCartoes(): Cartao[] {
   `).all() as unknown as Omit<Cartao, 'limiteDisponivelCentavos'>[]
   return registros.map((c) => ({
     ...c,
+    arquivado: Boolean(c.arquivado),
     limiteDisponivelCentavos: c.limiteCentavos - c.limiteUtilizadoCentavos
   }))
 }
@@ -304,6 +310,7 @@ export function cadastrarCartao(dados: NovoCartao): Cartao {
     throw new Error('Conta vinculada inexistente.')
   const cartao: Cartao = {
     id: randomUUID(),
+    arquivado: false,
     contaId,
     nome: dados.nome.trim(),
     banco: dados.banco.trim(),
@@ -358,7 +365,7 @@ export function atualizarCartao(id: string, dados: NovoCartao): Cartao {
   db.exec('BEGIN IMMEDIATE')
   try {
     const atual = listarCartoes().find((cartao) => cartao.id === id)
-    if (!atual) throw new Error('Cartão não encontrado.')
+    if (!atual || atual.arquivado) throw new Error('Cartão ativo não encontrado.')
     if (contaId && !db.prepare('SELECT id FROM contas WHERE id = ?').get(contaId))
       throw new Error('Conta bancária não encontrada.')
     if (dados.limiteCentavos < atual.limiteUtilizadoCentavos)
@@ -389,7 +396,7 @@ export function atualizarCartao(id: string, dados: NovoCartao): Cartao {
 }
 
 /**
- * Exclui somente cartões sem qualquer histórico financeiro.
+ * Exclui cartões vazios e retira cartões quitados da lista ativa.
  * Compras, parcelas e pagamentos (inclusive estornados) devem permanecer auditáveis.
  */
 export function excluirCartao(id: string): void {
@@ -410,13 +417,13 @@ export function excluirCartao(id: string): void {
     `).get(id, id, id) as { compras: number; parcelas: number; pagamentos: number }
 
     if (vinculos.compras || vinculos.parcelas || vinculos.pagamentos) {
-      throw new Error(
-        'Este cartão possui histórico de compras, parcelas ou pagamentos. ' +
-        'A exclusão foi bloqueada para preservar os registros financeiros.'
-      )
+      if (listarParcelasPagamento().some(p => p.cartaoId === id && !p.paga)) {
+        throw new Error('Quite todas as parcelas e faturas antes de excluir este cartão.')
+      }
+      db.prepare('INSERT OR IGNORE INTO cartoes_arquivados (cartao_id) VALUES (?)').run(id)
+    } else {
+      db.prepare('DELETE FROM cartoes WHERE id = ?').run(id)
     }
-
-    db.prepare('DELETE FROM cartoes WHERE id = ?').run(id)
     db.exec('COMMIT')
   } catch (erro) {
     db.exec('ROLLBACK')
@@ -442,7 +449,7 @@ export function cadastrarCompra(dados: NovaCompra): Compra {
   const db = obterBanco()
   const cartao = db.prepare('SELECT * FROM cartoes WHERE id = ?').get(dados.cartaoId) as
     | { dia_fechamento: number } | undefined
-  if (!cartao) throw new Error('Cartão não encontrado.')
+  if (!cartao || db.prepare('SELECT 1 FROM cartoes_arquivados WHERE cartao_id=?').get(dados.cartaoId)) throw new Error('Cartão ativo não encontrado.')
 
   const compra: Compra = {
     id: randomUUID(),
@@ -716,6 +723,8 @@ export function estornarPagamento(dados: NovoEstornoPagamento): EstornoPagamento
 
     db.prepare(`UPDATE ${tabela} SET estornado = 1 WHERE id = ?`)
       .run(dados.pagamentoId)
+    // Uma dívida reaberta por estorno deve voltar à lista de cartões ativos.
+    db.prepare('DELETE FROM cartoes_arquivados WHERE cartao_id=?').run(vinculacao.cartaoId)
     const estorno: EstornoPagamento = {
       id: randomUUID(),
       pagamentoId: pagamento.id,

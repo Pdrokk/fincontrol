@@ -44,6 +44,7 @@ interface TransferenciaFinanceira {
 
 interface CartaoFinanceiro {
   id: string
+  arquivado: boolean
   contaId: string | null
   nome: string
   banco: string
@@ -143,6 +144,7 @@ declare global {
   interface Window {
     fincontrol: {
       listarInvestimentos: () => Promise<{ posicoes: Posicao[]; movimentos: Movimento[] }>
+      atualizarValorAtivo: (id: string, centavos: number) => Promise<void>
       cadastrarAtivo: (dados: NovoAtivo) => Promise<string>
       atualizarCotacao: (id: string, centavos: number) => Promise<void>
       registrarInvestimento: (dados: Operacao) => Promise<void>
@@ -168,8 +170,8 @@ declare global {
       }) => Promise<{ valorCentavos: number; parcelasPagas: number }>
       listarCartoes: () => Promise<CartaoFinanceiro[]>
       excluirCartao: (id: string) => Promise<boolean>
-      atualizarCartao: (id: string, dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
-      cadastrarCartao: (dados: Omit<CartaoFinanceiro, 'id' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
+      atualizarCartao: (id: string, dados: Omit<CartaoFinanceiro, 'id' | 'arquivado' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
+      cadastrarCartao: (dados: Omit<CartaoFinanceiro, 'id' | 'arquivado' | 'limiteUtilizadoCentavos' | 'limiteDisponivelCentavos'>) => Promise<CartaoFinanceiro>
       listarComprasCartao: () => Promise<CompraCartaoFinanceira[]>
       cadastrarCompraCartao: (dados: Omit<CompraCartaoFinanceira, 'id'>) => Promise<CompraCartaoFinanceira>
       listarFaturasPrevistas: () => Promise<FaturaPrevistaFinanceira[]>
