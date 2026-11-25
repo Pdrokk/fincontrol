@@ -1,3 +1,4 @@
+import Investimentos from './components/Investimentos'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
 import DashboardResumo from './components/DashboardResumo'
@@ -12,6 +13,7 @@ import {
   Wallet,
   Landmark,
   CreditCard,
+  TrendingUp,
   Sun,
   Moon
 } from 'lucide-react'
@@ -21,7 +23,7 @@ import CartoesCredito from './components/CartoesCredito'
 
 type Tipo = 'receita' | 'despesa'
 
-type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'contas' | 'cartoes' | 'configuracoes'
+type Pagina = 'dashboard' | 'transacoes' | 'relatorios' | 'contas' | 'cartoes' | 'investimentos' | 'configuracoes'
 
 interface Transacao {
   id: string
@@ -75,6 +77,7 @@ const nomesPaginas: Record<Pagina, string> = {
   relatorios: 'Relatórios',
   contas: 'Minhas contas',
   cartoes: 'Cartões e faturas',
+  investimentos: 'Investimentos',
   configuracoes: 'Configurações'
 }
 
@@ -84,6 +87,7 @@ const iconesPaginas = {
   relatorios: ChartNoAxesCombined,
   contas: Landmark,
   cartoes: CreditCard,
+  investimentos: TrendingUp,
   configuracoes: Settings
 }
 
@@ -606,6 +610,7 @@ function App(): React.JSX.Element {
           </button>
         </header>
 
+        {pagina === 'investimentos' && <Investimentos onAlteracao={(): void => setRevisaoFinanceira(a => a + 1)} />}
         {pagina === 'contas' && <ContasBancarias />}
         {pagina === 'cartoes' && (
           <CartoesCredito onAlteracao={(): void => setRevisaoFinanceira((anterior) => anterior + 1)} />

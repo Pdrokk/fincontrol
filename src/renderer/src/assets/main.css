@@ -2491,3 +2491,28 @@ body::-webkit-scrollbar-corner,
     padding: 10px 6px;
   }
 }
+
+/* Investimentos: superfícies e controles seguem os tokens dos dois temas. */
+.banco-identidade { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.icone-banco { display: inline-grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid #ffffff44; border-radius: 8px; color: #fff; font-weight: 800; font-size: 12px; line-height: 1; letter-spacing: -.02em; }
+.investimentos { display: grid; gap: 16px; min-width: 0; }
+.investimentos .painel { min-width: 0; }
+.invest-resumo { display: flex; flex-wrap: wrap; gap: 18px 32px; padding-block: 12px; }
+.invest-resumo > div { display: grid; gap: 6px; }
+.invest-resumo strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.invest-resumo span, .invest-detalhe { color: var(--muted); font-size: .85rem; }
+.invest-ativo { display: grid; grid-template-columns: minmax(130px,1.2fr) repeat(2,minmax(100px,1fr)) minmax(120px,1fr); gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border-color); }
+.invest-ativo > div { min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.invest-ativo .invest-nome { display: flex; align-items: center; gap: 8px; }
+.invest-ativo form { display: flex; align-items: center; gap: 6px; }
+.invest-ativo input { min-width: 0; width: 100%; }
+.invest-cotacao input { background: var(--input-bg); color: var(--text); border: 1px solid var(--border-color); border-radius: 8px; padding: 9px; }
+.invest-cotacao button { padding: 9px; min-width: 44px; min-height: 44px; }
+.invest-alocacao { display: grid; gap: 10px; margin-top: 14px; }
+.invest-barra { height: 7px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+.invest-barra > span { display: block; height: 100%; background: #2563eb; border-radius: 4px; }
+.invest-historico { overflow-x: auto; }
+.invest-historico table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
+.invest-historico th, .invest-historico td { padding: 10px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.invest-historico th { color: var(--muted); font-size: .85rem; }
+@media(max-width: 900px) { .invest-ativo { grid-template-columns: repeat(2,minmax(0,1fr)); } }

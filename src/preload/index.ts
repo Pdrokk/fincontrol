@@ -22,6 +22,10 @@ if (process.contextIsolated) {
 }
 
 const fincontrolAPI = {
+  listarInvestimentos: (): Promise<unknown> => ipcRenderer.invoke('investimentos:listar'),
+  cadastrarAtivo: (dados: unknown): Promise<string> => ipcRenderer.invoke('investimentos:cadastrar', dados),
+  atualizarCotacao: (id: string, centavos: number): Promise<void> => ipcRenderer.invoke('investimentos:cotacao', id, centavos),
+  registrarInvestimento: (dados: unknown): Promise<void> => ipcRenderer.invoke('investimentos:operacao', dados),
   exportarBackup: (): Promise<string | null> => ipcRenderer.invoke('backup:exportar'),
   restaurarBackup: (): Promise<boolean> => ipcRenderer.invoke('backup:restaurar'),
   estornarPagamento: (dados: {
