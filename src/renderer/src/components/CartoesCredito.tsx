@@ -61,7 +61,11 @@ function dataLocal(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function CartoesCredito(): React.JSX.Element {
+interface Props {
+  onAlteracao?: () => void
+}
+
+export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Element {
   const [cartoes, setCartoes] = useState<Cartao[]>([])
   const [contas, setContas] = useState<Conta[]>([])
   const [compras, setCompras] = useState<Compra[]>([])
@@ -97,6 +101,8 @@ export default function CartoesCredito(): React.JSX.Element {
     setContas(listaContas)
     setCompras(listaCompras)
     setFaturas(listaFaturas)
+    // Invalida os indicadores do painel e relatórios após compras, pagamentos ou estornos.
+    onAlteracao?.()
   }
 
   useEffect((): (() => void) => {
