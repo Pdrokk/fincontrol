@@ -1,4 +1,4 @@
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, registrarOperacao, atualizarCotacao } from './investimentos'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, registrarOperacao, atualizarCotacao, salvarCotacaoMercado, atualizarQuantidadeMercado } from './investimentos'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -314,6 +314,8 @@ export async function executarSmokeInstalado(): Promise<void> {
     assert.equal(dinheiro(a.id), saldoInvest - 1020)
     atualizarCotacao(obterBanco(), ativo, 600)
     assert.equal(listarPosicoes(obterBanco())[0].valorAtualCentavos, 1200)
+    const mercado = cadastrarAtivo(obterBanco(),{codigo:'PETR4',nome:'Teste mercado',tipo:'Ação',instituicao:'Teste',quantidadeMercado:10})
+    salvarCotacaoMercado(obterBanco(),mercado,{preco:32.15,data:new Date(Date.now()-60000).toISOString(),fonte:'BRAPI'})
     const arquivo = join(pasta, `backup-smoke-${randomUUID()}.db`)
     await backup(obterBanco(), arquivo)
     bancoBackup = new DatabaseSync(arquivo, { readOnly: true })
@@ -333,7 +335,10 @@ export async function executarSmokeInstalado(): Promise<void> {
       categoria: 'Outros', data: hoje
     })
     assert.ok(listarTransacoes().some(t => t.id === extra.id))
+    atualizarQuantidadeMercado(obterBanco(),mercado,20)
     await aplicarRestauracaoValidada(arquivo)
+    assert.equal(listarPosicoes(obterBanco()).find(p=>p.id===mercado)?.quantidadeMercado,10)
+    assert.equal(listarPosicoes(obterBanco()).find(p=>p.id===mercado)?.valorAtualCentavos,32150)
     assert.equal(listarPosicoes(obterBanco())[0].custoCentavos, 1020)
     assert.equal(dinheiro(a.id), saldoInvest - 1020)
     assert.ok(!listarTransacoes().some(t => t.id === extra.id),
