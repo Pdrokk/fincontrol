@@ -66,11 +66,6 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
   const [mensagem, setMensagem] = useState('')
   const [filtroCartaoId, setFiltroCartaoId] = useState(cartaoInicialId)
 
-  useEffect(() => {
-    setFiltroCartaoId(cartaoInicialId)
-    setSelecionadas([])
-  }, [cartaoInicialId])
-
   async function carregar(): Promise<void> {
     const [listaParcelas, listaContas, listaCartoes, listaEstornos] = await Promise.all([
       window.fincontrol.listarParcelasPagamento(),
