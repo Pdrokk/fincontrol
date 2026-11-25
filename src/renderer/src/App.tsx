@@ -102,6 +102,7 @@ function App(): React.JSX.Element {
   const [parcelasCartao, setParcelasCartao] = useState<ParcelaCartaoRelatorio[]>([])
   const [parcelasPendentesIds, setParcelasPendentesIds] = useState<string[]>([])
   const [despesasCartaoPagas, setDespesasCartaoPagas] = useState<Transacao[]>([])
+  const [revisaoFinanceira, setRevisaoFinanceira] = useState(0)
 
   const [mesFiltro, setMesFiltro] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
   const [anoFiltro, setAnoFiltro] = useState(() => String(new Date().getFullYear()))
@@ -181,7 +182,7 @@ function App(): React.JSX.Element {
     return (): void => {
       ativo = false
     }
-  }, [pagina])
+  }, [pagina, revisaoFinanceira])
 
   useEffect((): (() => void) => {
     let ativo = true
@@ -196,7 +197,7 @@ function App(): React.JSX.Element {
     return (): void => {
       ativo = false
     }
-  }, [pagina, transacoes])
+  }, [pagina, transacoes, revisaoFinanceira])
 
   useEffect((): (() => void) => {
     let ativo = true
@@ -216,7 +217,7 @@ function App(): React.JSX.Element {
       console.error('Erro ao carregar faturas e parcelas:', erro)
     })
     return (): void => { ativo = false }
-  }, [pagina])
+  }, [pagina, revisaoFinanceira])
 
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
@@ -542,7 +543,9 @@ function App(): React.JSX.Element {
         </header>
 
         {pagina === 'contas' && <ContasBancarias />}
-        {pagina === 'cartoes' && <CartoesCredito />}
+        {pagina === 'cartoes' && (
+          <CartoesCredito onAlteracao={(): void => setRevisaoFinanceira((anterior) => anterior + 1)} />
+        )}
 
         {(pagina === 'dashboard' || pagina === 'transacoes' || pagina === 'relatorios') && (
           <section className="filtros-periodo">
