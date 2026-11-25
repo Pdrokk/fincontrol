@@ -287,7 +287,8 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
                   aria-label={`Registrar compra em ${c.nome}`}>
                   <Plus size={15} /> Nova compra
                 </button>
-                <button type="button" onClick={(): void => iniciarEdicaoCartao(c)}>
+                <button type="button" onClick={(): void => iniciarEdicaoCartao(c)}
+                  aria-label={`Editar cartão: ${c.nome}`}>
                   <Pencil size={15} /> Editar cartão
                 </button>
               </div>
