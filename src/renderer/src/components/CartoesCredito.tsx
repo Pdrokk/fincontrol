@@ -75,6 +75,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
   const [erro, setErro] = useState('')
   const [secao, setSecao] = useState<'pagamentos' | 'compras' | 'gerenciar'>('pagamentos')
   const [cartaoEmFoco, setCartaoEmFoco] = useState('')
+  const [focoVersao, setFocoVersao] = useState(0)
   const [aviso, setAviso] = useState('')
   const [erroFormulario, setErroFormulario] = useState('')
 
@@ -164,6 +165,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
 
   function abrirPagamentos(cartao: Cartao): void {
     setCartaoEmFoco(cartao.id)
+    setFocoVersao((anterior) => anterior + 1)
     setErroFormulario('')
     setAviso('')
     setSecao('pagamentos')
@@ -308,7 +310,8 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
           onClick={(): void => { setErroFormulario(''); setSecao('gerenciar') }}>Cadastrar ou editar cartão</button>
       </nav>
       {secao === 'pagamentos' && (
-        <CentralPagamentos onPagamento={atualizar} cartaoInicialId={cartaoEmFoco} />
+        <CentralPagamentos key={`${cartaoEmFoco}:${focoVersao}`} onPagamento={atualizar}
+          cartaoInicialId={cartaoEmFoco} />
       )}
 
       {secao === 'gerenciar' && (
