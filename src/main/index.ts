@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.3.1')) {
+          if (!document.body.textContent?.includes('Versão 1.3.2')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -261,6 +261,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       botaoPagina('Minhas contas')?.click();
       await dormir(450);
       if (!document.querySelector('.icone-banco')) throw new Error('Identificador de banco ausente.');
+      const idZerado = await window.fincontrol.cadastrarAtivo({codigo:'ZERO11',nome:'Posição zerada teste',tipo:'ETF',instituicao:'Teste'});
       const idPatrimonio = await window.fincontrol.cadastrarAtivo({codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',valorInformadoCentavos:5000});
       const saldoPatrimonioAntes = (await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos;
       await window.fincontrol.atualizarValorAtivo(idPatrimonio,6000);
@@ -268,6 +269,18 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes) throw new Error('Acompanhamento não deve movimentar saldo.');
       botaoPagina('Investimentos')?.click();
       await dormir(400);
+      const filtroZeradas = document.querySelector('.carteira-filtro-zeradas input');
+      const linhaZerada = () => [...document.querySelectorAll('.invest-ativo')].find(a=>a.textContent.includes('ZERO11'));
+      if (!filtroZeradas || linhaZerada()) throw new Error('Posição zerada não foi ocultada.');
+      filtroZeradas.click();
+      await dormir(150);
+      if (!linhaZerada()) throw new Error('Filtro não exibiu posição zerada.');
+      filtroZeradas.click();
+      await dormir(150);
+      if (linhaZerada()) throw new Error('Filtro não ocultou posição zerada.');
+      if (!(await window.fincontrol.listarInvestimentos()).posicoes.some(a=>a.id===idZerado)) throw new Error('Filtro apagou posição.');
+      const coresCategorias = [...document.querySelectorAll('.carteira-categoria .invest-barra > span')].map(a=>getComputedStyle(a).backgroundColor);
+      if (coresCategorias.length < 2 || new Set(coresCategorias).size < 2) throw new Error('Categorias da carteira não têm cores distintas.');
       const removerAtivo = document.querySelector('button[aria-label="Remover USD"]');
       if (!removerAtivo) throw new Error('Remoção de posição sem histórico ausente.');
       removerAtivo.click();
@@ -281,6 +294,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       document.querySelector('.fc-dialogo .fc-confirmar').click();
       await dormir(450);
       if ((await window.fincontrol.listarInvestimentos()).posicoes.some(a=>a.id===idPatrimonio)) throw new Error('Ativo não foi removido.');
+      if (!document.querySelector('.carteira-toast')?.textContent.includes('Ativo removido.')) throw new Error('Notificação de sucesso ausente.');
       if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes) throw new Error('Remoção alterou o caixa.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);
@@ -434,6 +448,20 @@ async function verificarResponsividadeInstalada(janela: BrowserWindow): Promise<
                 throw new Error('Contraste do seletor de gráficos incorreto: ' +
                   temaEsperado + ', cor=' + corAtiva);
               }
+            }
+            if (nome === 'Investimentos') {
+              const secundario = document.querySelector('.carteira-acoes .botao-secundario');
+              const editar = document.querySelector('.carteira-tabela .carteira-editar');
+              const esperado = temaEsperado === 'dark' ? 'rgb(39, 52, 73)' : 'rgb(255, 255, 255)';
+              const textoEsperado = temaEsperado === 'dark' ? 'rgb(248, 250, 252)' : 'rgb(15, 23, 42)';
+              for (const b of [secundario, editar].filter(Boolean)) {
+                const estilo = getComputedStyle(b);
+                if (estilo.backgroundColor !== esperado || estilo.color !== textoEsperado ||
+                    estilo.borderRadius !== '9px' || b.getBoundingClientRect().height < 44) {
+                  throw new Error('Botão secundário fora do tema: ' + temaEsperado + ' / ' + estilo.backgroundColor);
+                }
+              }
+              if (!secundario) throw new Error('Botão de atualização ausente.');
             }
             if (nome === 'Cartões e faturas') {
               const botoesHistorico = [...document.querySelectorAll('.central-historico .central-icone')];
