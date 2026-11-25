@@ -1,3 +1,4 @@
+import { confirmarFinControl, solicitarFinControl } from '../utils/dialogos'
 import { useEffect, useState } from 'react'
 import { Archive, ArrowDownRight, CheckCircle2, CreditCard, RotateCcw, Undo2 } from 'lucide-react'
 import Feedback from './Feedback'
@@ -151,7 +152,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       setErro('Saldo insuficiente na conta escolhida. Selecione outra conta ou menos parcelas.')
       return
     }
-    if (!window.confirm(
+    if (!await confirmarFinControl(
       `Confirmar pagamento de ${escolhidas.length} parcela(s), total ${moeda(valorEscolhido)}, usando ${conta.nome}?`
     )) return
     let confirmado = false
@@ -191,13 +192,13 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       ? parcelas.filter((p) => p.pagamentoId === parcela.pagamentoId)
           .reduce((total, p) => total + p.valorCentavos, 0)
       : parcela.valorCentavos
-    const motivo = window.prompt('Motivo do estorno (mínimo 5 caracteres):')
+    const motivo = await solicitarFinControl('Motivo do estorno (mínimo 5 caracteres):', 'Estornar pagamento')
     if (motivo === null) return
     if (motivo.trim().length < 5) {
       setErro('Informe um motivo com pelo menos 5 caracteres para registrar o estorno.')
       return
     }
-    if (!window.confirm(
+    if (!await confirmarFinControl(
       `Estornar ${moeda(valor)}? O valor voltará à conta pagadora e o limite disponível do cartão será reduzido. ${parcela.pagamentoTipo === 'fatura' ? 'Isso estornará toda a fatura.' : 'Isso estornará esta parcela.'}`
     )) return
     let estornoConfirmado = false

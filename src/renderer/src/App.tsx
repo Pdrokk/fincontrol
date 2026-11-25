@@ -1,3 +1,4 @@
+import { confirmarFinControl } from './utils/dialogos'
 import Investimentos from './components/Investimentos'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
@@ -485,7 +486,7 @@ function App(): React.JSX.Element {
   }
 
   async function excluirTransacao(id: string): Promise<void> {
-    if (!window.confirm('Deseja excluir esta transação?')) {
+    if (!await confirmarFinControl('Deseja excluir esta transação?', 'Excluir transação', 'Excluir', true)) {
       return
     }
 
