@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { comporCarteira } from '../src/renderer/src/utils/composicaoCarteira.ts'
 
-const posicao = (codigo: string, valorAtualCentavos: number | null, arquivado = false) => ({ codigo, tipo: 'Ação', valorAtualCentavos, arquivado })
+const posicao = (codigo: string, valorAtualCentavos: number | null, arquivado = false): { codigo: string; tipo: string; valorAtualCentavos: number | null; arquivado: boolean } => ({ codigo, tipo: 'Ação', valorAtualCentavos, arquivado })
 
 test('agrupa o mesmo ativo, exclui zerados, arquivados e valores desconhecidos', () => {
   const r = comporCarteira([posicao('PETR4', 2000), posicao('PETR4', 3000), posicao('USD', 15000), posicao('ZERO', 0), posicao('SEM', null), posicao('ARQ', 9999, true)])
