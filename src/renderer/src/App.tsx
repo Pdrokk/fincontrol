@@ -275,6 +275,10 @@ function App(): React.JSX.Element {
       (mesFiltro === 'todos' || mes === mesFiltro)
   }
 
+  const periodoDescricao = mesFiltro !== 'todos'
+    ? `${meses[Number(mesFiltro) - 1]} · ${anoFiltro === 'todos' ? 'todos os anos' : anoFiltro}`
+    : anoFiltro === 'todos' ? 'Todo o histórico' : `Ano de ${anoFiltro}`
+
   const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
   const transacoesBancariasPeriodo = transacoes.filter(pertencePeriodo)
   const totalReceitas = transacoesPeriodo
@@ -596,9 +600,11 @@ function App(): React.JSX.Element {
               Limpar período
             </button>
             {(pagina === 'dashboard' || pagina === 'relatorios') && (
-              <p className="filtros-aviso">
-                Os indicadores seguem o mês e ano selecionados. Os gráficos mostram até seis meses
-                por página, dentro do ano escolhido.
+              <p className="filtros-aviso" role="status">
+                <strong>Período selecionado: {periodoDescricao}.</strong>{' '}
+                {anoFiltro === 'todos' && mesFiltro === 'todos'
+                  ? 'Os totais abrangem todo o histórico; use as setas dos gráficos para explorar as janelas de seis meses.'
+                  : 'Indicadores e gráficos seguem o mesmo filtro. No modo Previsto, são exibidas apenas parcelas em aberto.'}
               </p>
             )}
           </section>
@@ -611,7 +617,7 @@ function App(): React.JSX.Element {
             despesasCentavos={totalDespesas}
             transacoes={transacoesRealizadas}
             previsoes={transacoesPrevistas}
-            filtroMes="todos"
+            filtroMes={mesFiltro}
             filtroAno={anoFiltro}
             transacoesRecentes={[...transacoesBancariasPeriodo]
               .sort((a, b) => b.data.localeCompare(a.data))
@@ -794,7 +800,7 @@ function App(): React.JSX.Element {
 
         {pagina === 'relatorios' && (
           <>
-            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} filtroMes="todos" filtroAno={anoFiltro} />
+            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} filtroMes={mesFiltro} filtroAno={anoFiltro} />
 
             <section className="painel">
               <h3>Resumo financeiro realizado do período</h3>
