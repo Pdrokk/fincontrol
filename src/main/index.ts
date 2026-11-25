@@ -53,7 +53,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
 
       const paginas = [
         'Visão Geral', 'Transações', 'Relatórios', 'Minhas contas',
-        'Cartões e faturas', 'Configurações'
+        'Cartões e faturas', 'Investimentos', 'Configurações'
       ];
       const verificadas = [];
       for (const nome of paginas) {
@@ -156,11 +156,15 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
             throw new Error('Voltar a Pagamentos falhou.');
           }
         }
+        if (nome === 'Investimentos') {
+          if (!document.querySelector('.investimentos') || !document.querySelector('input[name="codigo"]') ||
+              !document.querySelector('select[name="ativo"]')) throw new Error('Interface de investimentos incompleta.');
+        }
         if (nome === 'Configurações') {
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.1.0')) {
+          if (!document.body.textContent?.includes('Versão 1.2.0')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -242,6 +246,20 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       });
       const botaoPagina = (nome) => [...document.querySelectorAll('.sidebar nav button')]
         .find((b) => b.getAttribute('title') === nome);
+      const ativoTeste = await window.fincontrol.cadastrarAtivo({codigo:'BOVA11',nome:'ETF teste UI',tipo:'ETF',instituicao:'Teste'});
+      const saldoInvestAntes = (await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos;
+      await window.fincontrol.registrarInvestimento({ativoId:ativoTeste,contaId:contaTeste.id,tipo:'compra',quantidade:2,valorCentavos:1000,taxasCentavos:20,data:dataTeste});
+      await window.fincontrol.atualizarCotacao(ativoTeste,600);
+      const carteira = await window.fincontrol.listarInvestimentos();
+      if (carteira.posicoes.find(a => a.id === ativoTeste)?.valorAtualCentavos !== 1200) throw new Error('Cotação de investimento incorreta.');
+      if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoInvestAntes - 1020) throw new Error('Saldo de investimento incorreto.');
+      botaoPagina('Investimentos')?.click();
+      await dormir(550);
+      if (!document.querySelector('.invest-ativo')?.textContent?.includes('BOVA11')) throw new Error('Ativo não aparece na carteira.');
+      if (!document.querySelector('.invest-alocacao')) throw new Error('Alocação não aparece.');
+      botaoPagina('Minhas contas')?.click();
+      await dormir(450);
+      if (!document.querySelector('.icone-banco')) throw new Error('Identificador de banco ausente.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);
       botaoPagina('Transações')?.click();
@@ -321,7 +339,7 @@ async function verificarResponsividadeInstalada(janela: BrowserWindow): Promise<
         const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
         const paginas = [
           'Visão Geral', 'Transações', 'Relatórios',
-          'Minhas contas', 'Cartões e faturas', 'Configurações'
+          'Minhas contas', 'Cartões e faturas', 'Investimentos', 'Configurações'
         ];
         const larguras = [];
         const temas = ['light', 'dark'];
