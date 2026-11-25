@@ -176,6 +176,7 @@ function App(): React.JSX.Element {
       .then((registros): void => {
         if (ativo) {
           setTransacoes(registros)
+          setErroBanco('')
         }
       })
       .catch((erro: unknown): void => {
@@ -313,6 +314,20 @@ function App(): React.JSX.Element {
 
     return correspondeTipo && correspondeCategoria && correspondeBusca
   })
+
+  // Categorias históricas e importadas também devem aparecer no filtro e na edição.
+  const categoriasVisiveis = Array.from(new Set([
+    ...(tipoFiltro === 'despesa' ? [] : categorias.receita),
+    ...(tipoFiltro === 'receita' ? [] : categorias.despesa),
+    ...transacoes.filter((t) => tipoFiltro === 'todos' || t.tipo === tipoFiltro)
+      .map((t) => t.categoria)
+  ])).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
+  const categoriasDoFormulario = Array.from(new Set([
+    ...categorias[tipo],
+    ...transacoes.filter((t) => t.tipo === tipo).map((t) => t.categoria),
+    ...(categoria && !categorias[tipo].includes(categoria) ? [categoria] : [])
+  ]))
 
   const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => {
     if (ordenacaoHistorico === 'maior' || ordenacaoHistorico === 'menor') {
@@ -710,12 +725,7 @@ function App(): React.JSX.Element {
                   >
                     <option value="todas">Todas as categorias</option>
 
-                    {Array.from(
-                      new Set([
-                        ...(tipoFiltro === 'despesa' ? [] : categorias.receita),
-                        ...(tipoFiltro === 'receita' ? [] : categorias.despesa)
-                      ])
-                    ).map((nome) => (
+                    {categoriasVisiveis.map((nome) => (
                       <option key={nome} value={nome}>
                         {nome}
                       </option>
@@ -747,6 +757,7 @@ function App(): React.JSX.Element {
                   Descrição
                   <input
                     value={descricao}
+                    maxLength={200}
                     onChange={(e): void => setDescricao(e.target.value)}
                     placeholder="Ex: Supermercado"
                     required
@@ -776,7 +787,7 @@ function App(): React.JSX.Element {
                 <label>
                   Categoria
                   <select value={categoria} onChange={(e): void => setCategoria(e.target.value)}>
-                    {categorias[tipo].map((nome) => (
+                    {categoriasDoFormulario.map((nome) => (
                       <option key={nome} value={nome}>
                         {nome}
                       </option>

@@ -195,6 +195,14 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           contaId: contaTeste.id
         });
       }
+      await window.fincontrol.salvarTransacao({
+        descricao: 'Categoria legada importada',
+        valorCentavos: 1599,
+        tipo: 'despesa',
+        categoria: 'Manutenção do veículo',
+        data: dataTeste,
+        contaId: contaTeste.id
+      });
       const botaoPagina = (nome) => [...document.querySelectorAll('.sidebar nav button')]
         .find((b) => b.getAttribute('title') === nome);
       botaoPagina('Visão Geral')?.click();
@@ -203,6 +211,32 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(850);
       const tamanhoTeste = document.querySelector('#historico-tamanho');
       if (!tamanhoTeste) throw new Error('Paginação desapareceu após recarregar dados.');
+      const categoriasFiltro = document.querySelector('#categoriaFiltro');
+      if (!categoriasFiltro || ![...categoriasFiltro.options]
+        .some((opcao) => opcao.value === 'Manutenção do veículo')) {
+        throw new Error('Categoria importada não aparece no filtro do histórico.');
+      }
+      categoriasFiltro.value = 'Manutenção do veículo';
+      categoriasFiltro.dispatchEvent(new Event('change', { bubbles: true }));
+      await dormir(220);
+      const transacaoLegada = [...document.querySelectorAll('.lista .transacao')]
+        .find((item) => item.textContent?.includes('Categoria legada importada'));
+      if (!transacaoLegada) throw new Error('Filtro por categoria legada não retorna a transação.');
+      const editarLegada = [...transacaoLegada.querySelectorAll('button')]
+        .find((b) => b.textContent?.includes('Editar'));
+      editarLegada?.click();
+      await dormir(180);
+      const categoriaEdicao = [...document.querySelectorAll('.formulario select')]
+        .find((select) => [...select.options].some((op) => op.value === 'Manutenção do veículo'));
+      if (!categoriaEdicao || categoriaEdicao.value !== 'Manutenção do veículo') {
+        throw new Error('Edição não preserva categoria histórica da transação.');
+      }
+      const cancelar = [...document.querySelectorAll('.formulario button')]
+        .find((b) => b.textContent?.includes('Cancelar edição'));
+      cancelar?.click();
+      categoriasFiltro.value = 'todas';
+      categoriasFiltro.dispatchEvent(new Event('change', { bubbles: true }));
+      await dormir(200);
       tamanhoTeste.value = '15';
       tamanhoTeste.dispatchEvent(new Event('change', { bubbles: true }));
       await dormir(300);
