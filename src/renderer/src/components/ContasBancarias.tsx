@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
 import SalarioRecorrente from './SalarioRecorrente'
+import Feedback from './Feedback'
 import { corBanco, gradienteBanco } from '../utils/coresBancos'
 
 type TipoConta = 'corrente' | 'poupanca' | 'salario' | 'dinheiro' | 'outra'
@@ -69,6 +70,8 @@ export default function ContasBancarias(): React.JSX.Element {
   const [salvando, setSalvando] = useState(false)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [erroOperacao, setErroOperacao] = useState('')
+  const [mensagemOperacao, setMensagemOperacao] = useState('')
   const [contaSelecionadaId, setContaSelecionadaId] = useState('')
   const [modoGerenciar, setModoGerenciar] = useState<'editar' | 'entrada' | 'ajuste'>('editar')
 
@@ -105,9 +108,11 @@ export default function ContasBancarias(): React.JSX.Element {
   async function salvarConta(evento: React.FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
     if (salvando || carregando || erro) return
+    setErroOperacao('')
+    setMensagemOperacao('')
     const saldoInicialCentavos = parseCentavos(saldo)
     if (saldoInicialCentavos === null) {
-      alert('Informe um saldo válido, com até duas casas decimais.')
+      setErroOperacao('Saldo inicial inválido. Use até duas casas decimais, por exemplo 100,50.')
       return
     }
     try {
@@ -124,9 +129,10 @@ export default function ContasBancarias(): React.JSX.Element {
       setNome('')
       setSaldo('0')
       setTipo('corrente')
+      setMensagemOperacao('Conta cadastrada com sucesso.')
     } catch (falha) {
       console.error(falha)
-      alert('Não foi possível cadastrar a conta.')
+      setErroOperacao(falha instanceof Error ? falha.message : 'Não foi possível cadastrar a conta.')
     } finally {
       setSalvando(false)
     }
@@ -135,9 +141,11 @@ export default function ContasBancarias(): React.JSX.Element {
   async function salvarTransferencia(evento: React.FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
     if (salvando || carregando || erro) return
+    setErroOperacao('')
+    setMensagemOperacao('')
     const valorCentavos = parseCentavos(valorTransferencia)
     if (!valorCentavos || valorCentavos <= 0 || origemId === destinoId) {
-      alert('Escolha contas diferentes e um valor maior que zero.')
+      setErroOperacao('Selecione contas diferentes e informe um valor de transferência maior que zero.')
       return
     }
     try {
@@ -151,9 +159,10 @@ export default function ContasBancarias(): React.JSX.Element {
       })
       await recarregar()
       setValorTransferencia('')
+      setMensagemOperacao('Transferência concluída. Os saldos das contas foram atualizados.')
     } catch (falha) {
       console.error(falha)
-      alert('Não foi possível transferir. Verifique os saldos e as contas selecionadas.')
+      setErroOperacao(falha instanceof Error ? falha.message : 'Não foi possível transferir. Verifique os saldos e as contas selecionadas.')
     } finally {
       setSalvando(false)
     }
@@ -170,11 +179,14 @@ export default function ContasBancarias(): React.JSX.Element {
       `Excluir a conta "${conta.banco} · ${conta.nome}"? Apenas contas sem histórico, cartões ou salários vinculados podem ser excluídas.`
     )) return
     try {
+      setErroOperacao('')
+      setMensagemOperacao('')
       await window.fincontrol.excluirConta(conta.id)
       if (contaSelecionadaId === conta.id) setContaSelecionadaId('')
       await recarregar()
+      setMensagemOperacao('Conta excluída com sucesso.')
     } catch (falha) {
-      alert(falha instanceof Error ? falha.message : 'Esta conta possui vínculos e não pode ser excluída.')
+      setErroOperacao(falha instanceof Error ? falha.message : 'Esta conta possui vínculos e não pode ser excluída.')
     }
   }
 
@@ -200,7 +212,9 @@ export default function ContasBancarias(): React.JSX.Element {
           <small>Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de saldo</small>
         </div>
         {carregando && <p>Carregando contas...</p>}
-        {erro && <p role="alert">{erro}</p>}
+        {erro && <Feedback mensagem={erro} tipo="erro" />}
+        <Feedback mensagem={erroOperacao} tipo="erro" />
+        <Feedback mensagem={mensagemOperacao} tipo="sucesso" />
         <div className="grade-contas">
           {contas.map((conta) => (
             <article className="cartao-conta" key={conta.id} style={{ background: gradienteBanco(conta.banco) }}>
