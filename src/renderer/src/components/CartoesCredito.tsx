@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Plus, Pencil } from 'lucide-react'
+import { CreditCard, Plus, Pencil, Trash2 } from 'lucide-react'
 import Feedback from './Feedback'
 import { gradienteBanco } from '../utils/coresBancos'
 import CentralPagamentos from './CentralPagamentos'
@@ -73,6 +73,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
   const [faturas, setFaturas] = useState<Fatura[]>([])
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
+  const [cartaoExcluindoId, setCartaoExcluindoId] = useState<string | null>(null)
   const [erro, setErro] = useState('')
   const [secao, setSecao] = useState<'pagamentos' | 'compras' | 'gerenciar'>('pagamentos')
   const [cartaoEmFoco, setCartaoEmFoco] = useState('')
@@ -209,6 +210,38 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
     }
   }
 
+  async function removerCartao(cartao: Cartao): Promise<void> {
+    if (salvando || cartaoExcluindoId || carregando || erro) return
+    const confirmado = window.confirm(
+      `Excluir o cartão "${cartao.banco} · ${cartao.nome}"?\n\n` +
+      'Esta ação não pode ser desfeita. Cartões com compras, parcelas ou pagamentos ' +
+      'registrados não podem ser excluídos para preservar o histórico financeiro.'
+    )
+    if (!confirmado) return
+
+    setCartaoExcluindoId(cartao.id)
+    setErroFormulario('')
+    setAviso('')
+    try {
+      await window.fincontrol.excluirCartao(cartao.id)
+      if (cartaoEditandoId === cartao.id) limparFormularioCartao()
+      if (cartaoId === cartao.id) setCartaoId('')
+      if (cartaoEmFoco === cartao.id) {
+        setCartaoEmFoco('')
+        setFocoVersao((anterior) => anterior + 1)
+      }
+      await atualizar()
+      setAviso('Cartão excluído com sucesso.')
+    } catch (falha) {
+      console.error(falha)
+      setErroFormulario(
+        falha instanceof Error ? falha.message : 'Não foi possível excluir o cartão.'
+      )
+    } finally {
+      setCartaoExcluindoId(null)
+    }
+  }
+
   async function salvarCompra(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (salvando || carregando || erro) return
@@ -291,10 +324,19 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
                   aria-label={`Editar cartão: ${c.nome}`}>
                   <Pencil size={15} /> Editar cartão
                 </button>
+                <button type="button" disabled={salvando || Boolean(cartaoExcluindoId)}
+                  onClick={(): void => { void removerCartao(c) }}
+                  aria-label={`Excluir cartão: ${c.banco} · ${c.nome}`}>
+                  <Trash2 size={15} />
+                  {cartaoExcluindoId === c.id ? 'Excluindo...' : 'Excluir'}
+                </button>
               </div>
             </article>
           ))}
         </div>
+        {!carregando && !erro && cartoes.length === 0 && (
+          <p className="vazio">Nenhum cartão cadastrado até o momento.</p>
+        )}
       </section>
 
       <Feedback mensagem={aviso} tipo="sucesso" />
