@@ -1,3 +1,4 @@
+import { ehCategoriaSalario } from './regrasFinanceiras'
 import { app } from 'electron'
 import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync } from 'node:fs'
@@ -117,7 +118,7 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
     throw new Error('Tipo inválido.')
   }
 
-  if (typeof dados.categoria !== 'string' || !dados.categoria.trim()) {
+  if (typeof dados.categoria !== 'string' || !dados.categoria.trim() || dados.categoria.length > 100) {
     throw new Error('Categoria inválida.')
   }
 
@@ -133,7 +134,7 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
   const contaId = validarContaId(dados.contaId)
   // Não registrar manualmente um segundo salário na mesma competência quando
   // a recorrência já gerou aquele recebimento na conta.
-  if (dados.tipo === 'receita' && dados.categoria.toLowerCase() === 'salário') {
+  if (dados.tipo === 'receita' && ehCategoriaSalario(dados.categoria)) {
     const duplicado = obterBanco().prepare(`
       SELECT 1 FROM salarios_lancamentos sl
       JOIN transacoes t ON t.id = sl.transacao_id
@@ -245,7 +246,7 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
   }
   // A proteção de salário duplicado também precisa valer na edição. Do contrário,
   // uma despesa/receita comum poderia ser convertida em salário já recebido.
-  if (dados.tipo === 'receita' && dados.categoria.trim().toLocaleLowerCase('pt-BR') === 'salário') {
+  if (dados.tipo === 'receita' && ehCategoriaSalario(dados.categoria)) {
     const duplicado = banco.prepare(`
       SELECT 1 FROM salarios_lancamentos sl
       JOIN transacoes t ON t.id = sl.transacao_id
