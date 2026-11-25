@@ -15,7 +15,7 @@ export function interpretarBrapi(json: unknown, codigo: string): Cotacao {
 export function interpretarPtax(json: unknown): Cotacao {
   const dados = registro(json).value
   if (!Array.isArray(dados)) throw new Error('PTAX indisponível.')
-  const itens = dados.map(registro).filter(a => a.tipoBoletim === 'Fechamento' && typeof a.dataHoraCotacao === 'string' && typeof a.cotacaoVenda === 'number' && a.cotacaoVenda > 0)
+  const itens = dados.map(registro).filter(a => a.tipoBoletim === 'Fechamento' && typeof a.dataHoraCotacao === 'string' && typeof a.cotacaoVenda === 'number' && Number.isFinite(a.cotacaoVenda) && a.cotacaoVenda > 0)
   itens.sort((a,b) => String(b.dataHoraCotacao).localeCompare(String(a.dataHoraCotacao)))
   const item = itens[0]
   if (!item) throw new Error('PTAX de fechamento indisponível.')

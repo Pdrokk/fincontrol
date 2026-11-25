@@ -146,6 +146,7 @@ declare global {
       sincronizarCotacoes: (forcar?: boolean) => Promise<{ atualizadas: number; falhas: { codigo: string; motivo: string }[] }>
       configurarChaveCotacoes: (chave: string) => Promise<void>
       chaveCotacoesConfigurada: () => Promise<boolean>
+      excluirAtivoInvestimento: (id: string) => Promise<void>
       atualizarQuantidadeMercado: (id: string, quantidade: number) => Promise<void>
       listarInvestimentos: () => Promise<{ posicoes: Posicao[]; movimentos: Movimento[] }>
       atualizarValorAtivo: (id: string, centavos: number) => Promise<void>

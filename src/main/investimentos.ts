@@ -49,6 +49,7 @@ export function cadastrarAtivo(db: DatabaseSync, dados: NovoAtivo): string {
   const quantidade = dados.quantidadeMercado ?? null
   const unidades = quantidade === null ? null : validarQuantidadeMercado(quantidade)
   if (unidades !== null && (valor !== null || !ativoComCotacao(dados.codigo, dados.tipo))) throw new Error('Escolha um ativo da B3 ou USD/EUR para acompanhamento por quantidade.')
+  if (db.prepare('SELECT 1 FROM ativos_investimento WHERE codigo=? AND instituicao=?').get(dados.codigo.trim().toUpperCase(),dados.instituicao.trim())) throw new Error('Este ativo já está cadastrado nesta instituição. Edite a posição existente.')
   const id = randomUUID()
   db.prepare('INSERT INTO ativos_investimento (id,codigo,nome,tipo,instituicao,valor_informado_centavos,quantidade_mercado) VALUES (?,?,?,?,?,?,?)')
     .run(id, dados.codigo.trim().toUpperCase(), dados.nome.trim(), dados.tipo, dados.instituicao.trim(), valor, unidades)
@@ -82,7 +83,7 @@ export function atualizarValorAtivo(db: DatabaseSync, id: string, centavos: numb
 }
 export function atualizarCotacao(db: DatabaseSync, id: string, centavos: number): void {
   if (!inteiro(centavos, 1)) throw new Error('Cotação inválida.')
-  if (!db.prepare('UPDATE ativos_investimento SET cotacao_centavos=? WHERE id=?').run(centavos,id).changes)
+  if (!db.prepare('UPDATE ativos_investimento SET cotacao_centavos=? WHERE id=? AND quantidade_mercado IS NULL AND valor_informado_centavos IS NULL').run(centavos,id).changes)
     throw new Error('Ativo não encontrado.')
 }
 export function registrarOperacao(db: DatabaseSync, dados: Operacao, saldo: (id: string) => number | undefined, hoje: string): void {
@@ -129,18 +130,31 @@ function validarQuantidadeMercado(q: number): number {
   return unidades
 }
 export function valorMercado(q: number, preco: number | null): number | null {
-  if (preco === null) return null
+  if (preco === null || !Number.isFinite(preco) || preco <= 0 || !Number.isFinite(q) || q < 0) return null
   const valor = Math.round(q * preco * 100)
   return Number.isSafeInteger(valor) && valor >= 0 ? valor : null
 }
 export interface Cotacao { preco: number; data: string; fonte: 'BRAPI' | 'BCB PTAX' }
-export function salvarCotacaoMercado(db: DatabaseSync, id: string, cotacao: Cotacao, consultadaEm = new Date().toISOString()): void {
-  if (!Number.isFinite(cotacao.preco) || cotacao.preco <= 0 || cotacao.preco > 1e9 || !Number.isFinite(Date.parse(cotacao.data))) throw new Error('Cotação inválida.')
-  db.prepare('UPDATE ativos_investimento SET preco_mercado=?,cotacao_em=?,consulta_em=?,fonte_cotacao=? WHERE id=? AND quantidade_mercado IS NOT NULL')
-    .run(cotacao.preco,cotacao.data,consultadaEm,cotacao.fonte,id)
+export function salvarCotacaoMercado(db: DatabaseSync, id: string, cotacao: Cotacao, consultadaEm = new Date().toISOString()): boolean {
+  const data = Date.parse(cotacao.data)
+  const consulta = Date.parse(consultadaEm)
+  if (!Number.isFinite(cotacao.preco) || cotacao.preco <= 0 || cotacao.preco > 1e9 || !Number.isFinite(data) || !Number.isFinite(consulta) || data > consulta + 300000 || !['BRAPI','BCB PTAX'].includes(cotacao.fonte)) throw new Error('Cotação inválida.')
+  const atual = db.prepare('SELECT tipo,cotacao_em AS data FROM ativos_investimento WHERE id=? AND quantidade_mercado IS NOT NULL').get(id) as {tipo:string;data:string|null}|undefined
+  if (!atual) return false
+  if (cotacao.fonte !== (atual.tipo === 'Moeda' ? 'BCB PTAX' : 'BRAPI')) throw new Error('Fonte incompatível com o ativo.')
+  if (atual.data && Date.parse(atual.data) > data) return false
+  return Boolean(db.prepare('UPDATE ativos_investimento SET preco_mercado=?,cotacao_em=?,consulta_em=?,fonte_cotacao=? WHERE id=? AND quantidade_mercado IS NOT NULL')
+    .run(cotacao.preco,new Date(data).toISOString(),new Date(consulta).toISOString(),cotacao.fonte,id).changes)
 }
 export function atualizarQuantidadeMercado(db: DatabaseSync, id: string, quantidade: number): void {
   const unidades = validarQuantidadeMercado(quantidade)
   if (!db.prepare('UPDATE ativos_investimento SET quantidade_mercado=? WHERE id=? AND quantidade_mercado IS NOT NULL').run(unidades,id).changes)
     throw new Error('Posição de mercado não encontrada.')
+}
+
+/** Remove somente posições sem operações financeiras, sem alterar o caixa. */
+export function excluirAtivo(db: DatabaseSync, id: string): void {
+  if (typeof id !== 'string' || !id.trim()) throw new Error('Ativo inválido.')
+  if (db.prepare('SELECT 1 FROM movimentos_investimento WHERE ativo_id=? LIMIT 1').get(id)) throw new Error('Este ativo tem operações financeiras. O histórico precisa ser preservado.')
+  if (!db.prepare('DELETE FROM ativos_investimento WHERE id=?').run(id).changes) throw new Error('Ativo não encontrado.')
 }

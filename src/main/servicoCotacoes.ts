@@ -6,9 +6,9 @@ import { consultarCotacao } from './cotacoes'
 import { listarPosicoes, salvarCotacaoMercado } from './investimentos'
 
 const arquivo = (): string => join(app.getPath('userData'), 'cotacoes-chave.bin')
-let chaveSessao = ''
+let chaveSessao: string | null = null
 function chave(): string {
-  if (chaveSessao) return chaveSessao
+  if (chaveSessao !== null) return chaveSessao
   if (process.env.BRAPI_API_KEY) return process.env.BRAPI_API_KEY
   try {
     return safeStorage.isEncryptionAvailable() && existsSync(arquivo()) ? safeStorage.decryptString(readFileSync(arquivo())) : ''
@@ -23,9 +23,8 @@ export function configurarChave(valor: string): void {
     chaveSessao = ''
     return
   }
-  if (safeStorage.isEncryptionAvailable()) {
-    writeFileSync(arquivo(),safeStorage.encryptString(token),{mode:0o600})
-  }
+  if (!safeStorage.isEncryptionAvailable()) throw new Error('Armazenamento seguro indisponível neste dispositivo. A chave não foi salva.')
+  writeFileSync(arquivo(),safeStorage.encryptString(token),{mode:0o600})
   chaveSessao = token
 }
 interface Resultado { atualizadas: number; falhas: { codigo: string; motivo: string }[] }
@@ -35,21 +34,33 @@ async function atualizar(forcar: boolean): Promise<Resultado> {
   const posicoes = listarPosicoes(db).filter(a => a.quantidadeMercado !== null && (forcar || !a.consultaEm || Date.now()-Date.parse(a.consultaEm)>30*60000))
   const resultado: Resultado = {atualizadas:0,falhas:[]}
   const token = chave()
-  const cache = new Map<string, Awaited<ReturnType<typeof consultarCotacao>>>()
+  const grupos = new Map<string, typeof posicoes>()
   for (const a of posicoes) {
-    try {
-      const identificador = a.tipo + ':' + a.codigo
-      let cotacao = cache.get(identificador)
-      if (!cotacao) {
-        cotacao = await consultarCotacao(a.codigo,a.tipo,token)
-        cache.set(identificador,cotacao)
+    const identificador = a.tipo + ':' + a.codigo
+    const grupo = grupos.get(identificador) ?? []
+    grupo.push(a)
+    grupos.set(identificador,grupo)
+  }
+  const fila = [...grupos.values()]
+  async function processar(): Promise<void> {
+    while (fila.length) {
+      const grupo = fila.shift()
+      if (!grupo?.length) continue
+      if (obterBanco() !== db) return
+      const a = grupo[0]
+      try {
+        const cotacao = await consultarCotacao(a.codigo,a.tipo,token)
+        if (obterBanco() !== db) return
+        for (const p of grupo) {
+          if (salvarCotacaoMercado(db,p.id,cotacao)) resultado.atualizadas++
+        }
+      } catch (erro) {
+        const motivo = erro instanceof Error && (erro.message.startsWith('A fonte') || erro.message.startsWith('Limite de')) ? erro.message : 'Não foi possível consultar. Último valor preservado.'
+        resultado.falhas.push({codigo:a.codigo,motivo})
       }
-      salvarCotacaoMercado(db,a.id,cotacao)
-      resultado.atualizadas++
-    } catch (erro) {
-      resultado.falhas.push({codigo:a.codigo,motivo:erro instanceof Error && (erro.message.startsWith('A fonte') || erro.message.startsWith('Limite de')) ? erro.message : 'Não foi possível consultar. Último valor preservado.'})
     }
   }
+  await Promise.all(Array.from({length:Math.min(3,fila.length)},()=>processar()))
   return resultado
 }
 export function sincronizarCotacoes(forcar: boolean): Promise<Resultado> {
