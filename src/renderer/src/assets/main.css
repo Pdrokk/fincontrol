@@ -511,7 +511,7 @@ button:disabled {
   --bg: #f1f5f9;
   --surface: #ffffff;
   --text: #0f172a;
-  --muted: #64748b;
+  --muted: #59677a;
   --border-color: #e2e8f0;
   --sidebar-bg: #0f172a;
   --input-bg: #ffffff;
@@ -2175,9 +2175,15 @@ body::-webkit-scrollbar-corner,
   accent-color: #2563eb;
 }
 @media (prefers-reduced-motion: reduce) {
-  .fincontrol, .fincontrol *, .fincontrol *::before, .fincontrol *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+  /* Mantém feedback de foco/estado; elimina apenas efeitos de deslocamento. */
+  .fincontrol {
+    scroll-behavior: auto;
+  }
+  .fincontrol :is(.sidebar, .sidebar button, .cartao-conta, .grafico-card) {
+    animation: none !important;
+    transition: none !important;
+  }
+  .fincontrol * {
     scroll-behavior: auto !important;
   }
 }
@@ -2188,4 +2194,54 @@ body::-webkit-scrollbar-corner,
   .fincontrol :is(input, select, textarea, button):focus-visible {
     outline-color: Highlight;
   }
+}
+
+/* Impeccable audit v1.1 — alvos e leitura dos dados financeiros. */
+.fincontrol .historico-paginacao button,
+.fincontrol .historico-controles select,
+.fincontrol .central-filtro-cartao select {
+  min-height: 44px;
+}
+.fincontrol .graficos-dados {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+.fincontrol .graficos-dados summary {
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.fincontrol .graficos-dados summary:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 3px;
+}
+.fincontrol .graficos-dados-tabela {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.fincontrol .graficos-dados table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.fincontrol .graficos-dados th,
+.fincontrol .graficos-dados td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+.fincontrol .graficos-dados th {
+  color: var(--text);
+  font-weight: 600;
+}
+.fincontrol .graficos-dados td {
+  color: var(--text);
+}
+.fincontrol .graficos-dados td:not(:first-child),
+.fincontrol .graficos-dados th:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
 }
