@@ -106,6 +106,7 @@ const fincontrolAPI = {
   }): Promise<unknown> => ipcRenderer.invoke('contas:cadastrar', dados),
 
   listarCartoes: (): Promise<unknown> => ipcRenderer.invoke('cartoes:listar'),
+  excluirCartao: (id: string): Promise<boolean> => ipcRenderer.invoke('cartoes:excluir', id),
   atualizarCartao: (id: string, dados: {
     contaId: string | null
     nome: string

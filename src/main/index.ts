@@ -27,7 +27,7 @@ import { criarTabelaSalarios, listarSalarios, cadastrarSalario, desativarSalario
 import type { NovoSalarioRecorrente } from './salarios'
 
 import type { NovaTransacao } from './database'
-import { criarTabelasCartoes, listarCartoes, cadastrarCartao, atualizarCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, listarDespesasCartaoRealizadas, pagarFatura } from './cartoes'
+import { criarTabelasCartoes, listarCartoes, cadastrarCartao, atualizarCartao, excluirCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, listarDespesasCartaoRealizadas, pagarFatura } from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
 import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela, estornarPagamento, listarEstornosPagamentos } from './cartoes'
 import type { NovoEstornoPagamento } from './cartoes'
@@ -520,6 +520,7 @@ app.whenReady().then(() => {
   ipcMain.handle('cartoes:listar', () => listarCartoes())
   ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
   ipcMain.handle('cartoes:atualizar', (_evento, id: string, dados: NovoCartao) => atualizarCartao(id, dados))
+  ipcMain.handle('cartoes:excluir', (_evento, id: string) => { excluirCartao(id); return true })
   ipcMain.handle('compras-cartao:listar', () => listarCompras())
   ipcMain.handle('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
   ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
