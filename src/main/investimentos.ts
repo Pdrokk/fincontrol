@@ -247,11 +247,11 @@ export function registrarObservacaoCarteira(db: DatabaseSync, data: string, posi
   } catch (erro) { db.exec('ROLLBACK'); throw erro }
 }
 export function listarEvolucaoPatrimonio(db: DatabaseSync): ObservacaoPatrimonio[] {
-  return db.prepare(`SELECT data,valor_centavos AS valorCentavos,conhecido_centavos AS conhecidoCentavos,sem_cotacao AS semCotacao
-    FROM (SELECT * FROM historico_patrimonio_invest ORDER BY data DESC LIMIT 730) ORDER BY data`).all() as unknown as ObservacaoPatrimonio[]
+  return (db.prepare(`SELECT data,valor_centavos AS valorCentavos,conhecido_centavos AS conhecidoCentavos,sem_cotacao AS semCotacao
+    FROM (SELECT * FROM historico_patrimonio_invest ORDER BY data DESC LIMIT 730) ORDER BY data`).all() as unknown as ObservacaoPatrimonio[]).map(linha => ({ ...linha }))
 }
 export function listarHistoricoCotacoes(db: DatabaseSync, id: string): ObservacaoCotacao[] {
   if (typeof id!=='string'||!id.trim()||id.length>100) throw new Error('Ativo inválido.')
-  return db.prepare(`SELECT data,preco,fonte,observado_em AS observadoEm FROM
-    (SELECT * FROM historico_cotacoes_invest WHERE ativo_id=? ORDER BY data DESC LIMIT 730) ORDER BY data`).all(id) as unknown as ObservacaoCotacao[]
+  return (db.prepare(`SELECT data,preco,fonte,observado_em AS observadoEm FROM
+    (SELECT * FROM historico_cotacoes_invest WHERE ativo_id=? ORDER BY data DESC LIMIT 730) ORDER BY data`).all(id) as unknown as ObservacaoCotacao[]).map(linha => ({ ...linha }))
 }
