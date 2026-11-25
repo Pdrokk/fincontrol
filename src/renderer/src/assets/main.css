@@ -2568,3 +2568,63 @@ body::-webkit-scrollbar-corner,
 @media(max-width:900px){.carteira-balanco{grid-template-columns:1fr}.carteira-v3 .carteira-painel{padding:16px}}
 
 .carteira-acoes-linha { display:flex; justify-content:flex-end; align-items:center; gap:6px; }
+
+/* Polish 1.3.2: o botão secundário pertence ao mesmo sistema visual do FinControl. */
+.fincontrol .botao-secundario {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.25;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.fincontrol .botao-secundario:hover:not(:disabled) { background: var(--bg); border-color: #60a5fa; }
+.fincontrol .botao-secundario:active:not(:disabled) { background: var(--surface); }
+.fincontrol .botao-secundario:disabled { opacity: .48; cursor: not-allowed; }
+.fincontrol .carteira-editar { width: 44px; padding: 8px; flex: 0 0 44px; }
+.fincontrol .carteira-remover:hover:not(:disabled) { color: #b91c1c; border-color: #dc2626; }
+.fincontrol[data-theme='dark'] .carteira-remover:hover:not(:disabled) { color: #fca5a5; border-color: #f87171; }
+.carteira-v3 { --ativo-cor: #64748b; }
+.carteira-v3 [data-categoria='Ação'] { --ativo-cor: #2563eb; }
+.carteira-v3 [data-categoria='ETF'] { --ativo-cor: #7c3aed; }
+.carteira-v3 [data-categoria='FII'] { --ativo-cor: #0f766e; }
+.carteira-v3 [data-categoria='Moeda'] { --ativo-cor: #a16207; }
+.carteira-v3 [data-categoria='Cripto'] { --ativo-cor: #c2410c; }
+.carteira-v3 [data-categoria='Renda fixa'] { --ativo-cor: #15803d; }
+.carteira-v3 [data-categoria='Outro'] { --ativo-cor: #64748b; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Ação'] { --ativo-cor: #60a5fa; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='ETF'] { --ativo-cor: #a78bfa; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='FII'] { --ativo-cor: #2dd4bf; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Moeda'] { --ativo-cor: #fbbf24; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Cripto'] { --ativo-cor: #fb923c; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Renda fixa'] { --ativo-cor: #4ade80; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Outro'] { --ativo-cor: #94a3b8; }
+.carteira-categoria-rotulo { display: flex; align-items: center; gap: 7px; }
+.carteira-categoria-rotulo i { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--ativo-cor); }
+.carteira-categoria .invest-barra > span { background: var(--ativo-cor); }
+.carteira-icone-ativo { display: inline-grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 9px; color: var(--ativo-cor); background: color-mix(in srgb, var(--ativo-cor) 12%, var(--surface)); }
+.carteira-filtro { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 20px; padding: 12px 0 4px; }
+.carteira-filtro h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.carteira-filtro h4 span { margin-left: 6px; color: var(--muted); font-weight: 400; }
+.carteira-filtro-zeradas { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.carteira-filtro-zeradas input { width: 17px; height: 17px; accent-color: #2563eb; margin: 0; }
+.carteira-notificacoes { position: fixed; z-index: 30; right: 24px; bottom: 24px; width: min(360px, calc(100vw - 48px)); display: grid; gap: 8px; pointer-events: none; }
+.carteira-toast { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--surface); color: var(--text); box-shadow: 0 5px 18px #00000022; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.carteira-toast svg { flex-shrink: 0; color: #15803d; }
+.fincontrol[data-theme='dark'] .carteira-toast svg { color: #4ade80; }
+.carteira-aviso { display: flex; align-items: center; gap: 8px; }
+.carteira-aviso .fincontrol-feedback { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 750px) {
+  .carteira-notificacoes { right: 12px; bottom: 12px; width: min(360px, calc(100vw - 24px)); }
+  .carteira-acoes { width: 100%; }
+  .carteira-acoes button { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) { .fincontrol .botao-secundario { transition: none; } }
