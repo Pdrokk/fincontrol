@@ -310,7 +310,7 @@ function App(): React.JSX.Element {
   const contasPorId = useMemo(() => new Map(contas.map((conta) => [conta.id, conta])), [contas])
   const buscaAdiada = useDeferredValue(busca)
   const buscaNormalizada = buscaAdiada.trim().toLocaleLowerCase('pt-BR')
-  const indicePesquisa = useMemo(() => new Map(transacoes.map((t) => {
+  const indicePesquisa = useMemo(() => new Map<string, string>(transacoes.map((t) => {
     const conta = contasPorId.get(t.contaId ?? '')
     return [t.id, [t.descricao, t.categoria, conta?.nome, conta?.banco]
       .filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')]
