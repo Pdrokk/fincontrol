@@ -747,7 +747,7 @@ function App(): React.JSX.Element {
             />
 
             <section className="painel">
-              <h3>Resumo financeiro por competência</h3>
+              <h3>Resumo financeiro realizado do período</h3>
 
               <p>Receitas: {formatarMoeda(totalReceitas)}</p>
 
