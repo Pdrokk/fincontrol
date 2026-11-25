@@ -154,6 +154,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
     if (!window.confirm(
       `Confirmar pagamento de ${escolhidas.length} parcela(s), total ${moeda(valorEscolhido)}, usando ${conta.nome}?`
     )) return
+    let confirmado = false
     try {
       setSalvando(true)
       await window.fincontrol.pagarParcelasSelecionadas({
@@ -161,6 +162,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         contaId,
         dataPagamento
       })
+      confirmado = true
       await carregar()
       setMensagem('Pagamento registrado com sucesso. Saldos e limite atualizados.')
     } catch (falha) {
@@ -169,7 +171,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
     } finally {
       setSalvando(false)
     }
-    if (onPagamento) {
+    if (confirmado && onPagamento) {
       try {
         await onPagamento()
       } catch (falha) {
@@ -196,6 +198,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
     if (!window.confirm(
       `Estornar ${moeda(valor)}? O valor voltará à conta pagadora e o limite disponível do cartão será reduzido. ${parcela.pagamentoTipo === 'fatura' ? 'Isso estornará toda a fatura.' : 'Isso estornará esta parcela.'}`
     )) return
+    let estornoConfirmado = false
     try {
       setSalvando(true)
       await window.fincontrol.estornarPagamento({
@@ -203,6 +206,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         tipo: parcela.pagamentoTipo,
         motivo: motivo.trim()
       })
+      estornoConfirmado = true
       await carregar()
       setMensagem('Estorno registrado. O saldo retornou à conta e o limite foi recalculado.')
     } catch (falha) {
@@ -211,7 +215,7 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
     } finally {
       setSalvando(false)
     }
-    if (onPagamento) {
+    if (estornoConfirmado && onPagamento) {
       try {
         await onPagamento()
       } catch (falha) {
