@@ -35,3 +35,20 @@ test('HTTP 401 e 429 geram erros claros, sem retornar preço zero',async()=>{
     await assert.rejects(consultarCotacao('PETR4','Ação','',fake))
   }
 })
+
+test('falha de rede, resposta malformada e timeout não produzem cotação',async()=>{
+  const rede:typeof fetch=async()=>{throw new Error('offline')}
+  const invalida:typeof fetch=async()=>new Response('não é JSON',{status:200})
+  const timeout:typeof fetch=async()=>{throw new DOMException('Timeout','TimeoutError')}
+  for(const fake of [rede,invalida,timeout]) await assert.rejects(consultarCotacao('PETR4','Ação','',fake))
+})
+test('PTAX não envia token BRAPI ao Banco Central',async()=>{
+  const fake:typeof fetch=async(input,init)=>{
+    const u=new URL(String(input))
+    assert.equal(u.hostname,'olinda.bcb.gov.br')
+    assert.equal(u.searchParams.get('@moeda'),"'USD'")
+    assert.equal(new Headers(init?.headers).has('Authorization'),false)
+    return new Response(JSON.stringify({value:[{tipoBoletim:'Fechamento',dataHoraCotacao:'2026-11-24 13:00:00.000',cotacaoVenda:5.1234}]}),{status:200})
+  }
+  assert.equal((await consultarCotacao('USD','Moeda','segredo',fake)).preco,5.1234)
+})

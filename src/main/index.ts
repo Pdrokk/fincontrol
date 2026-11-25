@@ -1,6 +1,6 @@
 import { sincronizarCotacoes, configurarChave, chaveConfigurada } from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdtempSync } from 'node:fs'
@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.3.0')) {
+          if (!document.body.textContent?.includes('Versão 1.3.1')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -266,6 +266,22 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await window.fincontrol.atualizarValorAtivo(idPatrimonio,6000);
       if ((await window.fincontrol.listarInvestimentos()).posicoes.find(a => a.id === idPatrimonio)?.valorAtualCentavos !== 6000) throw new Error('Valor patrimonial incorreto.');
       if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes) throw new Error('Acompanhamento não deve movimentar saldo.');
+      botaoPagina('Investimentos')?.click();
+      await dormir(400);
+      const removerAtivo = document.querySelector('button[aria-label="Remover USD"]');
+      if (!removerAtivo) throw new Error('Remoção de posição sem histórico ausente.');
+      removerAtivo.click();
+      await dormir(150);
+      if (!document.querySelector('.fc-dialogo[open]')) throw new Error('Confirmação de remoção ausente.');
+      document.querySelector('.fc-dialogo .fc-cancelar').click();
+      await dormir(100);
+      if (!(await window.fincontrol.listarInvestimentos()).posicoes.some(a=>a.id===idPatrimonio)) throw new Error('Cancelamento removeu ativo.');
+      removerAtivo.click();
+      await dormir(150);
+      document.querySelector('.fc-dialogo .fc-confirmar').click();
+      await dormir(450);
+      if ((await window.fincontrol.listarInvestimentos()).posicoes.some(a=>a.id===idPatrimonio)) throw new Error('Ativo não foi removido.');
+      if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes) throw new Error('Remoção alterou o caixa.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);
       botaoPagina('Transações')?.click();
@@ -557,6 +573,7 @@ app.whenReady().then(() => {
   ipcMain.handle('investimentos:sincronizar', (_evento, forcar: boolean) => sincronizarCotacoes(forcar === true))
   ipcMain.handle('investimentos:chave', (_evento, chave: string) => configurarChave(chave))
   ipcMain.handle('investimentos:chave-configurada', () => chaveConfigurada())
+  ipcMain.handle('investimentos:excluir', (_evento, id: string) => excluirAtivo(obterBanco(), id))
   ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
   ipcMain.handle('investimentos:listar', () => ({ posicoes: listarPosicoes(obterBanco()), movimentos: listarMovimentos(obterBanco()) }))
   ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))

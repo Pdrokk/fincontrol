@@ -2566,3 +2566,5 @@ body::-webkit-scrollbar-corner,
 .carteira-vazia { display:grid; justify-items:center; gap:8px; padding:42px 12px; text-align:center; color:var(--muted); }
 .carteira-vazia strong { color:var(--text); }
 @media(max-width:900px){.carteira-balanco{grid-template-columns:1fr}.carteira-v3 .carteira-painel{padding:16px}}
+
+.carteira-acoes-linha { display:flex; justify-content:flex-end; align-items:center; gap:6px; }

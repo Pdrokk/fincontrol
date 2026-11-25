@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, salvarCotacaoMercado, atualizarQuantidadeMercado, type Operacao } from '../src/main/investimentos.ts'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, registrarOperacao, salvarCotacaoMercado, atualizarQuantidadeMercado, excluirAtivo, valorMercado, type Operacao } from '../src/main/investimentos.ts'
 
 function ambiente(): { db: DatabaseSync; id: string; saldo: () => number; operar: (dados: Partial<Operacao>) => void } {
   const db = new DatabaseSync(':memory:')
@@ -91,4 +91,34 @@ test('posição acompanhada por quantidade, cache de cotação e edição não a
     assert.throws(()=>cadastrarAtivo(db,{codigo:'^BVSP',nome:'Índice',tipo:'ETF',instituicao:'',quantidadeMercado:10}))
     assert.throws(()=>cadastrarAtivo(db,{codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',quantidadeMercado:10,valorInformadoCentavos:100}))
   } finally { db.close() }
+})
+
+test('cotação antiga, inválida ou de fonte incorreta não sobrescreve cache',()=>{
+  const {db,saldo}=ambiente()
+  try {
+    const id=cadastrarAtivo(db,{codigo:'PETR4',nome:'PETR4',tipo:'Ação',instituicao:'',quantidadeMercado:10})
+    const data='2026-11-25T12:00:00Z', consulta='2026-11-25T12:05:00Z'
+    assert.equal(salvarCotacaoMercado(db,id,{preco:32.15,data,fonte:'BRAPI'},consulta),true)
+    assert.equal(salvarCotacaoMercado(db,id,{preco:1,data:'2026-11-24T12:00:00Z',fonte:'BRAPI'},consulta),false)
+    for(const preco of [NaN,Infinity,-1,0]) assert.throws(()=>salvarCotacaoMercado(db,id,{preco,data,fonte:'BRAPI'},consulta))
+    assert.throws(()=>salvarCotacaoMercado(db,id,{preco:1,data:'2026-12-01T12:00:00Z',fonte:'BRAPI'},consulta))
+    assert.throws(()=>salvarCotacaoMercado(db,id,{preco:1,data,fonte:'BCB PTAX'},consulta))
+    assert.equal(listarPosicoes(db).find(a=>a.id===id)?.valorAtualCentavos,32150)
+    assert.equal(valorMercado(10,NaN),null)
+    assert.equal(saldo(),100000)
+  } finally {db.close()}
+})
+test('exclusão de posição sem histórico preserva saldos e bloqueia perda de operações',()=>{
+  const {db,id,saldo,operar}=ambiente()
+  try {
+    operar({})
+    const caixa=saldo()
+    assert.throws(()=>excluirAtivo(db,id),/histórico/)
+    const novo=cadastrarAtivo(db,{codigo:'USD',nome:'Dólar',tipo:'Moeda',instituicao:'',quantidadeMercado:50})
+    excluirAtivo(db,novo)
+    assert.equal(salvarCotacaoMercado(db,novo,{preco:5,data:'2026-11-25T12:00:00Z',fonte:'BCB PTAX'},'2026-11-25T12:05:00Z'),false)
+    assert.throws(()=>excluirAtivo(db,novo))
+    assert.equal(saldo(),caixa)
+    assert.equal(listarMovimentos(db).length,1)
+  } finally {db.close()}
 })
