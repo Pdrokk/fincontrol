@@ -24,6 +24,16 @@ export function criarTabelasInvestimentos(db: DatabaseSync): void {
       caixa_centavos INTEGER NOT NULL, custo_baixado_centavos INTEGER NOT NULL,
       data TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS historico_patrimonio_invest (
+      data TEXT PRIMARY KEY, valor_centavos INTEGER, sem_cotacao INTEGER NOT NULL,
+      conhecido_centavos INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS historico_cotacoes_invest (
+      ativo_id TEXT NOT NULL REFERENCES ativos_investimento(id) ON DELETE CASCADE,
+      data TEXT NOT NULL, preco REAL NOT NULL CHECK(preco>0),
+      fonte TEXT NOT NULL, observado_em TEXT NOT NULL,
+      PRIMARY KEY(ativo_id,data)
+    );
     CREATE INDEX IF NOT EXISTS idx_invest_ativo ON movimentos_investimento(ativo_id, data);
     CREATE INDEX IF NOT EXISTS idx_invest_conta ON movimentos_investimento(conta_id, data);
   `)
@@ -198,4 +208,50 @@ export function excluirAtivo(db: DatabaseSync, id: string): void {
 
 export function reativarAtivo(db: DatabaseSync, id: string): void {
   if (!db.prepare('UPDATE ativos_investimento SET arquivado=0 WHERE id=? AND arquivado=1').run(id).changes) throw new Error('Ativo arquivado não encontrado.')
+}
+
+export interface ObservacaoPatrimonio { data: string; valorCentavos: number | null; conhecidoCentavos: number; semCotacao: number }
+export interface ObservacaoCotacao { data: string; preco: number; fonte: string; observadoEm: string }
+
+/** Uma observação por dia de uso. Não reconstrói o passado com preços atuais. */
+export function registrarObservacaoCarteira(db: DatabaseSync, data: string, posicoes = listarPosicoes(db)): void {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || !Number.isFinite(Date.parse(data)) || new Date(data).toISOString().slice(0,10)!==data) throw new Error('Data de observação inválida.')
+  const ativas = posicoes.filter(a=>!a.arquivado)
+  const semCotacao = ativas.filter(a=>a.valorAtualCentavos===null).length
+  const conhecido = ativas.reduce((n,a)=>n+(a.valorAtualCentavos??0),0)
+  if (!Number.isSafeInteger(conhecido) || conhecido<0) return
+  const anterior = db.prepare('SELECT 1 FROM historico_patrimonio_invest LIMIT 1').get()
+  if (!ativas.length && !anterior) return
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    db.prepare(`INSERT INTO historico_patrimonio_invest(data,valor_centavos,sem_cotacao,conhecido_centavos)
+      VALUES(?,?,?,?) ON CONFLICT(data) DO UPDATE SET valor_centavos=excluded.valor_centavos,
+      sem_cotacao=excluded.sem_cotacao,conhecido_centavos=excluded.conhecido_centavos`)
+      .run(data,semCotacao?null:conhecido,semCotacao,conhecido)
+    const inserir=db.prepare(`INSERT INTO historico_cotacoes_invest(ativo_id,data,preco,fonte,observado_em)
+      VALUES(?,?,?,?,?) ON CONFLICT(ativo_id,data) DO UPDATE SET preco=excluded.preco,
+      fonte=excluded.fonte,observado_em=excluded.observado_em
+      WHERE excluded.observado_em>=historico_cotacoes_invest.observado_em`)
+    for (const a of ativas) {
+      if (a.valorInformadoCentavos!==null) continue
+      if (a.quantidadeMercado!==null) {
+        if (a.precoMercado!==null && Number.isFinite(a.precoMercado) && a.precoMercado>0 && a.cotacaoEm && a.fonteCotacao && Number.isFinite(Date.parse(a.cotacaoEm))) {
+          const instante=new Date(a.cotacaoEm).toISOString()
+          inserir.run(a.id,instante.slice(0,10),a.precoMercado,a.fonteCotacao,instante)
+        }
+      } else if (a.cotacaoCentavos!==null && a.cotacaoCentavos>0) {
+        inserir.run(a.id,data,a.cotacaoCentavos/100,'Manual',new Date().toISOString())
+      }
+    }
+    db.exec('COMMIT')
+  } catch (erro) { db.exec('ROLLBACK'); throw erro }
+}
+export function listarEvolucaoPatrimonio(db: DatabaseSync): ObservacaoPatrimonio[] {
+  return db.prepare(`SELECT data,valor_centavos AS valorCentavos,conhecido_centavos AS conhecidoCentavos,sem_cotacao AS semCotacao
+    FROM (SELECT * FROM historico_patrimonio_invest ORDER BY data DESC LIMIT 730) ORDER BY data`).all() as unknown as ObservacaoPatrimonio[]
+}
+export function listarHistoricoCotacoes(db: DatabaseSync, id: string): ObservacaoCotacao[] {
+  if (typeof id!=='string'||!id.trim()||id.length>100) throw new Error('Ativo inválido.')
+  return db.prepare(`SELECT data,preco,fonte,observado_em AS observadoEm FROM
+    (SELECT * FROM historico_cotacoes_invest WHERE ativo_id=? ORDER BY data DESC LIMIT 730) ORDER BY data`).all(id) as unknown as ObservacaoCotacao[]
 }

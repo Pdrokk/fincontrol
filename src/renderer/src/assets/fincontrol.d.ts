@@ -1,4 +1,4 @@
-import type { NovoAtivo, Operacao, Posicao, Movimento } from '../../../main/investimentos'
+import type { NovoAtivo, Operacao, Posicao, Movimento, ObservacaoPatrimonio, ObservacaoCotacao } from '../../../main/investimentos'
 export {}
 
 type TipoFinanceiro = 'receita' | 'despesa'
@@ -149,7 +149,9 @@ declare global {
       reativarAtivoInvestimento: (id: string) => Promise<void>
       excluirAtivoInvestimento: (id: string) => Promise<void>
       atualizarQuantidadeMercado: (id: string, quantidade: number) => Promise<void>
-      listarInvestimentos: () => Promise<{ posicoes: Posicao[]; movimentos: Movimento[] }>
+      listarHistoricoCotacoes: (id: string) => Promise<ObservacaoCotacao[]>
+      abrirFonteInvestimento: (fonte: 'cvm' | 'sec' | 'bcb') => Promise<void>
+      listarInvestimentos: () => Promise<{ posicoes: Posicao[]; movimentos: Movimento[]; evolucao: ObservacaoPatrimonio[] }>
       atualizarValorAtivo: (id: string, centavos: number) => Promise<void>
       cadastrarAtivo: (dados: NovoAtivo) => Promise<string>
       atualizarCotacao: (id: string, centavos: number) => Promise<void>
