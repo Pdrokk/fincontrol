@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
 import DashboardResumo from './components/DashboardResumo'
 import Feedback from './components/Feedback'
@@ -268,70 +268,74 @@ function App(): React.JSX.Element {
     return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'),
       String(d.getDate()).padStart(2, '0')].join('-')
   })()
-  const transacoesRealizadas: Transacao[] = [...transacoes, ...despesasCartaoPagas]
-    .filter((t) => t.data <= hoje)
-  const pendentes = new Set(parcelasPendentesIds)
-  const transacoesPrevistas: Transacao[] = parcelasCartao.filter((t) => pendentes.has(t.id))
+  const transacoesRealizadas = useMemo(
+    () => [...transacoes, ...despesasCartaoPagas].filter((t) => t.data <= hoje),
+    [transacoes, despesasCartaoPagas, hoje]
+  )
+  const transacoesPrevistas = useMemo(() => {
+    const pendentes = new Set(parcelasPendentesIds)
+    return parcelasCartao.filter((t) => pendentes.has(t.id))
+  }, [parcelasCartao, parcelasPendentesIds])
   const transacoesContabeis = transacoesRealizadas
-  const anosDisponiveis = Array.from(
+  const anosDisponiveis = useMemo(() => Array.from(
     new Set([
       String(new Date().getFullYear()),
       ...transacoesContabeis.map((t) => t.data.slice(0, 4)),
       ...transacoesPrevistas.map((t) => t.data.slice(0, 4))
     ])
-  ).sort((a, b) => b.localeCompare(a))
-
-  function pertencePeriodo(t: Transacao): boolean {
-    const ano = t.data.slice(0, 4)
-    const mes = t.data.slice(5, 7)
-    return (anoFiltro === 'todos' || ano === anoFiltro) &&
-      (mesFiltro === 'todos' || mes === mesFiltro)
-  }
+  ).sort((a, b) => b.localeCompare(a)), [transacoesContabeis, transacoesPrevistas])
 
   const periodoDescricao = mesFiltro !== 'todos'
     ? `${meses[Number(mesFiltro) - 1]} · ${anoFiltro === 'todos' ? 'todos os anos' : anoFiltro}`
     : anoFiltro === 'todos' ? 'Todo o histórico' : `Ano de ${anoFiltro}`
 
-  const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
-  const transacoesBancariasPeriodo = transacoes.filter(pertencePeriodo)
-  const totalReceitas = transacoesPeriodo
-    .filter((t) => t.tipo === 'receita')
-    .reduce((soma, t) => soma + t.valorCentavos, 0)
+  const transacoesPeriodo = useMemo(() => transacoesContabeis.filter((t) => (
+    (anoFiltro === 'todos' || t.data.slice(0, 4) === anoFiltro) &&
+    (mesFiltro === 'todos' || t.data.slice(5, 7) === mesFiltro)
+  )), [transacoesContabeis, anoFiltro, mesFiltro])
+  const transacoesBancariasPeriodo = useMemo(() => transacoes.filter((t) => (
+    (anoFiltro === 'todos' || t.data.slice(0, 4) === anoFiltro) &&
+    (mesFiltro === 'todos' || t.data.slice(5, 7) === mesFiltro)
+  )), [transacoes, anoFiltro, mesFiltro])
+  const { totalReceitas, totalDespesas } = useMemo(() => {
+    let receitas = 0
+    let despesas = 0
+    for (const t of transacoesPeriodo) {
+      if (t.tipo === 'receita') receitas += t.valorCentavos
+      else despesas += t.valorCentavos
+    }
+    return { totalReceitas: receitas, totalDespesas: despesas }
+  }, [transacoesPeriodo])
 
-  const totalDespesas = transacoesPeriodo
-    .filter((t) => t.tipo === 'despesa')
-    .reduce((soma, t) => soma + t.valorCentavos, 0)
-
-  const contasPorId = new Map(contas.map((conta) => [conta.id, conta]))
-  const buscaNormalizada = busca.trim().toLocaleLowerCase('pt-BR')
-  const transacoesFiltradas = transacoesBancariasPeriodo.filter((t) => {
-    const correspondeTipo = tipoFiltro === 'todos' || t.tipo === tipoFiltro
-
-    const correspondeCategoria = categoriaFiltro === 'todas' || t.categoria === categoriaFiltro
-
+  const contasPorId = useMemo(() => new Map(contas.map((conta) => [conta.id, conta])), [contas])
+  const buscaAdiada = useDeferredValue(busca)
+  const buscaNormalizada = buscaAdiada.trim().toLocaleLowerCase('pt-BR')
+  const indicePesquisa = useMemo(() => new Map<string, string>(transacoes.map((t) => {
     const conta = contasPorId.get(t.contaId ?? '')
-    const textoPesquisa = [t.descricao, t.categoria, conta?.nome, conta?.banco]
-      .filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
-    const correspondeBusca = textoPesquisa.includes(buscaNormalizada)
-
-    return correspondeTipo && correspondeCategoria && correspondeBusca
-  })
+    return [t.id, [t.descricao, t.categoria, conta?.nome, conta?.banco]
+      .filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')]
+  })), [transacoes, contasPorId])
+  const transacoesFiltradas = useMemo(() => transacoesBancariasPeriodo.filter((t) => (
+    (tipoFiltro === 'todos' || t.tipo === tipoFiltro) &&
+    (categoriaFiltro === 'todas' || t.categoria === categoriaFiltro) &&
+    (!buscaNormalizada || (indicePesquisa.get(t.id) ?? '').includes(buscaNormalizada))
+  )), [transacoesBancariasPeriodo, tipoFiltro, categoriaFiltro, buscaNormalizada, indicePesquisa])
 
   // Categorias históricas e importadas também devem aparecer no filtro e na edição.
-  const categoriasVisiveis = Array.from(new Set([
+  const categoriasVisiveis = useMemo(() => Array.from(new Set([
     ...(tipoFiltro === 'despesa' ? [] : categorias.receita),
     ...(tipoFiltro === 'receita' ? [] : categorias.despesa),
     ...transacoes.filter((t) => tipoFiltro === 'todos' || t.tipo === tipoFiltro)
       .map((t) => t.categoria)
-  ])).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  ])).sort((a, b) => a.localeCompare(b, 'pt-BR')), [transacoes, tipoFiltro])
 
-  const categoriasDoFormulario = Array.from(new Set([
+  const categoriasDoFormulario = useMemo(() => Array.from(new Set([
     ...categorias[tipo],
     ...transacoes.filter((t) => t.tipo === tipo).map((t) => t.categoria),
     ...(categoria && !categorias[tipo].includes(categoria) ? [categoria] : [])
-  ]))
+  ])), [transacoes, tipo, categoria])
 
-  const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => {
+  const transacoesOrdenadas = useMemo(() => [...transacoesFiltradas].sort((a, b) => {
     if (ordenacaoHistorico === 'maior' || ordenacaoHistorico === 'menor') {
       const diferenca = ordenacaoHistorico === 'maior'
         ? b.valorCentavos - a.valorCentavos
@@ -342,22 +346,26 @@ function App(): React.JSX.Element {
       ? a.data.localeCompare(b.data)
       : b.data.localeCompare(a.data)
     return data || a.id.localeCompare(b.id)
-  })
+  }), [transacoesFiltradas, ordenacaoHistorico])
   const totalPaginasHistorico = Math.max(1, Math.ceil(transacoesOrdenadas.length / itensPorPagina))
   const paginaHistoricoAtual = Math.min(paginaHistorico, totalPaginasHistorico - 1)
   const inicioHistorico = paginaHistoricoAtual * itensPorPagina
   const transacoesPagina = transacoesOrdenadas.slice(inicioHistorico, inicioHistorico + itensPorPagina)
+  const transacoesRecentes = useMemo(() => [...transacoesBancariasPeriodo]
+    .sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5), [transacoesBancariasPeriodo])
 
   // Categorias reais vêm das transações, não somente das opções fixas da UI.
-  const totaisCategorias = new Map<string, number>()
-  for (const t of transacoesPeriodo) {
-    if (t.tipo === 'despesa') {
-      totaisCategorias.set(t.categoria, (totaisCategorias.get(t.categoria) ?? 0) + t.valorCentavos)
+  const despesasPorCategoria = useMemo(() => {
+    const totais = new Map<string, number>()
+    for (const t of transacoesPeriodo) {
+      if (t.tipo === 'despesa') {
+        totais.set(t.categoria, (totais.get(t.categoria) ?? 0) + t.valorCentavos)
+      }
     }
-  }
-  const despesasPorCategoria = [...totaisCategorias.entries()]
-    .map(([nome, total]) => ({ nome, total }))
-    .sort((a, b) => b.total - a.total)
+    return [...totais.entries()]
+      .map(([nome, total]) => ({ nome, total }))
+      .sort((a, b) => b.total - a.total)
+  }, [transacoesPeriodo])
 
   useEffect(() => {
     let ativo = true
@@ -672,9 +680,7 @@ function App(): React.JSX.Element {
             previsoes={transacoesPrevistas}
             filtroMes={mesFiltro}
             filtroAno={anoFiltro}
-            transacoesRecentes={[...transacoesBancariasPeriodo]
-              .sort((a, b) => b.data.localeCompare(a.data))
-              .slice(0, 5)}
+            transacoesRecentes={transacoesRecentes}
             faturas={faturasPrevistas}
             onPagamentos={(): void => setPagina('cartoes')}
             onTransacoes={(): void => setPagina('transacoes')}

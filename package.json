@@ -19,7 +19,7 @@
     "build:win": "npm run build && electron-builder --win --publish never",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
-    "test": "node --experimental-strip-types --test tests/regrasFinanceiras.test.ts tests/consistenciaSql.test.ts",
+    "test": "node --experimental-strip-types --test tests/regrasFinanceiras.test.ts tests/consistenciaSql.test.ts tests/performanceHistorico.test.mjs",
     "prebuild:win": "node scripts/gerar-icones.mjs"
   },
   "dependencies": {

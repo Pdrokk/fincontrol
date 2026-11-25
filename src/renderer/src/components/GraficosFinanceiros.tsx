@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import {
   Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
@@ -34,7 +34,7 @@ const rotuloMes = (mes: string): string => {
   return `${nome}/${ano.slice(2)}`
 }
 
-export default function GraficosFinanceiros({
+function GraficosFinanceiros({
   transacoes, previsoes = [], compacto = false, filtroMes = 'todos', filtroAno = 'todos'
 }: Props): React.JSX.Element {
   const [modo, setModo] = useState<'realizado' | 'previsto'>('realizado')
@@ -248,3 +248,6 @@ export default function GraficosFinanceiros({
     </div>
   )
 }
+
+// Só recalcula e redesenha Recharts quando dados ou filtros mudarem.
+export default memo(GraficosFinanceiros)
