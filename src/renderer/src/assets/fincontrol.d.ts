@@ -1,3 +1,4 @@
+import type { NovoAtivo, Operacao, Posicao, Movimento } from '../../../main/investimentos'
 export {}
 
 type TipoFinanceiro = 'receita' | 'despesa'
@@ -141,6 +142,10 @@ interface SalarioRecorrenteFinanceiro {
 declare global {
   interface Window {
     fincontrol: {
+      listarInvestimentos: () => Promise<{ posicoes: Posicao[]; movimentos: Movimento[] }>
+      cadastrarAtivo: (dados: NovoAtivo) => Promise<string>
+      atualizarCotacao: (id: string, centavos: number) => Promise<void>
+      registrarInvestimento: (dados: Operacao) => Promise<void>
       exportarBackup: () => Promise<string | null>
       restaurarBackup: () => Promise<boolean>
       estornarPagamento: (dados: {

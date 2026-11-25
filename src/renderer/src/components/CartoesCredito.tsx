@@ -1,3 +1,4 @@
+import IconeBanco from './IconeBanco'
 import { useEffect, useState } from 'react'
 import { CreditCard, Plus, Pencil, Trash2 } from 'lucide-react'
 import Feedback from './Feedback'
@@ -304,7 +305,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
         <div className="grade-contas">
           {cartoes.map((c) => (
             <article className="cartao-conta" key={c.id} style={{ background: gradienteBanco(c.banco) }}>
-              <div className="cartao-conta-topo"><CreditCard size={24} /><strong>{c.banco}</strong></div>
+              <div className="cartao-conta-topo"><IconeBanco banco={c.banco} /><strong>{c.banco}</strong></div>
               <span>{c.nome}</span>
               <h3>Disponível: {moeda(c.limiteDisponivelCentavos)}</h3>
               <p>Limite contratado: {moeda(c.limiteCentavos)}</p>

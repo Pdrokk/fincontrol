@@ -1,3 +1,4 @@
+import IconeBanco from './IconeBanco'
 import { useEffect, useState } from 'react'
 import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
@@ -220,7 +221,7 @@ export default function ContasBancarias(): React.JSX.Element {
             <article className="cartao-conta" key={conta.id} style={{ background: gradienteBanco(conta.banco) }}>
               <div className="cartao-conta-topo">
                 <Wallet size={24} />
-                <strong>{conta.banco}</strong>
+                <strong className="banco-identidade"><IconeBanco banco={conta.banco} />{conta.banco}</strong>
               </div>
               <span>Saldo atual</span>
               <h3>{formatarMoeda(conta.saldoAtualCentavos)}</h3>

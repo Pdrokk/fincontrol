@@ -1,3 +1,4 @@
+import { criarTabelasInvestimentos } from './investimentos'
 import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
@@ -55,6 +56,7 @@ export function executarMigracaoLegadaSmoke(): void {
     criarTabelaContas()
     criarTabelasCartoes()
     criarTabelaSalarios()
+    criarTabelasInvestimentos(obterBanco())
     obterBanco().exec('PRAGMA foreign_keys = ON')
 
     const conta = listarContas().find(c => c.id === 'legado-1')

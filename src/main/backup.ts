@@ -1,3 +1,4 @@
+import { criarTabelasInvestimentos } from './investimentos'
 import { app, dialog } from 'electron'
 import { DatabaseSync, backup } from 'node:sqlite'
 import { copyFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
@@ -12,6 +13,7 @@ function iniciarModelo(): void {
   criarTabelaContas()
   criarTabelasCartoes()
   criarTabelaSalarios()
+  criarTabelasInvestimentos(obterBanco())
   obterBanco().exec('PRAGMA foreign_keys = ON')
   processarSalariosVencidos()
 }
