@@ -1964,3 +1964,14 @@ body::-webkit-scrollbar-corner,
     position: static;
   }
 }
+
+/* Refinamento de legibilidade: contexto do filtro financeiro, em ambos os temas. */
+.fincontrol .filtros-periodo .filtros-aviso {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.fincontrol .filtros-periodo .filtros-aviso strong {
+  color: var(--text);
+  font-weight: 600;
+}

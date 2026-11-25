@@ -67,8 +67,24 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         if (document.body.textContent?.includes('Não foi possível carregar esta tela')) {
           throw new Error('React caiu ao entrar em ' + nome);
         }
-        if (nome === 'Relatórios' && !document.querySelector('.graficos-relatorio')) {
-          throw new Error('Gráficos ausentes na página Relatórios.');
+        if (nome === 'Relatórios') {
+          if (!document.querySelector('.graficos-relatorio')) {
+            throw new Error('Gráficos ausentes na página Relatórios.');
+          }
+          const filtro = document.querySelector('#mesFiltro');
+          if (!filtro) throw new Error('Filtro de mês ausente nos Relatórios.');
+          filtro.value = '01';
+          filtro.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(250);
+          if (!document.querySelector('.filtros-aviso')?.textContent?.includes('Janeiro')) {
+            throw new Error('Resumo do período não acompanhou a seleção do mês.');
+          }
+          if (!document.querySelector('.graficos-explicacao')?.textContent?.includes('mês selecionado')) {
+            throw new Error('Gráficos não acompanharam o mês selecionado.');
+          }
+          filtro.value = 'todos';
+          filtro.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(150);
         }
         if (nome === 'Cartões e faturas') {
           if (!document.querySelector('.central-pagamentos')) {
