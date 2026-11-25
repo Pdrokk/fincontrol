@@ -67,12 +67,62 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         if (document.body.textContent?.includes('Não foi possível carregar esta tela')) {
           throw new Error('React caiu ao entrar em ' + nome);
         }
-        if (nome === 'Relatórios' && !document.querySelector('.graficos-relatorio')) {
-          throw new Error('Gráficos ausentes na página Relatórios.');
+        if (nome === 'Transações') {
+          const ordenacao = document.querySelector('#historico-ordenacao');
+          const tamanho = document.querySelector('#historico-tamanho');
+          const resumo = document.querySelector('.historico-resumo');
+          if (!ordenacao || !tamanho || !resumo) {
+            throw new Error('Controles de histórico ou resumo de resultados ausentes.');
+          }
+          if (ordenacao.options.length !== 4 || tamanho.options.length !== 3) {
+            throw new Error('Ordenação ou tamanho da página não apresentam todas as opções.');
+          }
+          tamanho.value = '30';
+          tamanho.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(150);
+          if (document.querySelector('#historico-tamanho')?.value !== '30') {
+            throw new Error('Alterar o tamanho da página falhou.');
+          }
+          ordenacao.value = 'maior';
+          ordenacao.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(150);
+          if (document.querySelector('#historico-ordenacao')?.value !== 'maior') {
+            throw new Error('Ordenação por maior valor não foi aplicada.');
+          }
+          const pesquisa = document.querySelector('#busca');
+          if (!pesquisa) throw new Error('Busca do histórico ausente.');
+          const valorTransacao = [...document.querySelectorAll('.formulario input')]
+            .find((input) => input.placeholder === '0,00');
+          if (valorTransacao?.type !== 'text' || valorTransacao?.inputMode !== 'decimal') {
+            throw new Error('Campo de valor precisa aceitar vírgula decimal brasileira.');
+          }
+        }
+        if (nome === 'Relatórios') {
+          if (!document.querySelector('.graficos-relatorio')) {
+            throw new Error('Gráficos ausentes na página Relatórios.');
+          }
+          const filtro = document.querySelector('#mesFiltro');
+          if (!filtro) throw new Error('Filtro de mês ausente nos Relatórios.');
+          filtro.value = '01';
+          filtro.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(250);
+          if (!document.querySelector('.filtros-aviso')?.textContent?.includes('Janeiro')) {
+            throw new Error('Resumo do período não acompanhou a seleção do mês.');
+          }
+          if (!document.querySelector('.graficos-explicacao')?.textContent?.includes('mês selecionado')) {
+            throw new Error('Gráficos não acompanharam o mês selecionado.');
+          }
+          filtro.value = 'todos';
+          filtro.dispatchEvent(new Event('change', { bubbles: true }));
+          await dormir(150);
         }
         if (nome === 'Cartões e faturas') {
           if (!document.querySelector('.central-pagamentos')) {
             throw new Error('Central de Pagamentos ausente.');
+          }
+          const filtroCartao = document.querySelector('#central-cartao-filtro');
+          if (!filtroCartao || filtroCartao.options[0]?.textContent !== 'Todos os cartões') {
+            throw new Error('Filtro contextual de cartão ausente ou incorreto.');
           }
           const aba = (texto) => [...document.querySelectorAll('.cartoes-navegacao button')]
             .find((b) => b.textContent?.includes(texto));
@@ -123,7 +173,85 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if (esquema !== depois) {
         throw new Error('Tema nativo do Chromium não acompanhou o React.');
       }
-      return { paginas: verificadas, tema: 'OK', scrollbar: 'OK' };
+      // Exercita paginação com dados de teste exclusivos deste perfil descartável.
+      const contaTeste = await window.fincontrol.cadastrarConta({
+        banco: 'Banco de Teste', nome: 'Conta de testes UI', tipo: 'corrente',
+        cor: '#2563eb', saldoInicialCentavos: 1000000
+      });
+      if (!contaTeste?.id) throw new Error('Conta de teste não foi criada.');
+      const hojeTeste = new Date();
+      const dataTeste = [
+        hojeTeste.getFullYear(),
+        String(hojeTeste.getMonth() + 1).padStart(2, '0'),
+        String(hojeTeste.getDate()).padStart(2, '0')
+      ].join('-');
+      for (let n = 1; n <= 34; n++) {
+        await window.fincontrol.salvarTransacao({
+          descricao: 'Regressão UI ' + n,
+          valorCentavos: n * 100,
+          tipo: 'despesa',
+          categoria: 'Outros',
+          data: dataTeste,
+          contaId: contaTeste.id
+        });
+      }
+      await window.fincontrol.salvarTransacao({
+        descricao: 'Categoria legada importada',
+        valorCentavos: 1599,
+        tipo: 'despesa',
+        categoria: 'Manutenção do veículo',
+        data: dataTeste,
+        contaId: contaTeste.id
+      });
+      const botaoPagina = (nome) => [...document.querySelectorAll('.sidebar nav button')]
+        .find((b) => b.getAttribute('title') === nome);
+      botaoPagina('Visão Geral')?.click();
+      await dormir(350);
+      botaoPagina('Transações')?.click();
+      await dormir(850);
+      const tamanhoTeste = document.querySelector('#historico-tamanho');
+      if (!tamanhoTeste) throw new Error('Paginação desapareceu após recarregar dados.');
+      const categoriasFiltro = document.querySelector('#categoriaFiltro');
+      if (!categoriasFiltro || ![...categoriasFiltro.options]
+        .some((opcao) => opcao.value === 'Manutenção do veículo')) {
+        throw new Error('Categoria importada não aparece no filtro do histórico.');
+      }
+      categoriasFiltro.value = 'Manutenção do veículo';
+      categoriasFiltro.dispatchEvent(new Event('change', { bubbles: true }));
+      await dormir(220);
+      const transacaoLegada = [...document.querySelectorAll('.lista .transacao')]
+        .find((item) => item.textContent?.includes('Categoria legada importada'));
+      if (!transacaoLegada) throw new Error('Filtro por categoria legada não retorna a transação.');
+      const editarLegada = [...transacaoLegada.querySelectorAll('button')]
+        .find((b) => b.textContent?.includes('Editar'));
+      editarLegada?.click();
+      await dormir(180);
+      const categoriaEdicao = [...document.querySelectorAll('.formulario select')]
+        .find((select) => [...select.options].some((op) => op.value === 'Manutenção do veículo'));
+      if (!categoriaEdicao || categoriaEdicao.value !== 'Manutenção do veículo') {
+        throw new Error('Edição não preserva categoria histórica da transação.');
+      }
+      const cancelar = [...document.querySelectorAll('.formulario button')]
+        .find((b) => b.textContent?.includes('Cancelar edição'));
+      cancelar?.click();
+      categoriasFiltro.value = 'todas';
+      categoriasFiltro.dispatchEvent(new Event('change', { bubbles: true }));
+      await dormir(200);
+      tamanhoTeste.value = '15';
+      tamanhoTeste.dispatchEvent(new Event('change', { bubbles: true }));
+      await dormir(300);
+      if (document.querySelectorAll('.lista .transacao').length !== 15) {
+        throw new Error('Histórico não respeita o limite de 15 transações por página.');
+      }
+      const proxima = [...document.querySelectorAll('.historico-paginacao button')]
+        .find((b) => b.textContent?.includes('Próxima'));
+      if (!proxima || proxima.disabled) throw new Error('Próxima página inacessível.');
+      proxima.click();
+      await dormir(250);
+      if (!document.querySelector('.historico-paginacao')?.textContent?.includes('Página 2')) {
+        throw new Error('Histórico não avançou para a segunda página.');
+      }
+      return { paginas: verificadas, tema: 'OK', scrollbar: 'OK', paginacao: 'OK' };
     })()
   `)
   console.info('FINCONTROL_UI_SMOKE_OK:', JSON.stringify(resultado))

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CreditCard, Plus, Pencil } from 'lucide-react'
+import Feedback from './Feedback'
 import { gradienteBanco } from '../utils/coresBancos'
 import CentralPagamentos from './CentralPagamentos'
 
@@ -74,6 +75,10 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [secao, setSecao] = useState<'pagamentos' | 'compras' | 'gerenciar'>('pagamentos')
+  const [cartaoEmFoco, setCartaoEmFoco] = useState('')
+  const [focoVersao, setFocoVersao] = useState(0)
+  const [aviso, setAviso] = useState('')
+  const [erroFormulario, setErroFormulario] = useState('')
 
   const [banco, setBanco] = useState('')
   const [nome, setNome] = useState('')
@@ -134,6 +139,8 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
     setLimite((cartao.limiteCentavos / 100).toFixed(2).replace('.', ','))
     setFechamento(String(cartao.diaFechamento))
     setVencimento(String(cartao.diaVencimento))
+    setErroFormulario('')
+    setAviso('')
     setSecao('gerenciar')
     window.setTimeout(() => document.getElementById('formulario-cartao')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
@@ -149,12 +156,30 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
     setVencimento('5')
   }
 
+  function abrirCompra(cartao: Cartao): void {
+    setCartaoId(cartao.id)
+    setCartaoEmFoco(cartao.id)
+    setErroFormulario('')
+    setAviso('')
+    setSecao('compras')
+  }
+
+  function abrirPagamentos(cartao: Cartao): void {
+    setCartaoEmFoco(cartao.id)
+    setFocoVersao((anterior) => anterior + 1)
+    setErroFormulario('')
+    setAviso('')
+    setSecao('pagamentos')
+  }
+
   async function salvarCartao(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (salvando || carregando || erro) return
+    setErroFormulario('')
+    setAviso('')
     const limiteCentavos = paraCentavos(limite)
     if (limiteCentavos === null) {
-      alert('Informe um limite válido.')
+      setErroFormulario('Informe um limite válido, por exemplo 2500,00.')
       return
     }
     const dados = {
@@ -174,10 +199,11 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
       }
       await atualizar()
       limparFormularioCartao()
+      setAviso('Cartão salvo com sucesso. Os limites foram atualizados.')
       setSecao('pagamentos')
     } catch (falha) {
       console.error(falha)
-      alert(falha instanceof Error ? falha.message : 'Não foi possível salvar o cartão.')
+      setErroFormulario(falha instanceof Error ? falha.message : 'Não foi possível salvar o cartão.')
     } finally {
       setSalvando(false)
     }
@@ -186,9 +212,11 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
   async function salvarCompra(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (salvando || carregando || erro) return
+    setErroFormulario('')
+    setAviso('')
     const valorCentavos = paraCentavos(valor)
     if (valorCentavos === null || valorCentavos <= 0) {
-      alert('Informe um valor de compra válido.')
+      setErroFormulario('Informe um valor de compra maior que zero, por exemplo 150,00.')
       return
     }
     try {
@@ -205,10 +233,11 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
       setDescricao('')
       setValor('')
       setParcelas('1')
+      setAviso('Compra registrada com sucesso. As parcelas já estão na Central de pagamentos.')
       setSecao('pagamentos')
     } catch (falha) {
       console.error(falha)
-      alert(falha instanceof Error ? falha.message : 'Não foi possível cadastrar a compra.')
+      setErroFormulario(falha instanceof Error ? falha.message : 'Não foi possível cadastrar a compra.')
     } finally { setSalvando(false) }
   }
 
@@ -250,6 +279,14 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
               <p>Fechamento: dia {c.diaFechamento} · Vencimento: dia {c.diaVencimento}</p>
               <small>{c.contaId ? 'Conta: ' + (contas.find((x) => x.id === c.contaId)?.nome ?? 'Vinculada') : 'Sem conta para pagamento definida'}</small>
               <div className="acoes-conta">
+                <button type="button" onClick={(): void => abrirPagamentos(c)}
+                  aria-label={`Ver faturas de ${c.nome}`}>
+                  Ver faturas
+                </button>
+                <button type="button" onClick={(): void => abrirCompra(c)}
+                  aria-label={`Registrar compra em ${c.nome}`}>
+                  <Plus size={15} /> Nova compra
+                </button>
                 <button type="button" onClick={(): void => iniciarEdicaoCartao(c)}>
                   <Pencil size={15} /> Editar cartão
                 </button>
@@ -259,18 +296,24 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
         </div>
       </section>
 
+      <Feedback mensagem={aviso} tipo="sucesso" />
+      <Feedback mensagem={erroFormulario} tipo="erro" />
+
       <nav className="cartoes-navegacao" aria-label="Áreas dos cartões">
         <button type="button" className={secao === 'pagamentos' ? 'ativo' : ''}
           aria-pressed={secao === 'pagamentos'}
-          onClick={(): void => setSecao('pagamentos')}>Pagamentos e faturas</button>
+          onClick={(): void => { setErroFormulario(''); setSecao('pagamentos') }}>Pagamentos e faturas</button>
         <button type="button" className={secao === 'compras' ? 'ativo' : ''}
           aria-pressed={secao === 'compras'}
-          onClick={(): void => setSecao('compras')}>Compras e parcelas</button>
+          onClick={(): void => { setErroFormulario(''); setSecao('compras') }}>Compras e parcelas</button>
         <button type="button" className={secao === 'gerenciar' ? 'ativo' : ''}
           aria-pressed={secao === 'gerenciar'}
-          onClick={(): void => setSecao('gerenciar')}>Cadastrar ou editar cartão</button>
+          onClick={(): void => { setErroFormulario(''); setSecao('gerenciar') }}>Cadastrar ou editar cartão</button>
       </nav>
-      {secao === 'pagamentos' && <CentralPagamentos onPagamento={atualizar} />}
+      {secao === 'pagamentos' && (
+        <CentralPagamentos key={`${cartaoEmFoco}:${focoVersao}`} onPagamento={atualizar}
+          cartaoInicialId={cartaoEmFoco} />
+      )}
 
       {secao === 'gerenciar' && (
       <section id="formulario-cartao" className="painel">
@@ -312,6 +355,15 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
       {secao === 'compras' && (<>
       <section className="painel">
         <h3>Registrar compra no cartão</h3>
+        {cartoes.length > 0 && cartaoId && (() => {
+          const selecionado = cartoes.find((c) => c.id === cartaoId)
+          return selecionado ? (
+            <p className="cartoes-contexto">
+              <strong>{selecionado.banco} · {selecionado.nome}</strong>
+              <span>Limite disponível: {moeda(selecionado.limiteDisponivelCentavos)}</span>
+            </p>
+          ) : null
+        })()}
         <form className="formulario" onSubmit={(e): void => { void salvarCompra(e) }}>
           <label>Cartão utilizado
             <select value={cartaoId} onChange={(e): void => setCartaoId(e.target.value)} required>

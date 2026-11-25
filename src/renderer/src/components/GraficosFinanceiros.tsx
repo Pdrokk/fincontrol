@@ -66,9 +66,10 @@ export default function GraficosFinanceiros({
     }
   }
 
-  const totalPaginas = Math.max(1, Math.ceil(meses.length / mesesPagina))
+  const itensPorPagina = filtroMes !== 'todos' ? 1 : filtroAno !== 'todos' ? 12 : mesesPagina
+  const totalPaginas = Math.max(1, Math.ceil(meses.length / itensPorPagina))
   const paginaAtual = Math.max(0, Math.min(pagina ?? totalPaginas - 1, totalPaginas - 1))
-  const visiveis = meses.slice(paginaAtual * mesesPagina, (paginaAtual + 1) * mesesPagina)
+  const visiveis = meses.slice(paginaAtual * itensPorPagina, (paginaAtual + 1) * itensPorPagina)
 
   // Resultado da janela, nunca rotulado como saldo bancário real.
   let resultadoAcumulado = 0
@@ -104,23 +105,23 @@ export default function GraficosFinanceiros({
             onClick={(): void => { setModo('realizado'); setPagina(null) }}>Realizado</button>
           <button type="button" aria-pressed={modo === 'previsto'}
             className={modo === 'previsto' ? 'ativo' : ''}
-            onClick={(): void => { setModo('previsto'); setPagina(0) }}>Previsto</button>
+            onClick={(): void => { setModo('previsto'); setPagina(null) }}>Previsto</button>
         </div>
         <div className="graficos-paginacao">
-          <button type="button" aria-label="Seis meses anteriores" title="Meses anteriores"
+          <button type="button" aria-label="Período anterior" title="Período anterior"
             disabled={paginaAtual === 0}
             onClick={(): void => setPagina(paginaAtual - 1)}><ChevronLeft size={17} /></button>
           <span>{visiveis.length ? `${rotuloMes(visiveis[0])} – ${rotuloMes(visiveis[visiveis.length - 1])}` : 'Sem dados'}</span>
-          <button type="button" aria-label="Próximos seis meses" title="Próximos meses"
+          <button type="button" aria-label="Próximo período" title="Próximo período"
             disabled={paginaAtual >= totalPaginas - 1}
             onClick={(): void => setPagina(paginaAtual + 1)}><ChevronRight size={17} /></button>
         </div>
       </div>
       <p className="graficos-explicacao">
         {filtroMes !== 'todos'
-          ? 'O gráfico está filtrado pelo mês selecionado. '
+          ? 'Os gráficos mostram o mês selecionado. '
           : filtroAno !== 'todos'
-            ? 'O gráfico mostra até seis meses por página do ano selecionado; o mês filtrado vale para os indicadores. '
+            ? 'Os gráficos mostram os meses com movimentações no ano escolhido. '
             : 'Use as setas para navegar pelo histórico de seis em seis meses. '}
         {modo === 'realizado'
           ? 'Somente receitas registradas e despesas efetivamente pagas. Parcelas futuras não entram neste resultado.'
@@ -129,7 +130,7 @@ export default function GraficosFinanceiros({
       <div className="graficos-financeiros">
         <section className="grafico-card">
           <h3>{modo === 'realizado' ? 'Receitas x despesas realizadas' : 'Despesas previstas'}</h3>
-          <p>Janela de até seis meses</p>
+          <p>{filtroMes !== 'todos' ? 'Mês selecionado' : filtroAno !== 'todos' ? 'Ano selecionado' : 'Janela de até seis meses'}</p>
           {dados.length ? (
             <div className="grafico-area">
               <ResponsiveContainer width="100%" height="100%">

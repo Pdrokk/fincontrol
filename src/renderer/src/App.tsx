@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import GraficosFinanceiros from './components/GraficosFinanceiros'
 import DashboardResumo from './components/DashboardResumo'
+import Feedback from './components/Feedback'
 import './assets/main.css'
 import {
   LayoutDashboard,
@@ -109,12 +110,19 @@ function App(): React.JSX.Element {
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
   const [busca, setBusca] = useState('')
+  const [ordenacaoHistorico, setOrdenacaoHistorico] = useState<'recentes' | 'antigas' | 'maior' | 'menor'>('recentes')
+  const [paginaHistorico, setPaginaHistorico] = useState(0)
+  const [itensPorPagina, setItensPorPagina] = useState(15)
 
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [erroBanco, setErroBanco] = useState('')
   const [backupOcupado, setBackupOcupado] = useState(false)
+  const [mensagemOperacao, setMensagemOperacao] = useState('')
+  const [erroOperacao, setErroOperacao] = useState('')
+  const [mensagemBackup, setMensagemBackup] = useState('')
+  const [erroBackup, setErroBackup] = useState('')
 
   const [tema, setTema] = useState<'light' | 'dark'>(() => {
     return localStorage.getItem('fincontrol-tema') === 'dark' ? 'dark' : 'light'
@@ -123,11 +131,13 @@ function App(): React.JSX.Element {
   async function exportarBackupUI(): Promise<void> {
     if (backupOcupado) return
     try {
+      setErroBackup('')
+      setMensagemBackup('')
       setBackupOcupado(true)
       const arquivo = await window.fincontrol.exportarBackup()
-      if (arquivo) alert(`Backup criado: ${arquivo}`)
+      if (arquivo) setMensagemBackup(`Backup criado em: ${arquivo}`)
     } catch (falha) {
-      alert(falha instanceof Error ? falha.message : 'Falha ao exportar backup.')
+      setErroBackup(falha instanceof Error ? falha.message : 'Falha ao exportar backup.')
     } finally {
       setBackupOcupado(false)
     }
@@ -136,11 +146,13 @@ function App(): React.JSX.Element {
   async function restaurarBackupUI(): Promise<void> {
     if (backupOcupado) return
     try {
+      setErroBackup('')
+      setMensagemBackup('')
       setBackupOcupado(true)
       await window.fincontrol.restaurarBackup()
       // O processo principal recarrega esta janela após uma restauração bem-sucedida.
     } catch (falha) {
-      alert(falha instanceof Error ? falha.message : 'Falha ao restaurar backup.')
+      setErroBackup(falha instanceof Error ? falha.message : 'Falha ao restaurar backup.')
     } finally {
       setBackupOcupado(false)
     }
@@ -164,6 +176,7 @@ function App(): React.JSX.Element {
       .then((registros): void => {
         if (ativo) {
           setTransacoes(registros)
+          setErroBanco('')
         }
       })
       .catch((erro: unknown): void => {
@@ -275,6 +288,10 @@ function App(): React.JSX.Element {
       (mesFiltro === 'todos' || mes === mesFiltro)
   }
 
+  const periodoDescricao = mesFiltro !== 'todos'
+    ? `${meses[Number(mesFiltro) - 1]} · ${anoFiltro === 'todos' ? 'todos os anos' : anoFiltro}`
+    : anoFiltro === 'todos' ? 'Todo o histórico' : `Ano de ${anoFiltro}`
+
   const transacoesPeriodo = transacoesContabeis.filter(pertencePeriodo)
   const transacoesBancariasPeriodo = transacoes.filter(pertencePeriodo)
   const totalReceitas = transacoesPeriodo
@@ -290,14 +307,44 @@ function App(): React.JSX.Element {
 
     const correspondeCategoria = categoriaFiltro === 'todas' || t.categoria === categoriaFiltro
 
-    const correspondeBusca = t.descricao
-      .toLocaleLowerCase('pt-BR')
-      .includes(busca.trim().toLocaleLowerCase('pt-BR'))
+    const conta = contas.find((c) => c.id === t.contaId)
+    const textoPesquisa = [t.descricao, t.categoria, conta?.nome, conta?.banco]
+      .filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
+    const correspondeBusca = textoPesquisa.includes(busca.trim().toLocaleLowerCase('pt-BR'))
 
     return correspondeTipo && correspondeCategoria && correspondeBusca
   })
 
-  const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => b.data.localeCompare(a.data))
+  // Categorias históricas e importadas também devem aparecer no filtro e na edição.
+  const categoriasVisiveis = Array.from(new Set([
+    ...(tipoFiltro === 'despesa' ? [] : categorias.receita),
+    ...(tipoFiltro === 'receita' ? [] : categorias.despesa),
+    ...transacoes.filter((t) => tipoFiltro === 'todos' || t.tipo === tipoFiltro)
+      .map((t) => t.categoria)
+  ])).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
+  const categoriasDoFormulario = Array.from(new Set([
+    ...categorias[tipo],
+    ...transacoes.filter((t) => t.tipo === tipo).map((t) => t.categoria),
+    ...(categoria && !categorias[tipo].includes(categoria) ? [categoria] : [])
+  ]))
+
+  const transacoesOrdenadas = [...transacoesFiltradas].sort((a, b) => {
+    if (ordenacaoHistorico === 'maior' || ordenacaoHistorico === 'menor') {
+      const diferenca = ordenacaoHistorico === 'maior'
+        ? b.valorCentavos - a.valorCentavos
+        : a.valorCentavos - b.valorCentavos
+      if (diferenca !== 0) return diferenca
+    }
+    const data = ordenacaoHistorico === 'antigas'
+      ? a.data.localeCompare(b.data)
+      : b.data.localeCompare(a.data)
+    return data || a.id.localeCompare(b.id)
+  })
+  const totalPaginasHistorico = Math.max(1, Math.ceil(transacoesOrdenadas.length / itensPorPagina))
+  const paginaHistoricoAtual = Math.min(paginaHistorico, totalPaginasHistorico - 1)
+  const inicioHistorico = paginaHistoricoAtual * itensPorPagina
+  const transacoesPagina = transacoesOrdenadas.slice(inicioHistorico, inicioHistorico + itensPorPagina)
 
   // Categorias reais vêm das transações, não somente das opções fixas da UI.
   const totaisCategorias = new Map<string, number>()
@@ -369,17 +416,22 @@ function App(): React.JSX.Element {
       return
     }
 
-    const numero = Number(valor.replace(',', '.'))
-    const centavos = Math.round(numero * 100)
+    setErroOperacao('')
+    setMensagemOperacao('')
+    const valorNormalizado = valor.trim()
+    const valorValido = /^\d+([,.]\d{1,2})?$/.test(valorNormalizado)
+    const numero = Number(valorNormalizado.replace(',', '.'))
+    const centavos = valorValido ? Math.round(numero * 100) : 0
 
     if (
       !descricao.trim() ||
+      !valorValido ||
       !Number.isFinite(numero) ||
       !Number.isSafeInteger(centavos) ||
       centavos <= 0 ||
       !data || (!editandoId && !contaId && contas.length === 0)
     ) {
-      alert('Preencha os campos corretamente.')
+      setErroOperacao('Confira a descrição, a conta, a data e o valor. Use até duas casas decimais (ex.: 125,50).')
       return
     }
 
@@ -408,10 +460,11 @@ function App(): React.JSX.Element {
       }
 
       cancelarEdicao()
+      setMensagemOperacao(editandoId ? 'Transação atualizada com sucesso.' : 'Transação registrada com sucesso.')
       setPagina('transacoes')
     } catch (erro) {
       console.error('Erro ao salvar transação:', erro)
-      alert('Não foi possível salvar a transação.')
+      setErroOperacao('Não foi possível salvar a transação. Confira os dados e tente novamente.')
     } finally {
       setSalvando(false)
     }
@@ -426,9 +479,11 @@ function App(): React.JSX.Element {
       await window.fincontrol.removerTransacao(id)
 
       setTransacoes((anteriores) => anteriores.filter((transacao) => transacao.id !== id))
+      setErroOperacao('')
+      setMensagemOperacao('Transação excluída com sucesso.')
     } catch (erro) {
       console.error('Erro ao excluir:', erro)
-      alert('Não foi possível excluir a transação.')
+      setErroOperacao('Não foi possível excluir a transação. Tente novamente.')
     }
   }
 
@@ -596,9 +651,11 @@ function App(): React.JSX.Element {
               Limpar período
             </button>
             {(pagina === 'dashboard' || pagina === 'relatorios') && (
-              <p className="filtros-aviso">
-                Os indicadores seguem o mês e ano selecionados. Os gráficos mostram até seis meses
-                por página, dentro do ano escolhido.
+              <p className="filtros-aviso" role="status">
+                <strong>Período selecionado: {periodoDescricao}.</strong>{' '}
+                {anoFiltro === 'todos' && mesFiltro === 'todos'
+                  ? 'Os totais abrangem todo o histórico; use as setas dos gráficos para explorar as janelas de seis meses.'
+                  : 'Indicadores e gráficos seguem o mesmo filtro. No modo Previsto, são exibidas apenas parcelas em aberto.'}
               </p>
             )}
           </section>
@@ -611,7 +668,7 @@ function App(): React.JSX.Element {
             despesasCentavos={totalDespesas}
             transacoes={transacoesRealizadas}
             previsoes={transacoesPrevistas}
-            filtroMes="todos"
+            filtroMes={mesFiltro}
             filtroAno={anoFiltro}
             transacoesRecentes={[...transacoesBancariasPeriodo]
               .sort((a, b) => b.data.localeCompare(a.data))
@@ -626,6 +683,8 @@ function App(): React.JSX.Element {
           <>
             <section className="painel">
               <h3>{editandoId ? 'Editar movimentação' : 'Adicionar movimentação'}</h3>
+              <Feedback mensagem={erroOperacao} tipo="erro" />
+              <Feedback mensagem={mensagemOperacao} tipo="sucesso" />
 
               <div className="filtros-avancados">
                 <div className="filtro-campo">
@@ -633,9 +692,9 @@ function App(): React.JSX.Element {
                   <input
                     id="busca"
                     type="text"
-                    placeholder="Buscar descrição..."
+                    placeholder="Descrição, categoria ou conta..."
                     value={busca}
-                    onChange={(e): void => setBusca(e.target.value)}
+                    onChange={(e): void => { setBusca(e.target.value); setPaginaHistorico(0) }}
                   />
                 </div>
 
@@ -647,6 +706,7 @@ function App(): React.JSX.Element {
                     onChange={(e): void => {
                       setTipoFiltro(e.target.value)
                       setCategoriaFiltro('todas')
+                      setPaginaHistorico(0)
                     }}
                   >
                     <option value="todos">Todos</option>
@@ -661,16 +721,11 @@ function App(): React.JSX.Element {
                   <select
                     id="categoriaFiltro"
                     value={categoriaFiltro}
-                    onChange={(e): void => setCategoriaFiltro(e.target.value)}
+                    onChange={(e): void => { setCategoriaFiltro(e.target.value); setPaginaHistorico(0) }}
                   >
                     <option value="todas">Todas as categorias</option>
 
-                    {Array.from(
-                      new Set([
-                        ...(tipoFiltro === 'despesa' ? [] : categorias.receita),
-                        ...(tipoFiltro === 'receita' ? [] : categorias.despesa)
-                      ])
-                    ).map((nome) => (
+                    {categoriasVisiveis.map((nome) => (
                       <option key={nome} value={nome}>
                         {nome}
                       </option>
@@ -685,6 +740,7 @@ function App(): React.JSX.Element {
                     setBusca('')
                     setTipoFiltro('todos')
                     setCategoriaFiltro('todas')
+                    setPaginaHistorico(0)
                   }}
                 >
                   Limpar busca
@@ -701,6 +757,7 @@ function App(): React.JSX.Element {
                   Descrição
                   <input
                     value={descricao}
+                    maxLength={200}
                     onChange={(e): void => setDescricao(e.target.value)}
                     placeholder="Ex: Supermercado"
                     required
@@ -710,9 +767,8 @@ function App(): React.JSX.Element {
                 <label>
                   Valor (R$)
                   <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={valor}
                     onChange={(e): void => setValor(e.target.value)}
                     placeholder="0,00"
@@ -731,7 +787,7 @@ function App(): React.JSX.Element {
                 <label>
                   Categoria
                   <select value={categoria} onChange={(e): void => setCategoria(e.target.value)}>
-                    {categorias[tipo].map((nome) => (
+                    {categoriasDoFormulario.map((nome) => (
                       <option key={nome} value={nome}>
                         {nome}
                       </option>
@@ -785,16 +841,73 @@ function App(): React.JSX.Element {
             </section>
 
             <section className="painel">
-              <h3>Histórico de transações</h3>
-
-              {listaTransacoes(transacoesOrdenadas)}
+              <div className="historico-cabecalho">
+                <div>
+                  <h3>Histórico de transações</h3>
+                  <p className="historico-resumo" role="status">
+                    {transacoesOrdenadas.length === 0
+                      ? 'Nenhum resultado para os filtros atuais.'
+                      : `Mostrando ${inicioHistorico + 1}–${Math.min(inicioHistorico + itensPorPagina, transacoesOrdenadas.length)} de ${transacoesOrdenadas.length} transações`}
+                  </p>
+                </div>
+                <div className="historico-controles">
+                  <label htmlFor="historico-ordenacao">Ordenar por
+                    <select id="historico-ordenacao" value={ordenacaoHistorico}
+                      onChange={(e): void => {
+                        setOrdenacaoHistorico(e.target.value as typeof ordenacaoHistorico)
+                        setPaginaHistorico(0)
+                      }}>
+                      <option value="recentes">Mais recentes</option>
+                      <option value="antigas">Mais antigas</option>
+                      <option value="maior">Maior valor</option>
+                      <option value="menor">Menor valor</option>
+                    </select>
+                  </label>
+                  <label htmlFor="historico-tamanho">Por página
+                    <select id="historico-tamanho" value={itensPorPagina}
+                      onChange={(e): void => { setItensPorPagina(Number(e.target.value)); setPaginaHistorico(0) }}>
+                      <option value={15}>15</option>
+                      <option value={30}>30</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              {transacoesOrdenadas.length === 0
+                ? <div className="historico-sem-resultados">
+                    <p className="vazio">
+                      {transacoes.length === 0
+                        ? 'Nenhuma transação cadastrada. Registre sua primeira movimentação acima.'
+                        : 'Nenhuma transação corresponde aos filtros selecionados.'}
+                    </p>
+                    {transacoes.length > 0 && (
+                      <button type="button" className="botao-limpar" onClick={(): void => {
+                        setBusca(''); setTipoFiltro('todos'); setCategoriaFiltro('todas')
+                        setMesFiltro('todos'); setAnoFiltro('todos'); setPaginaHistorico(0)
+                      }}>Limpar todos os filtros</button>
+                    )}
+                  </div>
+                : listaTransacoes(transacoesPagina)}
+              {totalPaginasHistorico > 1 && (
+                <nav className="historico-paginacao" aria-label="Paginação do histórico">
+                  <button type="button" disabled={paginaHistoricoAtual === 0}
+                    onClick={(): void => setPaginaHistorico((p) => Math.max(0, p - 1))}>
+                    Anterior
+                  </button>
+                  <span>Página {paginaHistoricoAtual + 1} de {totalPaginasHistorico}</span>
+                  <button type="button" disabled={paginaHistoricoAtual === totalPaginasHistorico - 1}
+                    onClick={(): void => setPaginaHistorico((p) => Math.min(totalPaginasHistorico - 1, p + 1))}>
+                    Próxima
+                  </button>
+                </nav>
+              )}
             </section>
           </>
         )}
 
         {pagina === 'relatorios' && (
           <>
-            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} filtroMes="todos" filtroAno={anoFiltro} />
+            <GraficosFinanceiros transacoes={transacoesRealizadas} previsoes={transacoesPrevistas} filtroMes={mesFiltro} filtroAno={anoFiltro} />
 
             <section className="painel">
               <h3>Resumo financeiro realizado do período</h3>
@@ -860,6 +973,8 @@ function App(): React.JSX.Element {
               <h3>Backup e restauração</h3>
               <p>Exporte uma cópia SQLite dos seus dados para outro local ou restaure um backup validado.</p>
               <p>Ao restaurar, os dados atuais serão substituídos. O FinControl cria um backup de emergência antes dessa troca.</p>
+              <Feedback mensagem={erroBackup} tipo="erro" />
+              <Feedback mensagem={mensagemBackup} tipo="sucesso" />
               <div className="configuracoes-backup">
                 <button type="button" className="botao-primario" disabled={backupOcupado}
                   onClick={(): void => { void exportarBackupUI() }}>
@@ -874,7 +989,7 @@ function App(): React.JSX.Element {
             <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão em desenvolvimento — preparação para FinControl 1.0</p>
+              <p>Versão 1.0 · aplicativo desktop offline</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>

@@ -72,7 +72,7 @@ export default function DashboardResumo({
       <div className="dashboard-secao-titulo">
         <div>
           <h3>Visão financeira</h3>
-          <p>Realizado e previsto em visões separadas, por janelas de seis meses.</p>
+          <p>Compare receitas, despesas e parcelas previstas no período selecionado.</p>
         </div>
       </div>
       <GraficosFinanceiros transacoes={transacoes} previsoes={previsoes} filtroMes={filtroMes} filtroAno={filtroAno} compacto />

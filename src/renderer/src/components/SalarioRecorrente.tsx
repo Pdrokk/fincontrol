@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CalendarClock, Plus, Ban } from 'lucide-react'
+import Feedback from './Feedback'
 
 interface Conta {
   id: string
@@ -45,6 +46,9 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
   const [quantidadeMeses, setQuantidadeMeses] = useState('12')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [erroOperacao, setErroOperacao] = useState('')
+  const [mensagem, setMensagem] = useState('')
+  const [parando, setParando] = useState(false)
 
   async function recarregarSalarios(): Promise<void> {
     setSalarios(await window.fincontrol.listarSalarios())
@@ -64,9 +68,11 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
   async function cadastrar(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (salvando) return
+    setErroOperacao('')
+    setMensagem('')
     const valorCentavos = paraCentavos(valor)
     if (!valorCentavos || valorCentavos <= 0) {
-      alert('Informe um salário válido.')
+      setErroOperacao('Informe um salário maior que zero, usando até duas casas decimais.')
       return
     }
     const inicio = `${mesInicio}-${String(dia).padStart(2, '0')}`
@@ -88,21 +94,30 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
       await recarregarSalarios()
       await onAtualizar()
       setValor('')
-      alert('Salário programado. Os lançamentos serão criados quando chegar a data.')
+      setMensagem(permitirRetroativo
+        ? 'Salário programado. Recebimentos retroativos confirmados foram lançados.'
+        : 'Salário programado. Os próximos recebimentos serão registrados na data correspondente.')
     } catch (falha) {
       console.error(falha)
-      alert(falha instanceof Error ? falha.message : 'Não foi possível registrar o salário.')
+      setErroOperacao(falha instanceof Error ? falha.message : 'Não foi possível registrar o salário.')
     } finally { setSalvando(false) }
   }
 
   async function parar(id: string): Promise<void> {
     if (!window.confirm('Desativar novos pagamentos automáticos deste salário? Receitas anteriores serão mantidas.')) return
+    if (parando) return
     try {
+      setParando(true)
+      setErroOperacao('')
+      setMensagem('')
       await window.fincontrol.desativarSalario(id)
       await recarregarSalarios()
+      setMensagem('Recorrência desativada. Os recebimentos anteriores foram preservados.')
     } catch (falha) {
       console.error(falha)
-      alert('Não foi possível desativar o salário.')
+      setErroOperacao(falha instanceof Error ? falha.message : 'Não foi possível desativar o salário.')
+    } finally {
+      setParando(false)
     }
   }
 
@@ -113,7 +128,9 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
         <CalendarClock size={25} />
       </div>
       <p>O valor entra como receita na conta escolhida na data programada. Se o aplicativo estiver fechado, os lançamentos vencidos são registrados quando ele abrir novamente. Não credita meses futuros antecipadamente.</p>
-      {erro && <p role="alert">{erro}</p>}
+      <Feedback mensagem={erro} tipo="erro" />
+      <Feedback mensagem={erroOperacao} tipo="erro" />
+      <Feedback mensagem={mensagem} tipo="sucesso" />
       <form className="formulario" onSubmit={(e): void => { void cadastrar(e) }}>
         <label>Conta que recebe o salário
           <select value={contaId} required onChange={(e): void => setContaId(e.target.value)}>
@@ -154,7 +171,8 @@ export default function SalarioRecorrente({ contas, onAtualizar }: Props): React
             <span>{s.ativo ? 'Ativo' : 'Desativado'}</span>
           </div>
           {s.ativo === 1 && (
-            <button type="button" className="botao-excluir" onClick={(): void => { void parar(s.id) }}>
+            <button type="button" className="botao-excluir" disabled={parando}
+              onClick={(): void => { void parar(s.id) }}>
               <Ban size={15} /> Parar
             </button>
           )}
