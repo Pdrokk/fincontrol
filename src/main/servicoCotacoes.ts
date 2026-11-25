@@ -1,3 +1,4 @@
+import { consultarFundamentos, type Fundamentos } from './fundamentos'
 import { app, safeStorage } from 'electron'
 import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -67,4 +68,12 @@ export function sincronizarCotacoes(forcar: boolean): Promise<Resultado> {
   if (pendente) return pendente
   pendente = atualizar(forcar).finally(() => { pendente = null })
   return pendente
+}
+
+/** Consulta informativa, sem escrita no banco ou alteração de posição. */
+export async function obterFundamentos(id: string): Promise<Fundamentos> {
+  if (typeof id !== 'string' || !id.trim() || id.length>100) throw new Error('Ativo inválido.')
+  const ativo = listarPosicoes(obterBanco()).find(a=>a.id===id)
+  if (!ativo || (ativo.tipo!=='Ação' && ativo.tipo!=='FII')) throw new Error('Indicadores não disponíveis para esta categoria.')
+  return consultarFundamentos(ativo.codigo,ativo.tipo,chave())
 }

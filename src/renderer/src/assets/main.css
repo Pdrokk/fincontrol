@@ -2677,3 +2677,8 @@ body::-webkit-scrollbar-corner,
 .carteira-ficha-historico { max-height:280px; overflow:auto; margin:8px 0; }
 .carteira-ficha>h4 { margin-top:18px; }
 .carteira-fontes-oficiais { margin-top:18px; border-top:1px solid var(--border-color); padding-top:16px; }
+
+.carteira-fundamentos { border-bottom:1px solid var(--border-color); padding:18px 0; }
+.carteira-fundamentos .carteira-ficha-dados { grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
+.carteira-fundamentos .invest-detalhe { line-height:1.5; }
+.carteira-fundamentos dd { font-size:17px; }

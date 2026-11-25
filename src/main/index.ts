@@ -1,4 +1,4 @@
-import { sincronizarCotacoes, configurarChave, chaveConfigurada } from './servicoCotacoes'
+import { sincronizarCotacoes, configurarChave, chaveConfigurada, obterFundamentos } from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
 import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, registrarOperacao, registrarObservacaoCarteira, listarEvolucaoPatrimonio, listarHistoricoCotacoes, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.5.0')) {
+          if (!document.body.textContent?.includes('Versão 1.6.0')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -265,6 +265,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(450);
       const ficha = document.querySelector('.carteira-ficha');
       if (!ficha || !ficha.textContent.includes('Histórico de cotações') || !ficha.textContent.includes('Resultado não realizado')) throw new Error('Ficha do ativo incompleta.');
+      if (ficha.querySelector('.carteira-fundamentos')) throw new Error('ETF não deve apresentar indicadores de empresa.');
       const historicoCotacao = await window.fincontrol.listarHistoricoCotacoes(ativoTeste);
       if (historicoCotacao.length !== 1 || historicoCotacao[0].preco !== 6) throw new Error('Histórico de cotação manual incorreto.');
       ficha.querySelector('button[aria-label="Fechar ficha do ativo"]').click();
@@ -667,6 +668,7 @@ app.whenReady().then(() => {
     registrarObservacaoCarteira(db,hojeLocalISO(),posicoes)
     return { posicoes, movimentos:listarMovimentos(db), evolucao:listarEvolucaoPatrimonio(db) }
   })
+  ipcMain.handle('investimentos:fundamentos', (_evento,id:string) => obterFundamentos(id))
   ipcMain.handle('investimentos:historico-cotacoes', (_evento,id:string) => listarHistoricoCotacoes(obterBanco(),id))
   ipcMain.handle('investimentos:fonte-oficial', async (_evento,fonte: string) => {
     const fontes: Record<string,string> = {
