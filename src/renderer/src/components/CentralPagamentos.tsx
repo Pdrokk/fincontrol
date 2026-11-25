@@ -163,11 +163,13 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         dataPagamento
       })
       confirmado = true
-      await carregar()
       setMensagem('Pagamento registrado com sucesso. Saldos e limite atualizados.')
+      await carregar()
     } catch (falha) {
       console.error(falha)
-      setErro(falha instanceof Error ? falha.message : 'Não foi possível confirmar o pagamento.')
+      setErro(confirmado
+        ? 'Pagamento concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
+        : falha instanceof Error ? falha.message : 'Não foi possível confirmar o pagamento.')
     } finally {
       setSalvando(false)
     }
@@ -207,11 +209,13 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         motivo: motivo.trim()
       })
       estornoConfirmado = true
-      await carregar()
       setMensagem('Estorno registrado. O saldo retornou à conta e o limite foi recalculado.')
+      await carregar()
     } catch (falha) {
       console.error(falha)
-      setErro(falha instanceof Error ? falha.message : 'Não foi possível estornar.')
+      setErro(estornoConfirmado
+        ? 'Estorno concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
+        : falha instanceof Error ? falha.message : 'Não foi possível estornar.')
     } finally {
       setSalvando(false)
     }
