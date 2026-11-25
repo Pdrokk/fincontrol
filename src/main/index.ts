@@ -289,6 +289,93 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
     })()
   `)
   console.info('FINCONTROL_UI_SMOKE_OK:', JSON.stringify(resultado))
+  await verificarResponsividadeInstalada(janela)
+}
+
+/**
+ * Confere as larguras úteis do Electron com o mesmo banco temporário do
+ * smoke funcional. Inclui estados claro/escuro e todas as páginas principais.
+ */
+async function verificarResponsividadeInstalada(janela: BrowserWindow): Promise<void> {
+  const larguras = [640, 768, 900, 1280, 1920, 2560]
+  for (const largura of larguras) {
+    janela.setContentSize(largura, 760)
+    await new Promise<void>((resolve) => setTimeout(resolve, 220))
+    const resultado = await janela.webContents.executeJavaScript(`
+      (async () => {
+        const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const paginas = [
+          'Visão Geral', 'Transações', 'Relatórios',
+          'Minhas contas', 'Cartões e faturas', 'Configurações'
+        ];
+        const larguras = [];
+        const temas = ['light', 'dark'];
+        for (const temaEsperado of temas) {
+          const aplicativo = document.querySelector('.fincontrol');
+          if (aplicativo.getAttribute('data-theme') !== temaEsperado) {
+            document.querySelector('.botao-tema-lateral').click();
+            await dormir(100);
+          }
+          if (aplicativo.getAttribute('data-theme') !== temaEsperado) {
+            throw new Error('Troca de tema falhou na adaptação.');
+          }
+          for (const nome of paginas) {
+            const botao = [...document.querySelectorAll('.sidebar nav button')]
+              .find((b) => b.getAttribute('title') === nome);
+            if (!botao) throw new Error('Menu indisponível: ' + nome);
+            botao.click();
+            await dormir(190);
+            const titulo = document.querySelector('.cabecalho h2');
+            if (titulo?.textContent?.trim() !== nome) {
+              throw new Error('Título ausente ao redimensionar: ' + nome);
+            }
+            const viewport = document.documentElement.clientWidth;
+            const larguraDocumento = document.documentElement.scrollWidth;
+            if (larguraDocumento > viewport + 2) {
+              throw new Error('Rolagem horizontal inesperada: ' +
+                nome + ', tema ' + temaEsperado + ', viewport=' + viewport +
+                ', documento=' + larguraDocumento);
+            }
+            const menu = document.querySelector('.sidebar');
+            const conteudo = document.querySelector('.content');
+            const sidebar = menu?.getBoundingClientRect();
+            const principal = conteudo?.getBoundingClientRect();
+            if (!sidebar || !principal || principal.width < 320 ||
+                sidebar.left < -2 || sidebar.right > viewport + 2 ||
+                principal.left < sidebar.right - 2 ||
+                principal.right > viewport + 2) {
+              throw new Error('Colunas de navegação ou conteúdo cortadas em ' + nome +
+                ' / ' + temaEsperado + ' / ' + viewport);
+            }
+            const nav = [...document.querySelectorAll('.sidebar nav button')];
+            if (nav.some((item) => {
+              const rect = item.getBoundingClientRect();
+              return rect.width < 40 || rect.right > viewport + 2;
+            })) {
+              throw new Error('Atalho da navegação cortado em ' + nome);
+            }
+            if (viewport >= 1920 && principal.width > 1761) {
+              throw new Error('Painel esticou além do limite ultrawide.');
+            }
+            if (nome === 'Relatórios') {
+              const graficos = document.querySelector('.graficos-financeiros');
+              if (!graficos || graficos.getBoundingClientRect().width > principal.width + 2) {
+                throw new Error('Gráficos excederam a área útil.');
+              }
+            }
+            larguras.push(nome + '/' + temaEsperado);
+          }
+        }
+        return { viewport: document.documentElement.clientWidth, telas: larguras.length };
+      })()
+    `)
+    if (Math.abs(resultado.viewport - largura) > 20) {
+      throw new Error('Viewport divergente no teste responsivo: esperado=' +
+        largura + ', obtido=' + resultado.viewport)
+    }
+    console.info('FINCONTROL_RESPONSIVO_OK:', JSON.stringify(resultado))
+  }
+  janela.setContentSize(900, 670)
 }
 
 function createWindow(): void {
@@ -296,6 +383,8 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
+    minWidth: 640,
+    minHeight: 540,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
