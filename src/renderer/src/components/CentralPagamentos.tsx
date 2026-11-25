@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Archive, ArrowDownRight, CheckCircle2, CreditCard, RotateCcw, Undo2 } from 'lucide-react'
+import Feedback from './Feedback'
 
 interface ContaPagamento {
   id: string
@@ -162,12 +163,19 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       })
       await carregar()
       setMensagem('Pagamento registrado com sucesso. Saldos e limite atualizados.')
-      if (onPagamento) await onPagamento()
     } catch (falha) {
       console.error(falha)
       setErro(falha instanceof Error ? falha.message : 'Não foi possível confirmar o pagamento.')
     } finally {
       setSalvando(false)
+    }
+    if (onPagamento) {
+      try {
+        await onPagamento()
+      } catch (falha) {
+        console.error('Pagamento confirmado; falha ao atualizar outros painéis:', falha)
+        setErro('Pagamento concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.')
+      }
     }
   }
 
@@ -197,12 +205,19 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       })
       await carregar()
       setMensagem('Estorno registrado. O saldo retornou à conta e o limite foi recalculado.')
-      if (onPagamento) await onPagamento()
     } catch (falha) {
       console.error(falha)
       setErro(falha instanceof Error ? falha.message : 'Não foi possível estornar.')
     } finally {
       setSalvando(false)
+    }
+    if (onPagamento) {
+      try {
+        await onPagamento()
+      } catch (falha) {
+        console.error('Estorno confirmado; falha ao atualizar outros painéis:', falha)
+        setErro('Estorno concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.')
+      }
     }
   }
 
@@ -212,6 +227,8 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       setSalvando(true)
       await window.fincontrol.arquivarParcela(id, arquivar)
       await carregar()
+      setErro('')
+      setMensagem(arquivar ? 'Parcela arquivada sem apagar o histórico.' : 'Parcela restaurada ao histórico.')
     } catch (falha) {
       console.error(falha)
       setErro('Não foi possível atualizar a visibilidade da parcela. Tente novamente.')
@@ -257,8 +274,8 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       </div>
 
       {carregando && <p>Carregando pagamentos...</p>}
-      {erro && <p className="cartoes-mensagem cartoes-mensagem-erro" role="alert">{erro}</p>}
-      {mensagem && <p className="cartoes-mensagem cartoes-mensagem-sucesso" role="status">{mensagem}</p>}
+      <Feedback mensagem={erro} tipo="erro" />
+      <Feedback mensagem={mensagem} tipo="sucesso" />
 
       {aba === 'pendentes' && (
         <>
