@@ -2245,3 +2245,178 @@ body::-webkit-scrollbar-corner,
   text-align: right;
   white-space: nowrap;
 }
+
+/* Impeccable adapt — janela Windows redimensionável, Full HD e ultrawide.
+   O painel usa o espaço disponível sem esticar gráficos indefinidamente. */
+.fincontrol .content {
+  width: 100%;
+  max-width: 1760px;
+  margin-inline: auto;
+}
+
+.fincontrol .sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.fincontrol :is(.painel, .grafico-card, .dashboard-kpi, .dashboard-item, .central-grupo) {
+  min-width: 0;
+}
+
+.fincontrol :is(.resumo-contas strong, .central-pagamento-total strong,
+  .cartao-conta strong, .cartao-conta h3, .central-grupo-titulo strong,
+  .central-parcela span, .dashboard-item > div) {
+  overflow-wrap: anywhere;
+}
+
+.fincontrol .central-parcela span,
+.fincontrol .central-grupo-titulo > span {
+  min-width: 0;
+}
+
+.fincontrol .graficos-paginacao button {
+  width: 44px;
+  height: 44px;
+}
+
+.fincontrol .graficos-paginacao > span {
+  text-align: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .fincontrol .central-pagamento-form {
+    position: static;
+  }
+
+  .fincontrol .graficos-toolbar {
+    align-items: flex-start;
+  }
+
+  .fincontrol .dashboard-item {
+    flex-wrap: wrap;
+  }
+
+  .fincontrol .dashboard-item > div {
+    flex: 1 1 170px;
+  }
+
+  .fincontrol .dashboard-item > strong {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .fincontrol .sidebar {
+    width: 60px;
+    min-width: 60px;
+    padding: 16px 6px;
+  }
+
+  .fincontrol .sidebar-logo {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 22px;
+  }
+
+  .fincontrol .sidebar nav button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .fincontrol .content {
+    padding: 16px;
+  }
+
+  .fincontrol .painel,
+  .fincontrol .grafico-card,
+  .fincontrol .dashboard-lista,
+  .fincontrol .central-pagamentos {
+    padding: 16px;
+  }
+
+  .fincontrol .cabecalho,
+  .fincontrol .titulo-contas,
+  .fincontrol .dashboard-secao-titulo {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .fincontrol .cabecalho > .botao-primario {
+    min-height: 44px;
+  }
+
+  .fincontrol .resumo-contas {
+    padding: 16px;
+  }
+
+  .fincontrol .resumo-contas strong {
+    font-size: clamp(20px, 4vw, 28px);
+  }
+
+  .fincontrol .dashboard-duas-colunas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fincontrol .central-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fincontrol .central-resumo > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .fincontrol .central-pagamento-total {
+    flex-wrap: wrap;
+  }
+
+  .fincontrol .central-pagamento-campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fincontrol .central-pagamento-campos button {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .fincontrol .transacao {
+    gap: 10px;
+  }
+
+  .fincontrol .transacao-info {
+    flex: 1 1 100%;
+  }
+
+  .fincontrol .graficos-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fincontrol .graficos-paginacao {
+    justify-content: space-between;
+  }
+
+  .fincontrol .graficos-paginacao > span {
+    flex: 1;
+  }
+
+  .fincontrol .grafico-area {
+    height: clamp(210px, 44vw, 275px);
+  }
+
+  .fincontrol .historico-paginacao {
+    justify-content: space-between;
+  }
+}
+
+@media (pointer: coarse) {
+  .fincontrol :is(.botao-editar, .botao-excluir, .acoes-conta button,
+    .cartoes-navegacao button, .central-abas button) {
+    min-height: 44px;
+  }
+}
