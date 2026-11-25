@@ -1,3 +1,4 @@
+import { criarTabelasInvestimentos } from '../src/main/investimentos.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
@@ -30,6 +31,7 @@ function bancoTeste(): DatabaseSync {
     INSERT INTO contas VALUES ('A', 'Banco', 'Conta A', 'corrente', '#2563eb', 10000, '2000-01-01');
     INSERT INTO contas VALUES ('B', 'Banco', 'Conta B', 'corrente', '#2563eb', 0, '2000-01-01');
   `)
+  criarTabelasInvestimentos(db)
   return db
 }
 

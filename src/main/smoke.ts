@@ -1,3 +1,4 @@
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, registrarOperacao, atualizarCotacao } from './investimentos'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -45,6 +46,7 @@ export async function executarSmokeInstalado(): Promise<void> {
     criarTabelaContas()
     criarTabelasCartoes()
     criarTabelaSalarios()
+    criarTabelasInvestimentos(obterBanco())
     obterBanco().exec('PRAGMA foreign_keys = ON')
     const hoje = hojeLocalISO()
 
@@ -292,6 +294,12 @@ export async function executarSmokeInstalado(): Promise<void> {
     const chaves = obterBanco().prepare('PRAGMA foreign_key_check').all()
     assert.equal(chaves.length, 0, 'Não deve haver referências SQLite órfãs')
 
+    const ativo = cadastrarAtivo(obterBanco(), { codigo: 'BOVA11', nome: 'ETF teste', tipo: 'ETF', instituicao: 'Teste' })
+    const saldoInvest = dinheiro(a.id)
+    registrarOperacao(obterBanco(), { ativoId: ativo, contaId: a.id, tipo: 'compra', quantidade: 2, valorCentavos: 1000, taxasCentavos: 20, data: hoje }, dinheiro, hoje)
+    assert.equal(dinheiro(a.id), saldoInvest - 1020)
+    atualizarCotacao(obterBanco(), ativo, 600)
+    assert.equal(listarPosicoes(obterBanco())[0].valorAtualCentavos, 1200)
     const arquivo = join(pasta, `backup-smoke-${randomUUID()}.db`)
     await backup(obterBanco(), arquivo)
     bancoBackup = new DatabaseSync(arquivo, { readOnly: true })
@@ -312,6 +320,8 @@ export async function executarSmokeInstalado(): Promise<void> {
     })
     assert.ok(listarTransacoes().some(t => t.id === extra.id))
     await aplicarRestauracaoValidada(arquivo)
+    assert.equal(listarPosicoes(obterBanco())[0].custoCentavos, 1020)
+    assert.equal(dinheiro(a.id), saldoInvest - 1020)
     assert.ok(!listarTransacoes().some(t => t.id === extra.id),
       'Restauração deve recuperar o estado anterior ao backup')
     assert.equal(dinheiro(b.id), saldoAnterior + 123 + 8_500)

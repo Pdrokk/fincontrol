@@ -1,3 +1,5 @@
+import { hojeLocalISO } from './regrasFinanceiras'
+import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, registrarOperacao, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdtempSync } from 'node:fs'
@@ -500,6 +502,7 @@ app.whenReady().then(() => {
   criarTabelaContas()
   criarTabelasCartoes()
   criarTabelaSalarios()
+  criarTabelasInvestimentos(obterBanco())
   obterBanco().exec('PRAGMA foreign_keys = ON')
   processarSalariosVencidos()
 
@@ -517,6 +520,10 @@ app.whenReady().then(() => {
   }, 60_000)
   app.once('before-quit', () => clearInterval(verificadorSalarios))
 
+  ipcMain.handle('investimentos:listar', () => ({ posicoes: listarPosicoes(obterBanco()), movimentos: listarMovimentos(obterBanco()) }))
+  ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))
+  ipcMain.handle('investimentos:cotacao', (_evento, id: string, centavos: number) => atualizarCotacao(obterBanco(), id, centavos))
+  ipcMain.handle('investimentos:operacao', (_evento, dados: Operacao) => registrarOperacao(obterBanco(), dados, id => listarContas().find(c => c.id === id)?.saldoAtualCentavos, hojeLocalISO()))
   ipcMain.handle('cartoes:listar', () => listarCartoes())
   ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
   ipcMain.handle('cartoes:atualizar', (_evento, id: string, dados: NovoCartao) => atualizarCartao(id, dados))

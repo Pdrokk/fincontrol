@@ -293,7 +293,8 @@ export function excluirConta(id: string): void {
       ['estornos_pagamentos', 'conta_id'],
       ['cartoes', 'conta_id'],
       ['ajustes_saldo', 'conta_id'],
-      ['salarios_recorrentes', 'conta_id']
+      ['salarios_recorrentes', 'conta_id'],
+      ['movimentos_investimento', 'conta_id']
     ] as const
     for (const [tabela, coluna] of dependencias) {
       const quantidade = db.prepare(`SELECT COUNT(*) AS n FROM ${tabela} WHERE ${coluna} = ?`).get(id) as {n: number}
