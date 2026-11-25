@@ -978,7 +978,7 @@ function App(): React.JSX.Element {
             <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão em desenvolvimento — preparação para FinControl 1.0</p>
+              <p>Versão 1.0 · aplicativo desktop offline</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>
