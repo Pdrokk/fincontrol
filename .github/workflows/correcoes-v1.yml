@@ -1,4 +1,4 @@
-name: Validar correções financeiras e layout FinControl 1.0
+name: Validar correções financeiras e layout FinControl
 on:
   pull_request:
     branches:
@@ -46,7 +46,8 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $exe = Join-Path $PWD 'dist/FinControl-1.0.0-portable.exe'
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $exe = Join-Path $PWD "dist/FinControl-$version-portable.exe"
           if (-not (Test-Path $exe)) { throw "EXE portátil ausente" }
           $p = Start-Process -FilePath $exe -ArgumentList '--fincontrol-ui-smoke-test' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Teste de interface falhou: $($p.ExitCode)" }
@@ -55,8 +56,8 @@ jobs:
       - name: Disponibilizar executável portátil de testes
         uses: actions/upload-artifact@v4
         with:
-          name: FinControl-v1-Correcoes-Validacao-Windows
+          name: FinControl-Correcoes-Validacao-Windows-${{ github.run_number }}
           path: |
-            dist/FinControl-1.0.0-portable.exe
+            dist/FinControl-*-portable.exe
           if-no-files-found: error
           retention-days: 14
