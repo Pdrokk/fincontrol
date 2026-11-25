@@ -183,6 +183,70 @@ export async function executarSmokeInstalado(): Promise<void> {
     assert.ok(historicoFatura.some((p) => p.id === pagamento.id && p.estornado === 1))
     assert.equal(historicoFatura.filter((p) => p.estornado === 0).length, 1)
 
+    // Regressão: fatura parcialmente paga, relatório realizado e limite de crédito.
+    const cartaoParcial = cadastrarCartao({
+      contaId: a.id, banco: 'Banco Teste', nome: 'Pagamento parcial',
+      limiteCentavos: 45_000, diaFechamento: 25, diaVencimento: 10
+    })
+    cadastrarCompra({
+      cartaoId: cartaoParcial.id, descricao: 'Três mensalidades',
+      categoria: 'Educação', data: hoje, valorCentavos: 45_000, numeroParcelas: 3
+    })
+    const parcelasParciais = listarParcelasPagamento()
+      .filter(p => p.cartaoId === cartaoParcial.id)
+    assert.equal(parcelasParciais.length, 3)
+    assert.equal(listarCartoes().find(c => c.id === cartaoParcial.id)?.limiteDisponivelCentavos, 0)
+    const saldoAntesParcial = dinheiro(a.id)
+    const resultadoParcial = pagarParcelasSelecionadas({
+      contaId: a.id, parcelaIds: [parcelasParciais[0].id], dataPagamento: hoje
+    })
+    assert.equal(resultadoParcial.parcelasPagas, 1)
+    assert.equal(resultadoParcial.valorCentavos, 15_000)
+    assert.equal(dinheiro(a.id), saldoAntesParcial - 15_000)
+    assert.equal(listarCartoes().find(c => c.id === cartaoParcial.id)?.limiteDisponivelCentavos, 15_000)
+    const faturasParciais = listarFaturasPrevistas().filter(f => f.cartaoId === cartaoParcial.id)
+    assert.equal(faturasParciais.reduce((n, f) => n + f.totalCentavos, 0), 45_000)
+    assert.equal(faturasParciais.reduce((n, f) => n + f.valorPagoCentavos, 0), 15_000)
+    assert.equal(faturasParciais.reduce((n, f) => n + f.saldoPendenteCentavos, 0), 30_000)
+    assert.equal(faturasParciais.filter(f => f.paga).length, 1)
+    const realizadosParcial = listarDespesasCartaoRealizadas()
+      .filter(p => parcelasParciais.some(q => q.id === p.id))
+    assert.equal(realizadosParcial.length, 1, 'Relatório realizado não deve contar parcelas futuras')
+    assert.equal(realizadosParcial.reduce((n, p) => n + p.valorCentavos, 0), 15_000)
+    recusar(() => pagarFatura({
+      contaId: a.id, cartaoId: cartaoParcial.id,
+      competencia: parcelasParciais[0].competencia, dataPagamento: hoje
+    }), 'Fatura já parcialmente quitada não pode ser paga em duplicidade')
+
+    // A segunda compra usa o limite liberado; estornar a primeira parcela
+    // ultrapassaria o limite e precisa falhar atomicamente.
+    cadastrarCompra({
+      cartaoId: cartaoParcial.id, descricao: 'Compra após liberação de limite',
+      categoria: 'Outros', data: hoje, valorCentavos: 15_000, numeroParcelas: 1
+    })
+    assert.equal(listarCartoes().find(c => c.id === cartaoParcial.id)?.limiteDisponivelCentavos, 0)
+    const pagamentoParcial = listarParcelasPagamento()
+      .find(p => p.id === parcelasParciais[0].id)?.pagamentoId
+    assert.ok(pagamentoParcial)
+    recusar(() => estornarPagamento({
+      tipo: 'parcela', pagamentoId: pagamentoParcial,
+      motivo: 'Estorno sem limite suficiente'
+    }), 'Estorno não pode tornar o limite disponível negativo')
+    assert.equal(dinheiro(a.id), saldoAntesParcial - 15_000)
+    assert.equal(listarParcelasPagamento().find(p => p.id === parcelasParciais[0].id)?.paga, true)
+    assert.equal(listarCartoes().find(c => c.id === cartaoParcial.id)?.limiteDisponivelCentavos, 0)
+    assert.equal(listarDespesasCartaoRealizadas()
+      .filter(p => parcelasParciais.some(q => q.id === p.id)).length, 1)
+    const pendentesParciais = listarParcelasPagamento()
+      .filter(p => p.cartaoId === cartaoParcial.id && !p.paga)
+    assert.equal(pendentesParciais.length, 3)
+    recusar(() => pagarParcelasSelecionadas({
+      contaId: a.id, parcelaIds: [parcelasParciais[0].id, parcelasParciais[1].id],
+      dataPagamento: hoje
+    }), 'Pagamento em lote com parcela já quitada deve reverter tudo')
+    assert.equal(dinheiro(a.id), saldoAntesParcial - 15_000)
+    assert.equal(listarParcelasPagamento().find(p => p.id === parcelasParciais[1].id)?.paga, false)
+
     const saldoAnterior = dinheiro(b.id)
     ajustarSaldo({
       contaId: b.id, saldoDesejadoCentavos: saldoAnterior + 123,
