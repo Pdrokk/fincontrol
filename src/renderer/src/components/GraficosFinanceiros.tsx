@@ -105,7 +105,7 @@ export default function GraficosFinanceiros({
             onClick={(): void => { setModo('realizado'); setPagina(null) }}>Realizado</button>
           <button type="button" aria-pressed={modo === 'previsto'}
             className={modo === 'previsto' ? 'ativo' : ''}
-            onClick={(): void => { setModo('previsto'); setPagina(0) }}>Previsto</button>
+            onClick={(): void => { setModo('previsto'); setPagina(null) }}>Previsto</button>
         </div>
         <div className="graficos-paginacao">
           <button type="button" aria-label="Período anterior" title="Período anterior"
