@@ -30,3 +30,8 @@ export function inicioDeSalarioRetroativo(
 export function podeExcluirConta(saldoCentavos: number): boolean {
   return saldoCentavos === 0
 }
+
+/** Normaliza a categoria antes de aplicar as proteções de salário recorrente. */
+export function ehCategoriaSalario(categoria: string): boolean {
+  return categoria.trim().toLocaleLowerCase('pt-BR') === 'salário'
+}
