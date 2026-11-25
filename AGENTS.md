@@ -11,3 +11,6 @@ Aplicativo desktop Electron + React + TypeScript, SQLite local, Windows x64 port
 - Antes de aprovar: npm run typecheck, npm run lint, npm test, npm run build e smoke Windows do workflow. Não alegar que testes rodaram quando não rodaram.
 - UI: informação prioritária primeiro, tabelas compactas com números alinhados, ações contextuais, formulários sob demanda. Evitar cartões decorativos, métricas redundantes e placeholders sem função.
 - Não fazer merge automaticamente sem aprovação de homologação. Usar branch e PR.
+
+## Portão de qualidade
+Abrir PR como rascunho. Só marcar pronto para revisão após sucesso dos checks de qualidade e do smoke Windows no SHA final. Corrigir falhas sem desativar regras, remover asserções ou fabricar resultados.

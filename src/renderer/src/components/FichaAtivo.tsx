@@ -3,6 +3,7 @@ import { ExternalLink, X } from 'lucide-react'
 import type { Posicao, Movimento, ObservacaoCotacao } from '../../../main/investimentos'
 import GraficoHistoricoInvest from './GraficoHistoricoInvest'
 import Feedback from './Feedback'
+import IndicadoresAtivo from './IndicadoresAtivo'
 
 interface Props { ativo:Posicao; movimentos:Movimento[]; agora:number; onFechar:()=>void }
 const moeda=(n:number|null):string=>n===null?'Indisponível':(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
@@ -46,6 +47,7 @@ export default function FichaAtivo({ativo,movimentos,agora,onFechar}:Props):Reac
     <p className="invest-detalhe">{ativo.fonteCotacao&&ativo.cotacaoEm?'Fonte: '+ativo.fonteCotacao+' · '+new Date(ativo.cotacaoEm).toLocaleString('pt-BR'):legado?'Valor informado anteriormente. Defina a quantidade para registrar operações.':'Cotação manual ou ainda indisponível.'}{!ativo.custoConhecido?' O custo inicial não foi informado; não é possível calcular a rentabilidade completa.':''}</p>
     <Feedback mensagem={erro} tipo="erro"/>
     <GraficoHistoricoInvest titulo="Histórico de cotações" pontos={(dados??[]).map(p=>({data:p.data,valor:p.preco}))} agora={agora} carregando={dados===null} descricao="Última cotação observada em cada data; sem preenchimento artificial de dias ausentes. Valores manuais são registros locais."/>
+    {(ativo.tipo==='Ação'||ativo.tipo==='FII')&&<IndicadoresAtivo key={ativo.id} ativo={ativo}/>}
     <h4>Operações deste ativo ({movimentos.length})</h4>
     {!movimentos.length?<p className="invest-detalhe">Nenhuma operação registrada.</p>:<div className="invest-historico carteira-ficha-historico"><table><thead><tr><th>Data</th><th>Operação</th><th>Quantidade</th><th>Movimento bancário</th></tr></thead><tbody>{movimentos.map(m=><tr key={m.id}><td>{m.data.split('-').reverse().join('/')}</td><td>{m.tipo==='compra'?'Compra':m.tipo==='venda'?'Venda':'Provento'}</td><td>{m.tipo==='provento'?'—':qtd(m.quantidade)}</td><td>{moeda(m.caixaCentavos)}</td></tr>)}</tbody></table></div>}
     {fontes.length>0&&<div className="carteira-fontes-oficiais"><h4>Consultar fontes oficiais</h4><p className="invest-detalhe">Abre a consulta pública no navegador. A identificação do emissor e a cobertura precisam ser verificadas; não há importação automática de documentos.</p><div className="carteira-acoes">{fontes.map(f=><button className="botao-secundario" key={f.id} type="button" onClick={():void=>{void window.fincontrol.abrirFonteInvestimento(f.id).catch(()=>setErro('Não foi possível abrir a fonte oficial.'))}}>{f.rotulo}<ExternalLink size={15}/></button>)}</div></div>}

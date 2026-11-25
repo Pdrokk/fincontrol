@@ -28,6 +28,7 @@ const fincontrolAPI = {
   reativarAtivoInvestimento: (id: string): Promise<void> => ipcRenderer.invoke('investimentos:reativar', id),
   excluirAtivoInvestimento: (id: string): Promise<void> => ipcRenderer.invoke('investimentos:excluir', id),
   atualizarQuantidadeMercado: (id: string, quantidade: number): Promise<void> => ipcRenderer.invoke('investimentos:quantidade', id, quantidade),
+  consultarFundamentos: (id:string): Promise<unknown> => ipcRenderer.invoke('investimentos:fundamentos', id),
   listarHistoricoCotacoes: (id: string): Promise<unknown> => ipcRenderer.invoke('investimentos:historico-cotacoes', id),
   abrirFonteInvestimento: (fonte: string): Promise<void> => ipcRenderer.invoke('investimentos:fonte-oficial', fonte),
   listarInvestimentos: (): Promise<unknown> => ipcRenderer.invoke('investimentos:listar'),

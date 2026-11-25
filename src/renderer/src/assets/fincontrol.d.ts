@@ -1,3 +1,4 @@
+import type { Fundamentos } from '../../../main/fundamentos'
 import type { NovoAtivo, Operacao, Posicao, Movimento, ObservacaoPatrimonio, ObservacaoCotacao } from '../../../main/investimentos'
 export {}
 
@@ -149,6 +150,7 @@ declare global {
       reativarAtivoInvestimento: (id: string) => Promise<void>
       excluirAtivoInvestimento: (id: string) => Promise<void>
       atualizarQuantidadeMercado: (id: string, quantidade: number) => Promise<void>
+      consultarFundamentos: (id:string) => Promise<Fundamentos>
       listarHistoricoCotacoes: (id: string) => Promise<ObservacaoCotacao[]>
       abrirFonteInvestimento: (fonte: 'cvm' | 'sec' | 'bcb') => Promise<void>
       listarInvestimentos: () => Promise<{ posicoes: Posicao[]; movimentos: Movimento[]; evolucao: ObservacaoPatrimonio[] }>
