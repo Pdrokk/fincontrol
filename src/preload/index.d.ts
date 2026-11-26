@@ -1,7 +1,11 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
-
 declare global {
   interface Window {
-    electron: ElectronAPI
+    electron: {
+      process: {
+        versions: { electron: string; chrome: string; node: string }
+      }
+    }
   }
 }
+
+export {}

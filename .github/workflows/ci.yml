@@ -26,3 +26,6 @@ jobs:
         run: npm test
       - name: Compilar aplicativo
         run: npm run build
+      - name: Auditar dependências (incluindo Electron e ferramentas de build)
+        if: always()
+        run: npm audit --audit-level=high

@@ -1,7 +1,9 @@
 import { sincronizarCotacoes, configurarChave, chaveConfigurada, obterFundamentos } from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
 import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, registrarOperacao, registrarObservacaoCarteira, listarEvolucaoPatrimonio, listarHistoricoCotacoes, type NovoAtivo, type Operacao } from './investimentos'
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron'
+import { pathToFileURL } from 'node:url'
+import { remetenteIPCConfiavel, urlExternaPermitida } from './seguranca'
 import { join } from 'path'
 import { appendFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -36,6 +38,31 @@ import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParce
 import type { NovoEstornoPagamento } from './cartoes'
 
 const modoUISmoke = process.argv.includes('--fincontrol-ui-smoke-test')
+const modoSmokeFinanceiro = process.argv.includes('--fincontrol-smoke-test')
+const instanciaPrincipal = modoUISmoke || modoSmokeFinanceiro || app.requestSingleInstanceLock()
+if (!instanciaPrincipal) app.quit()
+app.on('second-instance', () => {
+  const janela = BrowserWindow.getAllWindows()[0]
+  if (janela) {
+    if (janela.isMinimized()) janela.restore()
+    janela.focus()
+  }
+})
+
+const janelasConfiaveis = new WeakMap<WebContents, string>()
+function registrarIPC<Args extends unknown[], Resultado>(
+  canal: string,
+  handler: (evento: IpcMainInvokeEvent, ...args: Args) => Resultado
+): void {
+  ipcMain.handle(canal, (evento, ...args: unknown[]) => {
+    const frame = evento.senderFrame
+    if (!remetenteIPCConfiavel(frame?.url, janelasConfiaveis.get(evento.sender),
+      Boolean(frame && frame === evento.sender.mainFrame))) {
+      throw new Error('Origem IPC não autorizada.')
+    }
+    return handler(evento, ...(args as Args))
+  })
+}
 
 function registrarLogUISmoke(mensagem: string): void {
   if (!modoUISmoke) return
@@ -51,8 +78,18 @@ function registrarLogUISmoke(mensagem: string): void {
  * Usa um perfil SQLite isolado, criado apenas no modo de teste.
  */
 async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void> {
+  const preferencias = janela.webContents.getLastWebPreferences()
+  if (!preferencias?.sandbox || !preferencias.contextIsolation || preferencias.nodeIntegration ||
+      preferencias.webSecurity !== true || preferencias.webviewTag) {
+    throw new Error('Preferências de segurança do renderer inválidas.')
+  }
   const resultado = await janela.webContents.executeJavaScript(`
     (async () => {
+      if (typeof window.require !== 'undefined' || typeof window.process !== 'undefined' ||
+          typeof window.electron?.ipcRenderer !== 'undefined' || typeof window.api !== 'undefined' ||
+          typeof window.fincontrol?.listarContas !== 'function') {
+        throw new Error('Isolamento do renderer ou contrato do preload inválido.');
+      }
       const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       for (let i = 0; i < 30 && !document.querySelector('.sidebar nav'); i++) {
         await dormir(100);
@@ -615,9 +652,26 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      webviewTag: false
     }
   })
+
+  const arquivoRenderer = join(__dirname, '../renderer/index.html')
+  const urlDev = is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined
+  const documento = urlDev ? new URL(urlDev).href : pathToFileURL(arquivoRenderer).href
+  const conteudo = mainWindow.webContents
+  janelasConfiaveis.set(conteudo, documento)
+  conteudo.on('will-navigate', (evento) => evento.preventDefault())
+  conteudo.on('will-frame-navigate', (evento) => evento.preventDefault())
+  conteudo.on('will-redirect', (evento) => evento.preventDefault())
+  conteudo.on('will-attach-webview', (evento) => evento.preventDefault())
+  conteudo.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false))
+  conteudo.session.setPermissionCheckHandler(() => false)
 
   mainWindow.on('ready-to-show', () => {
     if (!modoUISmoke) mainWindow.show()
@@ -643,14 +697,12 @@ function createWindow(): void {
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     try {
-      const url = new URL(details.url)
-      const dominios = new Set(['github.com', 'react.dev', 'electronjs.org'])
-      if (url.protocol === 'https:' && dominios.has(url.hostname.toLowerCase())) {
-        void shell.openExternal(url.toString()).catch((erro) => {
-          console.error('Falha ao abrir URL externa permitida:', erro)
+      if (urlExternaPermitida(details.url)) {
+        void shell.openExternal(details.url).catch(() => {
+          console.error('Falha ao abrir URL externa permitida.')
         })
       } else {
-        console.warn('URL externa bloqueada pelo FinControl:', details.url)
+        console.warn('URL externa bloqueada pelo FinControl.')
       }
     } catch {
       console.warn('URL externa inválida bloqueada.')
@@ -660,10 +712,10 @@ function createWindow(): void {
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (urlDev) {
+    void mainWindow.loadURL(documento)
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    void mainWindow.loadFile(arquivoRenderer)
   }
 }
 
@@ -671,8 +723,9 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  if (!instanciaPrincipal) return
   // O modo de verificação só utiliza um banco temporário e não abre janelas.
-  if (process.argv.includes('--fincontrol-smoke-test')) {
+  if (modoSmokeFinanceiro) {
     void executarSmokeInstalado().then(
       async () => {
         try {
@@ -717,21 +770,21 @@ app.whenReady().then(() => {
   }, 60_000)
   app.once('before-quit', () => clearInterval(verificadorSalarios))
 
-  ipcMain.handle('investimentos:sincronizar', (_evento, forcar: boolean) => sincronizarCotacoes(forcar === true))
-  ipcMain.handle('investimentos:chave', (_evento, chave: string) => configurarChave(chave))
-  ipcMain.handle('investimentos:chave-configurada', () => chaveConfigurada())
-  ipcMain.handle('investimentos:reativar', (_evento, id: string) => reativarAtivo(obterBanco(), id))
-  ipcMain.handle('investimentos:excluir', (_evento, id: string) => excluirAtivo(obterBanco(), id))
-  ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
-  ipcMain.handle('investimentos:listar', () => {
+  registrarIPC('investimentos:sincronizar', (_evento, forcar: boolean) => sincronizarCotacoes(forcar === true))
+  registrarIPC('investimentos:chave', (_evento, chave: string) => configurarChave(chave))
+  registrarIPC('investimentos:chave-configurada', () => chaveConfigurada())
+  registrarIPC('investimentos:reativar', (_evento, id: string) => reativarAtivo(obterBanco(), id))
+  registrarIPC('investimentos:excluir', (_evento, id: string) => excluirAtivo(obterBanco(), id))
+  registrarIPC('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
+  registrarIPC('investimentos:listar', () => {
     const db=obterBanco()
     const posicoes=listarPosicoes(db)
     registrarObservacaoCarteira(db,hojeLocalISO(),posicoes)
     return { posicoes, movimentos:listarMovimentos(db), evolucao:listarEvolucaoPatrimonio(db) }
   })
-  ipcMain.handle('investimentos:fundamentos', (_evento,id:string) => obterFundamentos(id))
-  ipcMain.handle('investimentos:historico-cotacoes', (_evento,id:string) => listarHistoricoCotacoes(obterBanco(),id))
-  ipcMain.handle('investimentos:fonte-oficial', async (_evento,fonte: string) => {
+  registrarIPC('investimentos:fundamentos', (_evento,id:string) => obterFundamentos(id))
+  registrarIPC('investimentos:historico-cotacoes', (_evento,id:string) => listarHistoricoCotacoes(obterBanco(),id))
+  registrarIPC('investimentos:fonte-oficial', async (_evento,fonte: string) => {
     const fontes: Record<string,string> = {
       cvm:'https://sistemas.cvm.gov.br/central-index.asp',
       sec:'https://www.sec.gov/search-filings',
@@ -740,77 +793,77 @@ app.whenReady().then(() => {
     if (typeof fonte!=='string'||!Object.hasOwn(fontes,fonte)) throw new Error('Fonte oficial inválida.')
     await shell.openExternal(fontes[fonte])
   })
-  ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))
-  ipcMain.handle('investimentos:valor', (_evento, id: string, centavos: number) => atualizarValorAtivo(obterBanco(), id, centavos))
-  ipcMain.handle('investimentos:cotacao', (_evento, id: string, centavos: number) => atualizarCotacao(obterBanco(), id, centavos))
-  ipcMain.handle('investimentos:operacao', (_evento, dados: Operacao) => registrarOperacao(obterBanco(), dados, id => listarContas().find(c => c.id === id)?.saldoAtualCentavos, hojeLocalISO()))
-  ipcMain.handle('cartoes:listar', () => listarCartoes())
-  ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
-  ipcMain.handle('cartoes:atualizar', (_evento, id: string, dados: NovoCartao) => atualizarCartao(id, dados))
-  ipcMain.handle('cartoes:excluir', (_evento, id: string) => { excluirCartao(id); return true })
-  ipcMain.handle('compras-cartao:listar', () => listarCompras())
-  ipcMain.handle('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
-  ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
-  ipcMain.handle('parcelas-relatorios:listar', () => listarParcelasParaRelatorios())
-  ipcMain.handle('cartoes:despesas-realizadas', () => listarDespesasCartaoRealizadas())
-  ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
-  ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
-  ipcMain.handle('parcelas:arquivar', (_evento, id: string, arquivar: boolean) => definirArquivoParcela(id, arquivar))
-  ipcMain.handle('pagamentos:estornar', (_evento, dados: NovoEstornoPagamento) => estornarPagamento(dados))
-  ipcMain.handle('pagamentos:estornos-listar', () => listarEstornosPagamentos())
-  ipcMain.handle('backup:exportar', () => exportarBackup())
-  ipcMain.handle('backup:restaurar', async (evento) => {
+  registrarIPC('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))
+  registrarIPC('investimentos:valor', (_evento, id: string, centavos: number) => atualizarValorAtivo(obterBanco(), id, centavos))
+  registrarIPC('investimentos:cotacao', (_evento, id: string, centavos: number) => atualizarCotacao(obterBanco(), id, centavos))
+  registrarIPC('investimentos:operacao', (_evento, dados: Operacao) => registrarOperacao(obterBanco(), dados, id => listarContas().find(c => c.id === id)?.saldoAtualCentavos, hojeLocalISO()))
+  registrarIPC('cartoes:listar', () => listarCartoes())
+  registrarIPC('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
+  registrarIPC('cartoes:atualizar', (_evento, id: string, dados: NovoCartao) => atualizarCartao(id, dados))
+  registrarIPC('cartoes:excluir', (_evento, id: string) => { excluirCartao(id); return true })
+  registrarIPC('compras-cartao:listar', () => listarCompras())
+  registrarIPC('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
+  registrarIPC('faturas-previstas:listar', () => listarFaturasPrevistas())
+  registrarIPC('parcelas-relatorios:listar', () => listarParcelasParaRelatorios())
+  registrarIPC('cartoes:despesas-realizadas', () => listarDespesasCartaoRealizadas())
+  registrarIPC('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
+  registrarIPC('parcelas:listar', () => listarParcelasPagamento())
+  registrarIPC('parcelas:arquivar', (_evento, id: string, arquivar: boolean) => definirArquivoParcela(id, arquivar))
+  registrarIPC('pagamentos:estornar', (_evento, dados: NovoEstornoPagamento) => estornarPagamento(dados))
+  registrarIPC('pagamentos:estornos-listar', () => listarEstornosPagamentos())
+  registrarIPC('backup:exportar', () => exportarBackup())
+  registrarIPC('backup:restaurar', async (evento) => {
     const restaurado = await restaurarBackup()
     if (restaurado) setTimeout(() => evento.sender.reload(), 350)
     return restaurado
   })
-  ipcMain.handle('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
+  registrarIPC('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
     pagarParcelasSelecionadas(dados))
-  ipcMain.handle('salarios:listar', () => listarSalarios())
-  ipcMain.handle('salarios:cadastrar', (_evento, dados: NovoSalarioRecorrente) =>
+  registrarIPC('salarios:listar', () => listarSalarios())
+  registrarIPC('salarios:cadastrar', (_evento, dados: NovoSalarioRecorrente) =>
     cadastrarSalario(dados))
-  ipcMain.handle('salarios:desativar', (_evento, id: string) => desativarSalario(id))
+  registrarIPC('salarios:desativar', (_evento, id: string) => desativarSalario(id))
 
-  ipcMain.handle('contas:listar', () => {
+  registrarIPC('contas:listar', () => {
     processarSalariosVencidos()
     return listarContas()
   })
 
-  ipcMain.handle('contas:cadastrar', (_evento, dados: NovaConta) => {
+  registrarIPC('contas:cadastrar', (_evento, dados: NovaConta) => {
     return cadastrarConta(dados)
   })
 
-  ipcMain.handle('contas:excluir', (_evento, id: string) => {
+  registrarIPC('contas:excluir', (_evento, id: string) => {
     excluirConta(id)
     return true
   })
-  ipcMain.handle('contas:editar', (_evento, id: string, dados: AlteracaoConta) =>
+  registrarIPC('contas:editar', (_evento, id: string, dados: AlteracaoConta) =>
     editarConta(id, dados))
-  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) =>
+  registrarIPC('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) =>
     ajustarSaldo(dados))
-  ipcMain.handle('contas:listar-ajustes', () => listarAjustesSaldo())
+  registrarIPC('contas:listar-ajustes', () => listarAjustesSaldo())
 
-  ipcMain.handle('transferencias:listar', () => listarTransferencias())
+  registrarIPC('transferencias:listar', () => listarTransferencias())
 
-  ipcMain.handle('transferencias:criar', (_evento, dados: NovaTransferencia) => {
+  registrarIPC('transferencias:criar', (_evento, dados: NovaTransferencia) => {
     return transferirEntreContas(dados)
   })
 
-  ipcMain.handle('transacoes:listar', () => {
+  registrarIPC('transacoes:listar', () => {
     processarSalariosVencidos()
     return listarTransacoes()
   })
 
-  ipcMain.handle('transacoes:salvar', (_evento, dados: NovaTransacao) => {
+  registrarIPC('transacoes:salvar', (_evento, dados: NovaTransacao) => {
     return salvarTransacao(dados)
   })
 
-  ipcMain.handle('transacoes:remover', (_evento, id: string) => {
+  registrarIPC('transacoes:remover', (_evento, id: string) => {
     removerTransacao(id)
     return true
   })
 
-  ipcMain.handle('transacoes:editar', (_evento, id: string, dados: NovaTransacao) => {
+  registrarIPC('transacoes:editar', (_evento, id: string, dados: NovaTransacao) => {
     return editarTransacao(id, dados)
   })
 
@@ -823,9 +876,6 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
 
   createWindow()
 
