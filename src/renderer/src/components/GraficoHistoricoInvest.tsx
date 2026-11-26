@@ -32,6 +32,6 @@ export default function GraficoHistoricoInvest({titulo,classe='',pontos,agora,de
     </div>}
     {conhecidos.length===1&&<p className="invest-detalhe">Uma observação disponível. Novos dias de registro formarão a linha de evolução.</p>}
     <p className="invest-detalhe">{descricao}</p>
-    {dados.length>0&&<details className="carteira-dados-grafico"><summary>Consultar dados registrados ({dados.length})</summary><div className="invest-historico"><table><thead><tr><th>Data</th><th>Valor em reais</th></tr></thead><tbody>{dados.map(p=><tr key={p.data}><td>{dataCompleta(p.instante)}</td><td>{p.valor===null?'Indisponível':formatar(p.valor)}</td></tr>)}</tbody></table></div></details>}
+    {dados.length>0&&<details className="carteira-dados-grafico"><summary>Consultar dados registrados ({dados.length})</summary><div className="invest-historico" role="region" aria-label="Dados registrados de cotação" tabIndex={0}><table aria-label="Histórico de valores registrados"><thead><tr><th scope="col">Data</th><th scope="col" className="valor-numerico">Valor em reais</th></tr></thead><tbody>{dados.map(p=><tr key={p.data}><td>{dataCompleta(p.instante)}</td><td className="valor-numerico">{p.valor===null?'Indisponível':formatar(p.valor)}</td></tr>)}</tbody></table></div></details>}
   </section>
 }

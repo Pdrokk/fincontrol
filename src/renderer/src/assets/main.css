@@ -2620,6 +2620,7 @@ body::-webkit-scrollbar-corner,
 .carteira-toast { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--surface); color: var(--text); box-shadow: 0 5px 18px #00000022; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
 .carteira-toast svg { flex-shrink: 0; color: #15803d; }
 .fincontrol[data-theme='dark'] .carteira-toast svg { color: #4ade80; }
+.fincontrol .carteira-toast--informacao svg { color: var(--carteira-linha); }
 .carteira-aviso { display: flex; align-items: center; gap: 8px; }
 .carteira-aviso .fincontrol-feedback { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 750px) {
@@ -2692,7 +2693,7 @@ body::-webkit-scrollbar-corner,
 .carteira-rosca-legenda { list-style:none; margin:0; padding:0; display:grid; gap:6px; min-width:0; }
 .carteira-rosca-legenda li { display:grid; grid-template-columns:8px minmax(45px,1fr) auto minmax(42px,auto); align-items:center; gap:8px; font-size:13px; font-variant-numeric:tabular-nums; }
 .carteira-rosca-legenda i { display:block; width:8px; height:8px; background:var(--fatia-cor); border-radius:2px; }
-.carteira-rosca-legenda .carteira-rosca-nome { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+.carteira-rosca-legenda .carteira-rosca-nome { min-width:0; overflow-wrap:anywhere; color:var(--text); }
 .carteira-rosca-legenda strong { text-align:right; font-weight:600; }
 .carteira-cor-0 { --fatia-cor:#2563eb; }
 .carteira-cor-1 { --fatia-cor:#0f766e; }
@@ -2739,4 +2740,55 @@ body::-webkit-scrollbar-corner,
 @media (max-width:720px) {
   .fincontrol .titulo-contas .acao-contextual { width:100%; }
   .fincontrol .historico-filtros .filtro-campo { flex:0 1 auto; width:100%; }
+}
+
+/* Polish: foco, leitura e navegação da carteira sem alterar o layout. */
+.fincontrol { --fc-focus: #2563eb; }
+.fincontrol[data-theme='dark'] { --fc-focus: #60a5fa; }
+.fincontrol :is(input, select, textarea, button, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--fc-focus);
+  outline-offset: 2px;
+}
+.fincontrol .sidebar :is(button, [tabindex="0"]):focus-visible {
+  outline-color: #60a5fa;
+}
+.fincontrol .carteira-busca-campo:focus-within {
+  outline-color: var(--fc-focus);
+}
+.fincontrol .carteira-busca-campo input:focus-visible {
+  outline: none;
+}
+.fincontrol :is(.carteira-tabela, .invest-historico):focus-visible {
+  outline-offset: -2px;
+}
+.fincontrol .carteira-ativo-nome > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fincontrol .carteira-link-ativo {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.fincontrol .carteira-tabela tbody tr:focus-within {
+  background: var(--bg);
+}
+.fincontrol .invest-historico :is(.valor-numerico, th.valor-numerico) {
+  text-align: right;
+}
+.fincontrol .carteira-rosca-legenda strong {
+  overflow-wrap: anywhere;
+}
+.fincontrol .carteira-ficha:focus-visible {
+  outline: 2px solid var(--fc-focus);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  .fincontrol :is(input, select, textarea, button, summary, [tabindex="0"], .carteira-ficha):focus-visible,
+  .fincontrol .carteira-busca-campo:focus-within {
+    outline-color: Highlight;
+  }
+  .fincontrol .carteira-busca-campo input:focus-visible {
+    outline: none;
+  }
 }
