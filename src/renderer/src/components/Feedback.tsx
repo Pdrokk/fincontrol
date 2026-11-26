@@ -5,7 +5,9 @@ interface FeedbackProps {
 }
 
 export default function Feedback({
-  mensagem, tipo = 'informacao', id
+  mensagem,
+  tipo = 'informacao',
+  id
 }: FeedbackProps): React.JSX.Element | null {
   if (!mensagem) return null
   return (
@@ -14,7 +16,7 @@ export default function Feedback({
       className={`fincontrol-feedback fincontrol-feedback--${tipo}`}
       role={tipo === 'erro' ? 'alert' : 'status'}
     >
-      {mensagem}
+      {mensagem.replace(/^Error invoking remote method '[^']+': Error:\s*/, '')}
     </p>
   )
 }

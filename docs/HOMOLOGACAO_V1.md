@@ -1,65 +1,37 @@
-# FinControl 1.0 — Homologação para instalação no Windows
+# Homologação atual — FinControl 1.6.4 (Windows x64 portátil)
 
-**Versão:** 1.0.0 · **Plataforma:** Windows 64 bits · **Build:** Electron + React + TypeScript + SQLite · **Artefato esperado:** `FinControl-1.0.0-setup.exe`
+## Evidência da versão aprovada
 
-## 1. Níveis de validação
-
-| Camada | Execução automática |
+| Item | Resultado |
 |---|---|
-| TypeScript do processo Electron/preload e renderer | `npm run typecheck` |
-| Análise estática | `npm run lint` |
-| Regras e SQL em memória | `npm test` |
-| Build de produção | `npm run build` |
-| Empacotamento NSIS Windows x64 | workflow `windows-installer.yml` |
-| Executável empacotado | `fincontrol.exe --fincontrol-smoke-test` |
-| Instalador + aplicativo instalado | instalação silenciosa e smoke do EXE instalado |
-| Migração de SQLite legado | smoke com DB antigo descartável |
-| Backup/restauração | smoke em DB descartável (inclui rejeição de arquivo inválido) |
-| Interface com mouse, teclado, leitor de tela e conta pessoal | **homologação manual necessária** |
+| PRs 47 e 48 | Mesclados na develop |
+| SHA do PR 48 | `d862bafc5a4f2d1be4dedd0681a1906cb6d93320` |
+| SHA da develop verificada | `407f72b40a460ca35764dd089eda71037c45a235` |
+| Árvore Git idêntica nos dois SHAs | `a930ab77571dd4de1d0f4606aab998c900cb0d59` |
+| Qualidade | [Run 45733822723](https://github.com/Pdrokk/fincontrol/actions/runs/45733822723) — sucesso |
+| Windows | [Run 45733822820](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820) — sucesso |
+| Testes unitários | 45 aprovados; 0 falhas |
+| ESLint | 0 erros; 1.719 avisos de formatação/análise, não tratados como falhas |
+| Build | EXE portátil gerado |
+| Smoke financeiro | Pagamentos, estornos, migrações e backup no EXE empacotado; regressão portátil aprovada |
+| Smoke de interface | Sete páginas; tema, scrollbar, paginação e ações aprovados |
+| Responsividade | Seis larguras solicitadas, 14 combinações página/tema por largura |
+| Artefato | [FinControl-Correcoes-Validacao-Windows-48](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820/artifacts/15078142692) |
 
-Os testes integrados do Electron usam apenas `app.setPath('userData', pastaTemporaria)` e removem essa pasta ao final, nunca os dados pessoais do usuário.
+Os valores de viewport observados nos logs foram 630, 758, 890, 1270, 1910 e 2550px. São testes automatizados, não avaliação visual humana ou certificação de acessibilidade. Os resultados se referem ao código testado acima, cuja árvore Git coincide com a develop após o PR 48; não há execução direta no SHA de merge consultado. Logs verificados em 25/11/2026 (Brasília). Consulte a [matriz final](homologacao-final.md) para critérios de aceite e casos manuais.
 
-## 2. Testes manuais em ambiente Windows (após aprovação da CI)
+## Roteiro manual obrigatório para a versão final
 
-Prepare um banco fictício ou faça backup antes de começar.
+Use dados fictícios e um perfil de Windows separado quando possível. Não restaure backup sobre dados pessoais para testar.
 
-1. Instale o `.exe`; verifique atalho, inicialização, fechamento e reabertura.
-2. Confira se a sidebar, o switch de tema e os painéis funcionam com Light/Dark Mode.
-3. Cadastre e edite duas contas com bancos distintos (Inter e Nubank).
-4. Registre receita, despesa e transferência e confira saldos e filtros do Dashboard.
-5. Registre cartão, compra em três parcelas e confira limite contratado/disponível.
-6. Pague duas parcelas de uma vez; confira saldo bancário, limite liberado e histórico.
-7. Estorne uma parcela e tente estorná-la novamente. Confira o histórico da justificativa.
-8. Arquive uma parcela quitada e restaure a visibilidade no histórico.
-9. Configure salário recorrente e confirme que não duplica após reiniciar.
-10. Em Relatórios, alterne **Realizado** e **Previsto**, altere mês/ano e navegue nas páginas.
-11. Exporte um backup; faça uma mudança fictícia e **restaure o backup com esse banco de testes**, confirmando a reversão.
-12. Reinicie e confira persistência; desinstale e instale novamente usando outro banco de testes.
+- [ ] Executar o EXE em Windows x64 sem ambiente de desenvolvimento; confirmar versão, abertura, fechamento e reabertura.
+- [ ] Criar duas contas, receita, despesa, transferência e ajuste; reconciliar os saldos.
+- [ ] Cadastrar cartão, compra parcelada, pagamento em lote, estorno e conferir limites.
+- [ ] Cadastrar investimento manual, compra/venda e provento; conferir caixa, quantidade, rosca e histórico.
+- [ ] Verificar prévia com taxas, saldo insuficiente e recuperação de falhas.
+- [ ] Conferir filtros, paginação, relatórios e temas claro/escuro com teclado.
+- [ ] Exportar backup, alterar dados fictícios, restaurar e confirmar persistência após reiniciar.
+- [ ] Confirmar que o EXE não depende de internet para registros; se consultar mercado, verificar data/fonte e falhas.
+- [ ] Conferir visualmente 640px, resolução habitual e ultrawide.
 
-## 3. Uso de dados pessoais
-
-- Nunca envie o `fincontrol.db` ao GitHub ou a um serviço público.
-- Faça backup antes de atualizar o aplicativo para 1.0.
-- O instalador **não deve apagar a pasta de dados**; a verificação na máquina final ainda é recomendada.
-- Se notar algum saldo divergente, compare com as movimentações cadastradas antes de usar o resultado para tomar decisões reais.
-- A restauração substitui os dados correntes, mas mantém snapshot de emergência para diagnóstico.
-
-## 4. Distribuição
-
-O pipeline do GitHub publica um **artefato ZIP** que contém `FinControl-1.0.0-setup.exe` e `SHA256SUMS.txt`, disponível na página da execução aprovada.
-
-O instalador acadêmico não é assinado com certificado de desenvolvedor. O Windows poderá mostrar aviso de editor desconhecido.
-
-## 5. Limitações conhecidas
-
-- O projeto não possui sincronização entre computadores, app mobile nem integração bancária real.
-- As cores dos bancos são aproximações visuais, não logotipos oficiais.
-- A recorrência salarial funciona ao abrir o programa e enquanto ele está aberto, não como serviço de fundo com o computador desligado.
-- Transações e despesas de cartão cadastradas manualmente para o mesmo evento ainda exigem conferência de duplicidade pelo usuário.
-- O aplicativo não substitui escrituração contábil profissional nem conciliação com extratos reais.
-
-## 6. Decisão de liberação
-
-**Liberar para instalação acadêmica somente se:** workflow Windows passar (incluindo montagem/instalação/smoke), versão do executável for `1.0.0` e teste manual básico de abertura e persistência passar.
-
-**Não afirmar homologação em máquina pessoal** sem evidência de execução nessa máquina.
+Registre data, versão, ambiente e resultado real de cada item. Não marque como aprovado sem execução. A distribuição acadêmica definitiva exige homologação da versão final, verificação do arquivo entregue e aprovação da equipe. O EXE não possui assinatura digital.

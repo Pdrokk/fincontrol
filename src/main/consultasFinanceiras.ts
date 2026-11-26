@@ -14,6 +14,7 @@ export const CONSULTA_SALDOS_CONTAS = `
                    AND pp.data_pagamento <= date('now', 'localtime')
                    AND pp.estornado = 0), 0)
       + COALESCE((SELECT SUM(diferenca_centavos) FROM ajustes_saldo WHERE conta_id = c.id AND data <= date('now', 'localtime')), 0)
+      + COALESCE((SELECT SUM(caixa_centavos) FROM movimentos_investimento WHERE conta_id = c.id AND data <= date('now', 'localtime')), 0)
         AS saldoAtualCentavos
     FROM contas c ORDER BY c.criado_em DESC
   `

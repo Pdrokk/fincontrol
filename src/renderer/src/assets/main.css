@@ -511,7 +511,7 @@ button:disabled {
   --bg: #f1f5f9;
   --surface: #ffffff;
   --text: #0f172a;
-  --muted: #64748b;
+  --muted: #59677a;
   --border-color: #e2e8f0;
   --sidebar-bg: #0f172a;
   --input-bg: #ffffff;
@@ -1705,7 +1705,10 @@ button:disabled {
 
 .fincontrol .graficos-abas button.ativo {
   background: #2563eb20;
-  color: #60a5fa;
+  color: #1d4ed8;
+}
+.fincontrol[data-theme='dark'] .graficos-abas button.ativo {
+  color: #bfdbfe;
 }
 
 .fincontrol .graficos-paginacao {
@@ -2175,9 +2178,15 @@ body::-webkit-scrollbar-corner,
   accent-color: #2563eb;
 }
 @media (prefers-reduced-motion: reduce) {
-  .fincontrol, .fincontrol *, .fincontrol *::before, .fincontrol *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+  /* Mantém feedback de foco/estado; elimina apenas efeitos de deslocamento. */
+  .fincontrol {
+    scroll-behavior: auto;
+  }
+  .fincontrol :is(.sidebar, .sidebar button, .cartao-conta, .grafico-card) {
+    animation: none !important;
+    transition: none !important;
+  }
+  .fincontrol * {
     scroll-behavior: auto !important;
   }
 }
@@ -2187,5 +2196,599 @@ body::-webkit-scrollbar-corner,
   }
   .fincontrol :is(input, select, textarea, button):focus-visible {
     outline-color: Highlight;
+  }
+}
+
+/* Impeccable audit v1.1 — alvos e leitura dos dados financeiros. */
+.fincontrol .historico-paginacao button,
+.fincontrol .historico-controles select,
+.fincontrol .central-filtro-cartao select {
+  min-height: 44px;
+}
+.fincontrol .graficos-dados {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+.fincontrol .graficos-dados summary {
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.fincontrol .graficos-dados summary:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 3px;
+}
+.fincontrol .graficos-dados-tabela {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.fincontrol .graficos-dados table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.fincontrol .graficos-dados th,
+.fincontrol .graficos-dados td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+.fincontrol .graficos-dados th {
+  color: var(--text);
+  font-weight: 600;
+}
+.fincontrol .graficos-dados td {
+  color: var(--text);
+}
+.fincontrol .graficos-dados td:not(:first-child),
+.fincontrol .graficos-dados th:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Impeccable adapt — janela Windows redimensionável, Full HD e ultrawide.
+   O painel usa o espaço disponível sem esticar gráficos indefinidamente. */
+.fincontrol .content {
+  width: 100%;
+  max-width: 1760px;
+  margin-inline: auto;
+}
+
+.fincontrol .sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.fincontrol :is(.painel, .grafico-card, .dashboard-kpi, .dashboard-item, .central-grupo) {
+  min-width: 0;
+}
+
+.fincontrol :is(.resumo-contas strong, .central-pagamento-total strong,
+  .cartao-conta strong, .cartao-conta h3, .central-grupo-titulo strong,
+  .central-parcela span, .dashboard-item > div) {
+  overflow-wrap: anywhere;
+}
+
+.fincontrol .central-parcela span,
+.fincontrol .central-grupo-titulo > span {
+  min-width: 0;
+}
+
+.fincontrol .graficos-paginacao button {
+  width: 44px;
+  height: 44px;
+}
+
+.fincontrol .graficos-paginacao > span {
+  text-align: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .fincontrol .central-pagamento-form {
+    position: static;
+  }
+
+  .fincontrol .graficos-toolbar {
+    align-items: flex-start;
+  }
+
+  .fincontrol .dashboard-item {
+    flex-wrap: wrap;
+  }
+
+  .fincontrol .dashboard-item > div {
+    flex: 1 1 170px;
+  }
+
+  .fincontrol .dashboard-item > strong {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .fincontrol .sidebar {
+    width: 60px;
+    min-width: 60px;
+    padding: 16px 6px;
+  }
+
+  .fincontrol .sidebar-logo {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 22px;
+  }
+
+  .fincontrol .sidebar nav button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .fincontrol .content {
+    padding: 16px;
+  }
+
+  .fincontrol .painel,
+  .fincontrol .grafico-card,
+  .fincontrol .dashboard-lista,
+  .fincontrol .central-pagamentos {
+    padding: 16px;
+  }
+
+  .fincontrol .cabecalho,
+  .fincontrol .titulo-contas,
+  .fincontrol .dashboard-secao-titulo {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .fincontrol .cabecalho > .botao-primario {
+    min-height: 44px;
+  }
+
+  .fincontrol .resumo-contas {
+    padding: 16px;
+  }
+
+  .fincontrol .resumo-contas strong {
+    font-size: clamp(20px, 4vw, 28px);
+  }
+
+  .fincontrol .dashboard-duas-colunas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fincontrol .central-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fincontrol .central-resumo > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .fincontrol .central-pagamento-total {
+    flex-wrap: wrap;
+  }
+
+  .fincontrol .central-pagamento-campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fincontrol .central-pagamento-campos button {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .fincontrol .transacao {
+    gap: 10px;
+  }
+
+  .fincontrol .transacao-info {
+    flex: 1 1 100%;
+  }
+
+  .fincontrol .graficos-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fincontrol .graficos-paginacao {
+    justify-content: space-between;
+  }
+
+  .fincontrol .graficos-paginacao > span {
+    flex: 1;
+  }
+
+  .fincontrol .grafico-area {
+    height: clamp(210px, 44vw, 275px);
+  }
+
+  .fincontrol .historico-paginacao {
+    justify-content: space-between;
+  }
+}
+
+@media (pointer: coarse) {
+  .fincontrol :is(.botao-editar, .botao-excluir, .acoes-conta button,
+    .cartoes-navegacao button, .central-abas button) {
+    min-height: 44px;
+  }
+}
+
+/* Impeccable polish final — estados coerentes no tema claro e escuro. */
+.fincontrol .vazio {
+  color: var(--muted);
+  line-height: 1.55;
+}
+.fincontrol .graficos-abas button:hover:not(.ativo),
+.fincontrol .central-abas button:hover:not(.selecionada),
+.fincontrol .cartoes-navegacao button:hover:not(.ativo) {
+  background: var(--bg);
+  color: var(--text);
+}
+.fincontrol .graficos-abas button:focus-visible,
+.fincontrol .central-abas button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+.fincontrol .botao-texto {
+  min-height: 44px;
+  padding: 10px 4px;
+  text-underline-offset: 3px;
+}
+.fincontrol .botao-texto:hover {
+  text-decoration: underline;
+}
+.fincontrol .central-icone {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.fincontrol .graficos-dados table caption {
+  padding: 10px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.fincontrol .graficos-dados-tabela + .graficos-dados-tabela {
+  margin-top: 16px;
+}
+.fincontrol .graficos-dados tr:hover {
+  background: var(--bg);
+}
+.fincontrol .graficos-dados th:first-child {
+  overflow-wrap: anywhere;
+}
+.fincontrol :is(.categoria-texto, .central-pagamento-total) {
+  min-width: 0;
+}
+.fincontrol :is(.categoria-texto > span, .central-pagamento-total > span) {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 720px) {
+  .fincontrol .central-parcela.historico > span {
+    flex: 1 1 160px;
+  }
+  .fincontrol .historico-cabecalho {
+    align-items: stretch;
+  }
+  .fincontrol .graficos-dados td,
+  .fincontrol .graficos-dados th {
+    padding: 10px 6px;
+  }
+}
+
+/* Investimentos: superfícies e controles seguem os tokens dos dois temas. */
+.banco-identidade { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.icone-banco { display: inline-grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid #ffffff44; border-radius: 8px; color: #fff; font-weight: 800; font-size: 12px; line-height: 1; letter-spacing: -.02em; }
+.investimentos { display: grid; gap: 16px; min-width: 0; }
+.investimentos .painel { min-width: 0; }
+.invest-resumo { display: flex; flex-wrap: wrap; gap: 18px 32px; padding-block: 12px; }
+.invest-resumo > div { display: grid; gap: 6px; }
+.invest-resumo strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.invest-resumo span, .invest-detalhe { color: var(--muted); font-size: .85rem; }
+.invest-ativo { display: grid; grid-template-columns: minmax(130px,1.2fr) repeat(2,minmax(100px,1fr)) minmax(120px,1fr); gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border-color); }
+.invest-ativo > div { min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.invest-ativo .invest-nome { display: flex; align-items: center; gap: 8px; }
+.invest-ativo form { display: flex; align-items: center; gap: 6px; }
+.invest-ativo input { min-width: 0; width: 100%; }
+.invest-cotacao input { background: var(--input-bg); color: var(--text); border: 1px solid var(--border-color); border-radius: 8px; padding: 9px; }
+.invest-cotacao button { padding: 9px; min-width: 44px; min-height: 44px; }
+.invest-alocacao { display: grid; gap: 10px; margin-top: 14px; }
+.invest-barra { height: 7px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+.invest-barra > span { display: block; height: 100%; background: #2563eb; border-radius: 4px; }
+.invest-historico { overflow-x: auto; }
+.invest-historico table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
+.invest-historico th, .invest-historico td { padding: 10px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.invest-historico th { color: var(--muted); font-size: .85rem; }
+@media(max-width: 900px) { .invest-ativo { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+.fincontrol .fc-dialogo { position: fixed; inset: 0; margin: auto; width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; padding: 24px; border: 1px solid var(--border-color); border-radius: 15px; background: var(--surface); color: var(--text); box-sizing: border-box; }
+.fincontrol .fc-dialogo::backdrop { background: rgba(3, 7, 18, .65); }
+.fc-dialogo h2 { margin: 0 0 10px; font-size: 20px; font-weight: 700; }
+.fc-dialogo p { color: var(--muted); font-size: 14px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; margin: 0 0 18px; }
+.fc-dialogo .fc-dialogo-acoes { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.fc-dialogo button { min-height: 44px; padding: 10px 18px; border-radius: 9px; font: inherit; font-weight: 600; }
+.fc-dialogo .fc-cancelar { border: 1px solid var(--border-color); color: var(--text); background: var(--bg); }
+.fc-dialogo .fc-confirmar { border: 1px solid transparent; background: #2563eb; color: #fff; }
+.fc-dialogo .fc-confirmar:hover { background: #1d4ed8; }
+.fc-dialogo .fc-perigo { background: #b91c1c; }
+.fc-dialogo .fc-perigo:hover { background: #991b1b; }
+.fc-dialogo input { display: block; width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font: inherit; box-sizing: border-box; }
+.invest-avancado summary { cursor: pointer; font-weight: 600; color: var(--text); padding-block: 10px; }
+.invest-avancado[open] summary { margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+
+/* Carteira v1.3: leitura tabular e edição sob demanda, com os tokens do FinControl. */
+.carteira-v3 .carteira-painel { padding: 24px; }
+.carteira-cabecalho,.carteira-fonte { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.carteira-cabecalho h3 { margin:0 0 5px; font-size:19px; color:var(--text); }
+.carteira-acoes { display:flex; gap:8px; flex-wrap:wrap; }
+.carteira-v3 button { min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+.carteira-balanco { display:grid; grid-template-columns:minmax(220px,1fr) minmax(200px,.9fr); gap:24px; padding:22px 0; border-bottom:1px solid var(--border-color); }
+.carteira-balanco>div:first-child { display:grid; align-content:start; gap:8px; }
+.carteira-balanco>div:first-child>strong { font-size:clamp(25px,3vw,36px); font-weight:700; letter-spacing:-.025em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.carteira-balanco small,.carteira-balanco span,.carteira-fonte,.carteira-tabela small { color:var(--muted); font-size:13px; }
+.carteira-balanco .invest-alocacao { margin:0; gap:8px; }
+.carteira-categoria { display:grid; grid-template-columns:minmax(75px,1fr) minmax(55px,2fr) 54px; align-items:center; gap:10px; font-size:13px; }
+.carteira-categoria strong { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+.carteira-fonte { padding:8px 0; gap:8px; }
+.carteira-edicao { padding:18px 0; border-block:1px solid var(--border-color); margin-bottom:14px; }
+.carteira-edicao[hidden] { display:none!important; }
+.carteira-edicao .formulario { margin:12px 0; }
+.carteira-tabela { overflow-x:auto; max-width:100%; }
+.carteira-tabela table { width:100%; min-width:650px; border-collapse:collapse; text-align:left; font-variant-numeric:tabular-nums; }
+.carteira-tabela .invest-ativo { display:table-row; border:0; }
+.carteira-tabela th,.carteira-tabela td { padding:13px 10px; border-bottom:1px solid var(--border-color); vertical-align:middle; }
+.carteira-tabela thead th { font-size:12px; font-weight:600; color:var(--muted); }
+.carteira-tabela tbody th { font-weight:500; }
+.carteira-tabela th:not(:first-child),.carteira-tabela td { text-align:right; }
+.carteira-tabela tbody tr:hover { background:var(--bg); }
+.carteira-tabela small { display:block; margin-top:4px; font-weight:400; overflow-wrap:anywhere; }
+.carteira-ativo-nome { display:flex; gap:10px; align-items:center; }
+.carteira-ativo-nome>svg { flex-shrink:0; color:var(--muted); }
+.carteira-tabela .carteira-editar { min-width:44px; padding:8px; }
+.carteira-editor { display:flex; align-items:center; justify-content:flex-end; gap:6px; }
+.carteira-editor input { width:112px; min-height:44px; border:1px solid var(--border-color); border-radius:8px; padding:8px; }
+.carteira-vazia { display:grid; justify-items:center; gap:8px; padding:42px 12px; text-align:center; color:var(--muted); }
+.carteira-vazia strong { color:var(--text); }
+@media(max-width:900px){.carteira-balanco{grid-template-columns:1fr}.carteira-v3 .carteira-painel{padding:16px}}
+
+.carteira-acoes-linha { display:flex; justify-content:flex-end; align-items:center; gap:6px; }
+
+/* Polish 1.3.2: o botão secundário pertence ao mesmo sistema visual do FinControl. */
+.fincontrol .botao-secundario {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.25;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.fincontrol .botao-secundario:hover:not(:disabled) { background: var(--bg); border-color: #60a5fa; }
+.fincontrol .botao-secundario:active:not(:disabled) { background: var(--surface); }
+.fincontrol .botao-secundario:disabled { opacity: .48; cursor: not-allowed; }
+.fincontrol .carteira-editar { width: 44px; padding: 8px; flex: 0 0 44px; }
+.fincontrol .carteira-remover:hover:not(:disabled) { color: #b91c1c; border-color: #dc2626; }
+.fincontrol[data-theme='dark'] .carteira-remover:hover:not(:disabled) { color: #fca5a5; border-color: #f87171; }
+.carteira-v3 { --ativo-cor: #64748b; }
+.carteira-v3 [data-categoria='Ação'] { --ativo-cor: #2563eb; }
+.carteira-v3 [data-categoria='ETF'] { --ativo-cor: #7c3aed; }
+.carteira-v3 [data-categoria='FII'] { --ativo-cor: #0f766e; }
+.carteira-v3 [data-categoria='Moeda'] { --ativo-cor: #a16207; }
+.carteira-v3 [data-categoria='Cripto'] { --ativo-cor: #c2410c; }
+.carteira-v3 [data-categoria='Renda fixa'] { --ativo-cor: #15803d; }
+.carteira-v3 [data-categoria='Outro'] { --ativo-cor: #64748b; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Ação'] { --ativo-cor: #60a5fa; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='ETF'] { --ativo-cor: #a78bfa; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='FII'] { --ativo-cor: #2dd4bf; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Moeda'] { --ativo-cor: #fbbf24; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Cripto'] { --ativo-cor: #fb923c; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Renda fixa'] { --ativo-cor: #4ade80; }
+.fincontrol[data-theme='dark'] .carteira-v3 [data-categoria='Outro'] { --ativo-cor: #94a3b8; }
+.carteira-categoria-rotulo { display: flex; align-items: center; gap: 7px; }
+.carteira-categoria-rotulo i { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--ativo-cor); }
+.carteira-categoria .invest-barra > span { background: var(--ativo-cor); }
+.carteira-icone-ativo { display: inline-grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 9px; color: var(--ativo-cor); background: color-mix(in srgb, var(--ativo-cor) 12%, var(--surface)); }
+.carteira-filtro { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 20px; padding: 12px 0 4px; }
+.carteira-filtro h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.carteira-filtro h4 span { margin-left: 6px; color: var(--muted); font-weight: 400; }
+.carteira-filtro-zeradas { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.carteira-filtro-zeradas input { width: 17px; height: 17px; accent-color: #2563eb; margin: 0; }
+.carteira-notificacoes { position: fixed; z-index: 30; right: 24px; bottom: 24px; width: min(360px, calc(100vw - 48px)); display: grid; gap: 8px; pointer-events: none; }
+.carteira-toast { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--surface); color: var(--text); box-shadow: 0 5px 18px #00000022; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.carteira-toast svg { flex-shrink: 0; color: #15803d; }
+.fincontrol[data-theme='dark'] .carteira-toast svg { color: #4ade80; }
+.fincontrol .carteira-toast--informacao svg { color: var(--carteira-linha); }
+.carteira-aviso { display: flex; align-items: center; gap: 8px; }
+.carteira-aviso .fincontrol-feedback { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 750px) {
+  .carteira-notificacoes { right: 12px; bottom: 12px; width: min(360px, calc(100vw - 24px)); }
+  .carteira-acoes { width: 100%; }
+  .carteira-acoes button { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) { .fincontrol .botao-secundario { transition: none; } }
+
+/* Carteira unificada: operações contextuais sem seletor duplicado. */
+.carteira-v3 .carteira-acoes-linha { flex-wrap:wrap; }
+.carteira-v3 .carteira-tabela th:last-child { min-width:220px; }
+.carteira-v3 .carteira-operacao { margin-top:20px; border-bottom:0; }
+.carteira-v3 .carteira-operacao .formulario { margin-bottom:0; }
+
+/* Distribuição compacta: área proporcional, legenda independente da largura dos segmentos. */
+.carteira-distribuicao { align-content:start; min-width:0; }
+.carteira-distribuicao-titulo { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; }
+.carteira-barra-unica { display:flex; height:12px; overflow:hidden; border-radius:6px; background:var(--border-color); }
+.carteira-barra-unica>span { display:block; flex-basis:0; flex-shrink:1; min-width:0; height:100%; background:var(--ativo-cor); }
+.carteira-legenda { display:flex; flex-wrap:wrap; gap:6px 16px; padding:0; margin:2px 0 0; list-style:none; }
+.carteira-legenda li { display:inline-flex; align-items:center; gap:6px; min-width:0; font-size:13px; }
+.carteira-legenda li i { flex:0 0 8px; width:8px; height:8px; border-radius:2px; background:var(--ativo-cor); }
+.carteira-legenda li strong { font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+.carteira-busca { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:4px 0 10px; }
+.carteira-busca-campo { display:flex; flex:1 1 220px; align-items:center; gap:8px; padding:0 12px; border:1px solid var(--border-color); border-radius:9px; background:var(--input-bg); color:var(--muted); min-height:44px; }
+.carteira-busca-campo:focus-within { outline:2px solid #60a5fa; outline-offset:2px; }
+.carteira-busca-campo>svg { flex-shrink:0; }
+.carteira-busca-campo input { appearance:none; flex:1; width:100%; min-width:0; border:0; background:transparent; color:var(--text); font:inherit; padding:8px 0; }
+.carteira-busca-campo input:focus { outline:none; box-shadow:none; }
+.carteira-busca-campo input::placeholder { color:var(--muted); opacity:1; }
+.carteira-busca select { min-height:44px; padding:8px 12px; border:1px solid var(--border-color); border-radius:9px; background:var(--input-bg); color:var(--text); font:inherit; max-width:100%; }
+
+/* Análise da carteira: observações reais, mesma linguagem dos relatórios. */
+.carteira-v3 { --carteira-linha:#2563eb; }
+.fincontrol[data-theme='dark'] .carteira-v3 { --carteira-linha:#60a5fa; }
+.carteira-grafico { padding:18px 0; border-bottom:1px solid var(--border-color); min-width:0; }
+.carteira-grafico h4,.carteira-ficha h4 { margin:0; font-size:15px; font-weight:600; }
+.carteira-grafico-area { width:100%; min-width:0; margin-top:12px; }
+.carteira-grafico-vazio { min-height:104px; display:grid; align-content:center; text-align:center; padding:12px; color:var(--muted); }
+.carteira-grafico .invest-detalhe { margin:8px 0 0; line-height:1.5; }
+.carteira-dados-grafico { margin-top:10px; color:var(--muted); font-size:13px; }
+.carteira-dados-grafico summary { cursor:pointer; padding:8px 0; }
+.carteira-dados-grafico .invest-historico { max-height:220px; overflow:auto; }
+.fincontrol .carteira-link-ativo { appearance:none; background:none; border:0; padding:0; color:var(--carteira-linha); font:inherit; font-weight:700; min-height:24px; justify-content:flex-start; cursor:pointer; text-align:left; }
+.fincontrol .carteira-link-ativo:hover { text-decoration:underline; text-underline-offset:3px; }
+.fincontrol .carteira-link-ativo:focus-visible { outline:2px solid var(--carteira-linha); outline-offset:3px; border-radius:3px; }
+.carteira-ficha { margin-top:20px; padding-top:18px; border-bottom:0; }
+.carteira-ficha .carteira-cabecalho p { margin:0; }
+.carteira-ficha-dados { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:16px 24px; margin:18px 0; }
+.carteira-ficha-dados>div { min-width:0; }
+.carteira-ficha-dados dt { font-size:13px; color:var(--muted); }
+.carteira-ficha-dados dd { margin:5px 0 0; color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.carteira-ficha-dados dd small { font-weight:400; }
+.carteira-ficha-historico { max-height:280px; overflow:auto; margin:8px 0; }
+.carteira-ficha>h4 { margin-top:18px; }
+.carteira-fontes-oficiais { margin-top:18px; border-top:1px solid var(--border-color); padding-top:16px; }
+
+.carteira-fundamentos { border-bottom:1px solid var(--border-color); padding:18px 0; }
+.carteira-fundamentos .carteira-ficha-dados { grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
+.carteira-fundamentos .invest-detalhe { line-height:1.5; }
+.carteira-fundamentos dd { font-size:17px; }
+
+/* Rosca de composição: no máximo seis fatias, legenda compacta e acessível. */
+.carteira-composicao { min-width:0; align-content:start; }
+.carteira-composicao h4 { margin:0; font-size:14px; font-weight:600; }
+.carteira-composicao p { margin:4px 0; }
+.carteira-rosca-conteudo { display:grid; grid-template-columns:128px minmax(0,1fr); gap:16px; align-items:center; }
+.carteira-rosca { width:128px; height:128px; display:block; }
+.carteira-rosca-legenda { list-style:none; margin:0; padding:0; display:grid; gap:6px; min-width:0; }
+.carteira-rosca-legenda li { display:grid; grid-template-columns:8px minmax(45px,1fr) auto minmax(42px,auto); align-items:center; gap:8px; font-size:13px; font-variant-numeric:tabular-nums; }
+.carteira-rosca-legenda i { display:block; width:8px; height:8px; background:var(--fatia-cor); border-radius:2px; }
+.carteira-rosca-legenda .carteira-rosca-nome { min-width:0; overflow-wrap:anywhere; color:var(--text); }
+.carteira-rosca-legenda strong { text-align:right; font-weight:600; }
+.carteira-cor-0 { --fatia-cor:#2563eb; }
+.carteira-cor-1 { --fatia-cor:#0f766e; }
+.carteira-cor-2 { --fatia-cor:#a16207; }
+.carteira-cor-3 { --fatia-cor:#7c3aed; }
+.carteira-cor-4 { --fatia-cor:#be185d; }
+.carteira-cor-5 { --fatia-cor:#c2410c; }
+.carteira-cor-6 { --fatia-cor:#64748b; }
+.fincontrol[data-theme='dark'] .carteira-cor-0 { --fatia-cor:#60a5fa; }
+.fincontrol[data-theme='dark'] .carteira-cor-1 { --fatia-cor:#2dd4bf; }
+.fincontrol[data-theme='dark'] .carteira-cor-2 { --fatia-cor:#fbbf24; }
+.fincontrol[data-theme='dark'] .carteira-cor-3 { --fatia-cor:#a78bfa; }
+.fincontrol[data-theme='dark'] .carteira-cor-4 { --fatia-cor:#f472b6; }
+.fincontrol[data-theme='dark'] .carteira-cor-5 { --fatia-cor:#fb923c; }
+.fincontrol[data-theme='dark'] .carteira-cor-6 { --fatia-cor:#94a3b8; }
+@media(max-width:1200px) { .carteira-rosca-conteudo { grid-template-columns:1fr; gap:8px; } .carteira-rosca { justify-self:center; } }
+
+/* Harden: prévia e recuperação sem quebrar o layout com valores longos. */
+.carteira-previa { grid-column:1/-1; min-width:0; padding:12px 0; border-top:1px solid var(--border-color); }
+.carteira-previa dl { display:flex; flex-wrap:wrap; gap:12px 28px; margin:10px 0; }
+.carteira-previa dl>div { min-width:0; }
+.carteira-previa dt,.carteira-previa p { font-size:13px; color:var(--muted); overflow-wrap:anywhere; }
+.carteira-previa dd { margin:4px 0 0; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.carteira-recarga { flex-wrap:wrap; border:1px solid var(--border-color); border-radius:8px; padding:12px; }
+.carteira-recarga p { flex:1 1 220px; min-width:0; margin:0; overflow-wrap:anywhere; }
+.carteira-rosca-legenda li { grid-template-columns:8px minmax(0,1fr) minmax(0,1.5fr) minmax(42px,auto); }
+.carteira-rosca-legenda li>span:not(.carteira-rosca-nome) { text-align:right; overflow-wrap:anywhere; }
+.carteira-fonte,.carteira-ficha h3 { overflow-wrap:anywhere; }
+
+/* Layout: prioridade da tela, filtros junto aos resultados e ritmo compartilhado. */
+.fincontrol .cabecalho { margin-bottom:24px; padding-block:4px; gap:12px 20px; }
+.fincontrol .cabecalho>div,.fincontrol .titulo-contas>div { min-width:0; flex:1 1 220px; }
+.fincontrol .cabecalho h2 { margin-bottom:4px; }
+.fincontrol .cabecalho p,.fincontrol .titulo-contas p { line-height:1.5; overflow-wrap:anywhere; }
+.fincontrol .titulo-contas { flex-wrap:wrap; gap:12px 20px; margin-bottom:16px; }
+.fincontrol .titulo-contas h3 { margin-bottom:4px; }
+.fincontrol .titulo-contas p { margin:0; }
+.fincontrol .acao-contextual { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; max-width:100%; }
+.fincontrol .painel-transacao-form { scroll-margin-block-start:16px; }
+.fincontrol .painel-transacao-historico .historico-filtros { margin:0 0 16px; padding:12px 0 16px; border:0; border-bottom:1px solid var(--border-color); border-radius:0; gap:12px; }
+.fincontrol .historico-filtros .filtro-campo { flex:1 1 150px; min-width:0; }
+.fincontrol .historico-filtros .filtro-campo:first-child { flex-basis:220px; }
+.fincontrol #formulario-conta,.fincontrol #formulario-cartao { scroll-margin-block-start:16px; }
+@media (max-width:720px) {
+  .fincontrol .titulo-contas .acao-contextual { width:100%; }
+  .fincontrol .historico-filtros .filtro-campo { flex:0 1 auto; width:100%; }
+}
+
+/* Polish: foco, leitura e navegação da carteira sem alterar o layout. */
+.fincontrol { --fc-focus: #2563eb; }
+.fincontrol[data-theme='dark'] { --fc-focus: #60a5fa; }
+.fincontrol :is(input, select, textarea, button, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--fc-focus);
+  outline-offset: 2px;
+}
+.fincontrol .sidebar :is(button, [tabindex="0"]):focus-visible {
+  outline-color: #60a5fa;
+}
+.fincontrol .carteira-busca-campo:focus-within {
+  outline-color: var(--fc-focus);
+}
+.fincontrol .carteira-busca-campo input:focus-visible {
+  outline: none;
+}
+.fincontrol :is(.carteira-tabela, .invest-historico):focus-visible {
+  outline-offset: -2px;
+}
+.fincontrol .carteira-ativo-nome > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fincontrol .carteira-link-ativo {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.fincontrol .carteira-tabela tbody tr:focus-within {
+  background: var(--bg);
+}
+.fincontrol .invest-historico :is(.valor-numerico, th.valor-numerico) {
+  text-align: right;
+}
+.fincontrol .carteira-rosca-legenda strong {
+  overflow-wrap: anywhere;
+}
+.fincontrol .carteira-ficha:focus-visible {
+  outline: 2px solid var(--fc-focus);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  .fincontrol :is(input, select, textarea, button, summary, [tabindex="0"], .carteira-ficha):focus-visible,
+  .fincontrol .carteira-busca-campo:focus-within {
+    outline-color: Highlight;
+  }
+  .fincontrol .carteira-busca-campo input:focus-visible {
+    outline: none;
   }
 }

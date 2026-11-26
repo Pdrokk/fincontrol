@@ -1,8 +1,12 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 
-interface Props { children: ReactNode }
-interface State { erro: boolean }
+interface Props {
+  children: ReactNode
+}
+interface State {
+  erro: boolean
+}
 
 export default class ErrorBoundary extends Component<Props, State> {
   state: State = { erro: false }
@@ -21,7 +25,10 @@ export default class ErrorBoundary extends Component<Props, State> {
       <main className="tela-recuperacao" role="alert">
         <div className="painel">
           <h1>Não foi possível carregar esta tela</h1>
-          <p>Seus dados financeiros continuam armazenados localmente. Você pode tentar abrir o aplicativo novamente.</p>
+          <p>
+            Seus dados financeiros continuam armazenados localmente. Você pode tentar abrir o
+            aplicativo novamente.
+          </p>
           <button type="button" onClick={(): void => window.location.reload()}>
             Recarregar FinControl
           </button>

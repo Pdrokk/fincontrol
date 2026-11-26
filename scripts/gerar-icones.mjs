@@ -17,8 +17,7 @@ function dentroRetanguloArredondado(x, y, x0, y0, x1, y1, raio) {
 }
 
 function corNoPonto(x, y) {
-  const ret = (x0, y0, x1, y1, r) =>
-    dentroRetanguloArredondado(x, y, x0, y0, x1, y1, r)
+  const ret = (x0, y0, x1, y1, r) => dentroRetanguloArredondado(x, y, x0, y0, x1, y1, r)
   if (!ret(0.05, 0.05, 0.95, 0.95, 0.21)) return [0, 0, 0, 0]
 
   let cor = [14, 27, 52, 255]
@@ -26,7 +25,7 @@ function corNoPonto(x, y) {
     const t = Math.max(0, Math.min(1, (x - 0.18) / 0.64))
     cor = [Math.round(30 + 35 * t), Math.round(91 + 35 * t), Math.round(201 + 39 * t), 255]
   }
-  if (ret(0.23, 0.25, 0.70, 0.34, 0.04)) cor = [203, 223, 252, 255]
+  if (ret(0.23, 0.25, 0.7, 0.34, 0.04)) cor = [203, 223, 252, 255]
   if (ret(0.23, 0.29, 0.71, 0.34, 0.03)) cor = [32, 91, 187, 255]
 
   if (ret(0.52, 0.42, 0.87, 0.63, 0.055)) cor = [213, 232, 255, 255]
@@ -46,8 +45,7 @@ function pixels(tamanho) {
       // Supersampling 3 x 3 para suavizar bordas também em ícones pequenos.
       for (let sy = 0; sy < 3; sy++) {
         for (let sx = 0; sx < 3; sx++) {
-          const cor = corNoPonto((x + (sx + 0.5) / 3) / tamanho,
-            (y + (sy + 0.5) / 3) / tamanho)
+          const cor = corNoPonto((x + (sx + 0.5) / 3) / tamanho, (y + (sy + 0.5) / 3) / tamanho)
           for (let k = 0; k < 4; k++) acumulado[k] += cor[k]
         }
       }
@@ -120,9 +118,12 @@ for (let i = 0; i < imagens.length; i++) {
 
 for (const caminho of ['build/generated/icon.ico', 'build/generated/icon.png']) {
   mkdirSync(dirname(caminho), { recursive: true })
-  writeFileSync(caminho, caminho.endsWith('.ico')
-    ? Buffer.concat([icoCabecalho, ...imagens])
-    : imagens[imagens.length - 1])
+  writeFileSync(
+    caminho,
+    caminho.endsWith('.ico')
+      ? Buffer.concat([icoCabecalho, ...imagens])
+      : imagens[imagens.length - 1]
+  )
 }
 
 console.info('Ícones FinControl gerados: build/generated/icon.ico e build/generated/icon.png')

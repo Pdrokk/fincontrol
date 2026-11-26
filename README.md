@@ -1,56 +1,51 @@
-# FinControl 1.0
+# FinControl — Controle Financeiro Pessoal
 
-Aplicativo desktop **offline** de controle financeiro pessoal para Windows, desenvolvido como projeto de TCC utilizando Electron, React, TypeScript e SQLite.
+**Versão homologada:** 1.6.4 · Windows x64 · Projeto acadêmico de TCC.
+
+Aplicativo desktop de controle financeiro pessoal com dados locais em SQLite. Desenvolvido com Electron, React, TypeScript e Recharts. Funciona offline para registros financeiros; consultas de mercado são opcionais e exigem internet.
+
+## Abrir sem instalação
+
+1. Abra a [execução Windows aprovada da v1.6.4](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820).
+2. Baixe o [artefato portátil homologado](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820/artifacts/15078142692) (ZIP; pode exigir login no GitHub). Extraia o arquivo `FinControl-1.6.4-portable.exe`.
+3. Execute o EXE com duplo clique. Não é necessário instalar Node.js nem VS Code. A extração temporária pode tornar o primeiro início mais lento.
+4. Confirme a versão em **Configurações → Sobre o aplicativo**.
+
+Artefatos do GitHub Actions expiram. Se o download não estiver disponível, gere o EXE com as instruções de desenvolvimento abaixo ou consulte a próxima versão homologada. Este link é de um artefato de testes aprovado, não de uma release definitiva publicada. O EXE acadêmico não possui certificado de assinatura; confira a procedência e não desative as proteções do Windows.
 
 ## Funcionalidades
 
-- Contas bancárias com identificação de instituição, saldos, transferências e ajustes auditáveis
-- Receitas e despesas com filtros por mês, ano e categoria
-- Cartões de crédito, compras parceladas e limite disponível
-- Central de Pagamentos para uma fatura completa ou várias parcelas selecionadas
-- Estorno de pagamento com justificativa e histórico
-- Salário recorrente com início e duração programados
-- Gráficos de movimentos realizados e parcelas previstas
-- Tema claro/escuro e cores de cartões de acordo com a instituição financeira
-- Backup SQLite e restauração com verificação de integridade e cópia de emergência
+| Área | Recursos |
+|---|---|
+| Visão Geral | Saldos, receitas, despesas, faturas abertas e gráficos realizados/previstos |
+| Transações | Cadastro, edição, exclusão, filtros, ordenação e paginação |
+| Relatórios | Resumo do período, categorias, gráficos e alternativa textual |
+| Minhas contas | Contas, transferências, entradas, ajustes auditáveis e salário recorrente |
+| Cartões e faturas | Limites, compras parceladas, pagamentos individuais/em lote, estornos e histórico |
+| Investimentos | Carteira, rosca por ativo, compras, vendas, proventos, ficha, cotações e fundamentos |
+| Configurações | Consulta de categorias, backup/restauração e informações de versão |
 
-**O FinControl não se conecta a bancos reais e não movimenta dinheiro de verdade.** Os valores são registros de controle pessoal.
+Tema claro/escuro, interface compacta, persistência local e navegação por teclado. O sistema não envia ordens à corretora, não movimenta dinheiro real e não se conecta a contas bancárias.
 
-## Abrir o FinControl — Windows, sem instalação
+## Dados e segurança
 
-O FinControl 1.0 está disponível como **um único executável portátil**. Não existe assistente de instalação: abra o arquivo e use o app.
+O arquivo de dados é `dados/fincontrol.db` no diretório `app.getPath('userData')` do Electron, normalmente dentro do perfil do Windows. O banco não fica embutido no EXE nem necessariamente ao seu lado. Faça backup antes de atualizar. Para migrar a outro computador, use **Configurações → Exportar backup** e **Restaurar backup**; a restauração substitui os dados atuais após validação e cria cópia de emergência.
 
-1. Acesse [GitHub Actions — FinControl portátil](https://github.com/Pdrokk/fincontrol/actions/workflows/windows-installer.yml) e abra a execução aprovada mais recente da branch `portable/fincontrol-v1.0.0`.
-2. Em **Artifacts**, baixe `FinControl-1.0.0-Portatil-Windows-x64`. O GitHub entrega os artefatos em um ZIP.
-3. Extraia o ZIP e execute `FinControl-1.0.0-portable.exe` com duplo clique. Não são necessários VS Code, npm nem Node.js.
-4. O arquivo pode ficar na Área de Trabalho ou em outra pasta. O primeiro início pode ser um pouco mais demorado porque o executável portátil extrai arquivos temporários.
+Cotações de ações, ETFs e FIIs brasileiros podem usar BRAPI; USD/EUR usam BCB PTAX. Demais posições podem ser informadas manualmente. Fundamentos de ações e FIIs dependem da cobertura/plano BRAPI. Dados podem ter atraso; valores ausentes não são zero. A chave BRAPI opcional usa armazenamento seguro local do Electron em arquivo separado do SQLite; não é incluída no backup. Não publique bancos, backups ou chaves.
 
-**Assinatura digital:** esta versão acadêmica não tem certificado de assinatura. O Windows pode apresentar um aviso de editor desconhecido. Confira o arquivo e sua procedência no GitHub; não desative proteções do sistema.
+## Desenvolver e testar
 
-### Onde ficam meus dados?
-
-O aplicativo usa o diretório de dados do usuário do Windows, em `dados/fincontrol.db`, da mesma forma que a versão com instalador. **O banco não fica dentro do executável** e não é apagado quando você substitui o `.exe` por uma versão nova.
-
-A versão sem instalação **não** coloca todos os dados ao lado do `.exe`; portanto, ao levar somente o arquivo executável para outro computador, seus dados não vão junto. Para isso, use **Configurações → Exportar backup** e depois **Restaurar backup** no outro computador.
-
-Faça um backup antes da troca de versão. Não compartilhe bancos e backups financeiros em repositórios públicos.
-
-## Requisitos
-
-- Windows 10/11 de 64 bits
-- Espaço livre suficiente para o aplicativo e o banco SQLite
-- Não é necessária conexão com a internet para o uso normal
-
-## Desenvolvimento
-
-Use Node.js 24 e o terminal PowerShell no VS Code.
+Windows x64 com Git, Node.js 24 e npm. Em PowerShell no VS Code:
 
 ```powershell
+git clone https://github.com/Pdrokk/fincontrol.git
+cd fincontrol
+git switch develop
 npm.cmd ci
 npm.cmd run dev
 ```
 
-### Testes e compilação
+Para atualizar um clone já existente, confira `git status`, preserve alterações locais e use `git switch develop` seguido de `git pull --ff-only origin develop`.
 
 ```powershell
 npm.cmd run typecheck
@@ -60,25 +55,23 @@ npm.cmd run build
 npm.cmd run build:win -- --x64
 ```
 
-O `npm.cmd test` executa testes de regras financeiras e consultas SQLite em memória. A workflow Windows também inicia o executável portátil em modo isolado (`--fincontrol-smoke-test`) para validar contas, pagamentos, estornos, salários, backup/restauração, integridade SQLite e migração de banco legado.
+O último comando gera `dist/FinControl-<versão>-portable.exe`. A CI usa Node 24 e valida o executável com bancos temporários. A versão 1.6.4 obteve 45 testes aprovados, zero falhas e 1.719 avisos de lint (sem erros); consulte as evidências em [homologação atual](docs/HOMOLOGACAO_V1.md). Não confunda testes automatizados com homologação manual em um computador do usuário.
 
-## Organização do projeto
+## Documentação
 
-- `src/main/`: processo principal Electron, SQLite, contas, cartões, salários e backup
-- `src/preload/`: API IPC exposta com isolamento de contexto
-- `src/renderer/`: interface React, gráficos, navegação e estilos
-- `tests/`: testes automatizados sem dados pessoais
-- `.github/workflows/`: CI de código e compilação do executável portátil no Windows
-- `docs/`: roteiros de homologação e material de desenvolvimento
+- [Manual de utilização](docs/manual-usuario.md)
+- [Arquitetura e regras técnicas](docs/arquitetura.md)
+- [Design system](DESIGN.md)
+- [Homologação e evidências](docs/HOMOLOGACAO_V1.md)
+- [Matriz de homologação final](docs/homologacao-final.md)
+- [Roteiro de entrega e apresentação](docs/entrega-tcc.md)
+- [Histórico de versões](CHANGELOG.md)
+- [Investimentos](docs/evolucao-investimentos.md) e [referências CVM/SEC](docs/referencia-cvm-sec.md)
 
-## Restrições e observações
+`src/main/`: processo principal, regras, SQLite e serviços. `src/preload/`: contratos IPC. `src/renderer/`: React e estilos. `tests/`: testes de regressão. `.github/workflows/`: CI e build. `docs/`: documentação atual e registros históricos de desenvolvimento.
 
-- O aplicativo é um projeto acadêmico, não um sistema bancário certificado.
-- Não há atualização automática assinada nem integração com instituições financeiras.
-- As cores das instituições são aproximações visuais, não material oficial.
-- Dados financeiros devem ser reconciliados com os extratos quando utilizados como referência.
-- Para suporte e histórico de desenvolvimento: [repositório GitHub](https://github.com/Pdrokk/fincontrol).
+## Limites
 
-## Licenciamento
+Não é um sistema bancário certificado, plataforma de negociação, consultoria de investimentos nem serviço de sincronização. Recorrência salarial é processada ao abrir e enquanto o aplicativo estiver em execução. Cotações/fundamentos dependem do provedor; não existe reconstrução de histórico anterior nem importação automática de documentos regulatórios. Confira os registros contra extratos reais. macOS e Linux não foram homologados nesta entrega.
 
-Projeto acadêmico. Nenhuma licença de redistribuição de terceiros é concedida por este README.
+Projeto acadêmico. Este README não concede licença de redistribuição de terceiros.

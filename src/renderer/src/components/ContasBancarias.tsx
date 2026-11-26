@@ -1,5 +1,15 @@
+import { confirmarFinControl } from '../utils/dialogos'
+import IconeBanco from './IconeBanco'
 import { useEffect, useState } from 'react'
-import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Plus,
+  Wallet,
+  Pencil,
+  CirclePlus,
+  SlidersHorizontal,
+  Trash2
+} from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
 import SalarioRecorrente from './SalarioRecorrente'
 import Feedback from './Feedback'
@@ -132,7 +142,9 @@ export default function ContasBancarias(): React.JSX.Element {
       setMensagemOperacao('Conta cadastrada com sucesso.')
     } catch (falha) {
       console.error(falha)
-      setErroOperacao(falha instanceof Error ? falha.message : 'Não foi possível cadastrar a conta.')
+      setErroOperacao(
+        falha instanceof Error ? falha.message : 'Não foi possível cadastrar a conta.'
+      )
     } finally {
       setSalvando(false)
     }
@@ -145,7 +157,9 @@ export default function ContasBancarias(): React.JSX.Element {
     setMensagemOperacao('')
     const valorCentavos = parseCentavos(valorTransferencia)
     if (!valorCentavos || valorCentavos <= 0 || origemId === destinoId) {
-      setErroOperacao('Selecione contas diferentes e informe um valor de transferência maior que zero.')
+      setErroOperacao(
+        'Selecione contas diferentes e informe um valor de transferência maior que zero.'
+      )
       return
     }
     try {
@@ -162,7 +176,11 @@ export default function ContasBancarias(): React.JSX.Element {
       setMensagemOperacao('Transferência concluída. Os saldos das contas foram atualizados.')
     } catch (falha) {
       console.error(falha)
-      setErroOperacao(falha instanceof Error ? falha.message : 'Não foi possível transferir. Verifique os saldos e as contas selecionadas.')
+      setErroOperacao(
+        falha instanceof Error
+          ? falha.message
+          : 'Não foi possível transferir. Verifique os saldos e as contas selecionadas.'
+      )
     } finally {
       setSalvando(false)
     }
@@ -175,9 +193,12 @@ export default function ContasBancarias(): React.JSX.Element {
   }
 
   async function removerConta(conta: Conta): Promise<void> {
-    if (!window.confirm(
-      `Excluir a conta "${conta.banco} · ${conta.nome}"? Apenas contas sem histórico, cartões ou salários vinculados podem ser excluídas.`
-    )) return
+    if (
+      !(await confirmarFinControl(
+        `Excluir a conta "${conta.banco} · ${conta.nome}"? Apenas contas sem histórico, cartões ou salários vinculados podem ser excluídas.`
+      ))
+    )
+      return
     try {
       setErroOperacao('')
       setMensagemOperacao('')
@@ -186,7 +207,11 @@ export default function ContasBancarias(): React.JSX.Element {
       await recarregar()
       setMensagemOperacao('Conta excluída com sucesso.')
     } catch (falha) {
-      setErroOperacao(falha instanceof Error ? falha.message : 'Esta conta possui vínculos e não pode ser excluída.')
+      setErroOperacao(
+        falha instanceof Error
+          ? falha.message
+          : 'Esta conta possui vínculos e não pode ser excluída.'
+      )
     }
   }
 
@@ -204,12 +229,27 @@ export default function ContasBancarias(): React.JSX.Element {
             <h3>Contas cadastradas</h3>
             <p>Gerencie seus bancos e saldos financeiros.</p>
           </div>
-          <Landmark size={26} />
+          <button
+            type="button"
+            className="botao-primario acao-contextual"
+            aria-controls="formulario-conta"
+            disabled={salvando || carregando || Boolean(erro)}
+            onClick={(): void => {
+              const formulario = document.getElementById('formulario-conta')
+              formulario?.scrollIntoView({ block: 'start' })
+              formulario?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+            }}
+          >
+            <Plus size={17} aria-hidden="true" /> Nova conta
+          </button>
         </div>
         <div className="resumo-contas">
           <span>Saldo total disponível nas contas</span>
           <strong>{formatarMoeda(total)}</strong>
-          <small>Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de saldo</small>
+          <small>
+            Saldo inicial + receitas − despesas + transferências − faturas pagas + correções de
+            saldo
+          </small>
         </div>
         {carregando && <p>Carregando contas...</p>}
         {erro && <Feedback mensagem={erro} tipo="erro" />}
@@ -217,10 +257,17 @@ export default function ContasBancarias(): React.JSX.Element {
         <Feedback mensagem={mensagemOperacao} tipo="sucesso" />
         <div className="grade-contas">
           {contas.map((conta) => (
-            <article className="cartao-conta" key={conta.id} style={{ background: gradienteBanco(conta.banco) }}>
+            <article
+              className="cartao-conta"
+              key={conta.id}
+              style={{ background: gradienteBanco(conta.banco) }}
+            >
               <div className="cartao-conta-topo">
                 <Wallet size={24} />
-                <strong>{conta.banco}</strong>
+                <strong className="banco-identidade">
+                  <IconeBanco banco={conta.banco} />
+                  {conta.banco}
+                </strong>
               </div>
               <span>Saldo atual</span>
               <h3>{formatarMoeda(conta.saldoAtualCentavos)}</h3>
@@ -238,7 +285,12 @@ export default function ContasBancarias(): React.JSX.Element {
                 <button type="button" onClick={(): void => abrirGerenciar(conta.id, 'ajuste')}>
                   <SlidersHorizontal size={15} /> Corrigir saldo
                 </button>
-                <button type="button" onClick={(): void => { void removerConta(conta) }}>
+                <button
+                  type="button"
+                  onClick={(): void => {
+                    void removerConta(conta)
+                  }}
+                >
                   <Trash2 size={15} /> Excluir
                 </button>
               </div>
@@ -260,7 +312,7 @@ export default function ContasBancarias(): React.JSX.Element {
         />
       )}
 
-      <section className="painel">
+      <section className="painel" id="formulario-conta">
         <h3>Cadastrar nova conta</h3>
         <form
           className="formulario"

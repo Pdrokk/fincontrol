@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import {
-  Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis
+  Bar,
+  BarChart,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -29,19 +38,25 @@ const moeda = (reais: number): string =>
 
 const rotuloMes = (mes: string): string => {
   const ano = mes.slice(0, 4)
-  const nome = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
-    .format(new Date(`${mes}-01T12:00:00Z`))
+  const nome = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' }).format(
+    new Date(`${mes}-01T12:00:00Z`)
+  )
   return `${nome}/${ano.slice(2)}`
 }
 
-export default function GraficosFinanceiros({
-  transacoes, previsoes = [], compacto = false, filtroMes = 'todos', filtroAno = 'todos'
+function GraficosFinanceiros({
+  transacoes,
+  previsoes = [],
+  compacto = false,
+  filtroMes = 'todos',
+  filtroAno = 'todos'
 }: Props): React.JSX.Element {
   const [modo, setModo] = useState<'realizado' | 'previsto'>('realizado')
   const [pagina, setPagina] = useState<number | null>(null)
-  const registros = (modo === 'realizado' ? transacoes : previsoes).filter((t) =>
-    (filtroAno === 'todos' || t.data.slice(0, 4) === filtroAno) &&
-    (filtroMes === 'todos' || t.data.slice(5, 7) === filtroMes)
+  const registros = (modo === 'realizado' ? transacoes : previsoes).filter(
+    (t) =>
+      (filtroAno === 'todos' || t.data.slice(0, 4) === filtroAno) &&
+      (filtroMes === 'todos' || t.data.slice(5, 7) === filtroMes)
   )
 
   const mapa = new Map<string, { receitas: number; despesas: number }>()
@@ -62,7 +77,10 @@ export default function GraficosFinanceiros({
     while (`${ano}-${String(mes).padStart(2, '0')}` <= ultima && meses.length < 1200) {
       meses.push(`${ano}-${String(mes).padStart(2, '0')}`)
       mes += 1
-      if (mes > 12) { mes = 1; ano += 1 }
+      if (mes > 12) {
+        mes = 1
+        ano += 1
+      }
     }
   }
 
@@ -91,30 +109,65 @@ export default function GraficosFinanceiros({
     categorias.set(item.categoria, (categorias.get(item.categoria) ?? 0) + item.valorCentavos)
   }
 
-  const dadosCategorias = [...categorias.entries()].sort((a, b) => b[1] - a[1])
+  const dadosCategorias = [...categorias.entries()]
+    .sort((a, b) => b[1] - a[1])
     .map(([nome, centavos], index) => ({
-      nome, valor: centavos / 100, fill: cores[index % cores.length]
+      nome,
+      valor: centavos / 100,
+      fill: cores[index % cores.length]
     }))
 
   return (
     <div className="graficos-relatorio">
       <div className="graficos-toolbar">
         <div className="graficos-abas" role="group" aria-label="Visão dos gráficos">
-          <button type="button" aria-pressed={modo === 'realizado'}
+          <button
+            type="button"
+            aria-pressed={modo === 'realizado'}
             className={modo === 'realizado' ? 'ativo' : ''}
-            onClick={(): void => { setModo('realizado'); setPagina(null) }}>Realizado</button>
-          <button type="button" aria-pressed={modo === 'previsto'}
+            onClick={(): void => {
+              setModo('realizado')
+              setPagina(null)
+            }}
+          >
+            Realizado
+          </button>
+          <button
+            type="button"
+            aria-pressed={modo === 'previsto'}
             className={modo === 'previsto' ? 'ativo' : ''}
-            onClick={(): void => { setModo('previsto'); setPagina(null) }}>Previsto</button>
+            onClick={(): void => {
+              setModo('previsto')
+              setPagina(null)
+            }}
+          >
+            Previsto
+          </button>
         </div>
         <div className="graficos-paginacao">
-          <button type="button" aria-label="Período anterior" title="Período anterior"
+          <button
+            type="button"
+            aria-label="Período anterior"
+            title="Período anterior"
             disabled={paginaAtual === 0}
-            onClick={(): void => setPagina(paginaAtual - 1)}><ChevronLeft size={17} /></button>
-          <span>{visiveis.length ? `${rotuloMes(visiveis[0])} – ${rotuloMes(visiveis[visiveis.length - 1])}` : 'Sem dados'}</span>
-          <button type="button" aria-label="Próximo período" title="Próximo período"
+            onClick={(): void => setPagina(paginaAtual - 1)}
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <span>
+            {visiveis.length
+              ? `${rotuloMes(visiveis[0])} – ${rotuloMes(visiveis[visiveis.length - 1])}`
+              : 'Sem dados'}
+          </span>
+          <button
+            type="button"
+            aria-label="Próximo período"
+            title="Próximo período"
             disabled={paginaAtual >= totalPaginas - 1}
-            onClick={(): void => setPagina(paginaAtual + 1)}><ChevronRight size={17} /></button>
+            onClick={(): void => setPagina(paginaAtual + 1)}
+          >
+            <ChevronRight size={17} />
+          </button>
         </div>
       </div>
       <p className="graficos-explicacao">
@@ -130,12 +183,17 @@ export default function GraficosFinanceiros({
       <div className="graficos-financeiros">
         <section className="grafico-card">
           <h3>{modo === 'realizado' ? 'Receitas x despesas realizadas' : 'Despesas previstas'}</h3>
-          <p>{filtroMes !== 'todos' ? 'Mês selecionado' : filtroAno !== 'todos' ? 'Ano selecionado' : 'Janela de até seis meses'}</p>
+          <p>
+            {filtroMes !== 'todos'
+              ? 'Mês selecionado'
+              : filtroAno !== 'todos'
+                ? 'Ano selecionado'
+                : 'Janela de até seis meses'}
+          </p>
           {dados.length ? (
-            <div className="grafico-area">
+            <div className="grafico-area" aria-hidden="true">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dados}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="mes" />
                   <YAxis width={65} tickFormatter={(v: number): string => `R$ ${v}`} />
                   <Tooltip formatter={(value): string => moeda(Number(value))} />
@@ -147,18 +205,26 @@ export default function GraficosFinanceiros({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          ) : <p className="grafico-vazio">Não há lançamentos nesta visão.</p>}
+          ) : (
+            <p className="grafico-vazio">Não há lançamentos nesta visão.</p>
+          )}
         </section>
         <section className="grafico-card">
           <h3>Despesas por categoria</h3>
           <p>Referente aos meses exibidos acima</p>
           {dadosCategorias.length ? (
             <>
-              <div className="grafico-area">
+              <div className="grafico-area" aria-hidden="true">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={dadosCategorias} dataKey="valor" nameKey="nome"
-                      innerRadius="52%" outerRadius="78%" paddingAngle={2} />
+                    <Pie
+                      data={dadosCategorias}
+                      dataKey="valor"
+                      nameKey="nome"
+                      innerRadius="52%"
+                      outerRadius="78%"
+                      paddingAngle={2}
+                    />
                     <Tooltip formatter={(value): string => moeda(Number(value))} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -173,33 +239,108 @@ export default function GraficosFinanceiros({
                 ))}
               </div>
             </>
-          ) : <p className="grafico-vazio">Sem despesas nesta janela.</p>}
+          ) : (
+            <p className="grafico-vazio">Sem despesas nesta janela.</p>
+          )}
         </section>
 
         {!compacto && (
           <section className="grafico-card grafico-largo">
-            <h3>{modo === 'realizado' ? 'Resultado acumulado da janela' : 'Compromissos acumulados da janela'}</h3>
-            <p>{modo === 'realizado'
-              ? 'Receitas menos despesas realizadas, iniciando em zero nesta página; não é o saldo das contas.'
-              : 'Soma de parcelas pendentes nesta página, sem considerar receitas futuras.'}</p>
+            <h3>
+              {modo === 'realizado'
+                ? 'Resultado acumulado da janela'
+                : 'Compromissos acumulados da janela'}
+            </h3>
+            <p>
+              {modo === 'realizado'
+                ? 'Receitas menos despesas realizadas, iniciando em zero nesta página; não é o saldo das contas.'
+                : 'Soma de parcelas pendentes nesta página, sem considerar receitas futuras.'}
+            </p>
             {dados.length ? (
-              <div className="grafico-area">
+              <div className="grafico-area" aria-hidden="true">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dados}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="mes" />
                     <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
                     <Tooltip formatter={(value): string => moeda(Number(value))} />
-                    <Line type="monotone" dataKey="resultado"
+                    <Line
+                      type="monotone"
+                      dataKey="resultado"
                       name={modo === 'realizado' ? 'Resultado' : 'Parcelas pendentes acumuladas'}
-                      stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} />
+                      stroke="#2563eb"
+                      strokeWidth={2.5}
+                      dot={{ r: 4 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            ) : <p className="grafico-vazio">Sem dados nesta janela.</p>}
+            ) : (
+              <p className="grafico-vazio">Sem dados nesta janela.</p>
+            )}
           </section>
         )}
       </div>
+      <details className="graficos-dados">
+        <summary>Consultar os valores dos gráficos em tabela</summary>
+        <div className="graficos-dados-tabela">
+          <table>
+            <caption>
+              {modo === 'realizado'
+                ? 'Receitas e despesas realizadas por mês'
+                : 'Despesas previstas por mês'}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Mês</th>
+                {modo === 'realizado' && <th scope="col">Receitas</th>}
+                <th scope="col">Despesas</th>
+                <th scope="col">
+                  {modo === 'realizado' ? 'Resultado da janela' : 'Compromissos acumulados'}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {dados.map((item) => (
+                <tr key={item.mes}>
+                  <th scope="row">{item.mes}</th>
+                  {modo === 'realizado' && <td>{moeda(item.receitas)}</td>}
+                  <td>{moeda(item.despesas)}</td>
+                  <td>{moeda(item.resultado)}</td>
+                </tr>
+              ))}
+              {dados.length === 0 && (
+                <tr>
+                  <td colSpan={modo === 'realizado' ? 4 : 3}>Sem dados neste período.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {dadosCategorias.length > 0 && (
+          <div className="graficos-dados-tabela">
+            <table>
+              <caption>Despesas por categoria no período exibido</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Categoria</th>
+                  <th scope="col">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dadosCategorias.map((item) => (
+                  <tr key={item.nome}>
+                    <th scope="row">{item.nome}</th>
+                    <td>{moeda(item.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </details>
     </div>
   )
 }
+
+// Só recalcula e redesenha Recharts quando dados ou filtros mudarem.
+export default memo(GraficosFinanceiros)

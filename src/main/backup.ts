@@ -1,3 +1,4 @@
+import { criarTabelasInvestimentos } from './investimentos'
 import { app, dialog } from 'electron'
 import { DatabaseSync, backup } from 'node:sqlite'
 import { copyFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
@@ -12,6 +13,7 @@ function iniciarModelo(): void {
   criarTabelaContas()
   criarTabelasCartoes()
   criarTabelaSalarios()
+  criarTabelasInvestimentos(obterBanco())
   obterBanco().exec('PRAGMA foreign_keys = ON')
   processarSalariosVencidos()
 }
@@ -36,17 +38,19 @@ function validarBackup(caminho: string): void {
   const verificacao = new DatabaseSync(caminho, { readOnly: true })
   try {
     const resultado = verificacao.prepare('PRAGMA integrity_check').get() as
-      | { integrity_check: string } | undefined
+      { integrity_check: string } | undefined
     if (resultado?.integrity_check !== 'ok') {
       throw new Error('O arquivo não passou na verificação de integridade do SQLite.')
     }
-    const nomes = verificacao.prepare(
-      "SELECT name FROM sqlite_master WHERE type = 'table'"
-    ).all() as { name: string }[]
+    const nomes = verificacao
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all() as { name: string }[]
     const existentes = new Set(nomes.map((t) => t.name))
-    if (!['transacoes', 'contas', 'cartoes', 'parcelas_cartao', 'compras_cartao'].every(
-      (nome) => existentes.has(nome)
-    )) {
+    if (
+      !['transacoes', 'contas', 'cartoes', 'parcelas_cartao', 'compras_cartao'].every((nome) =>
+        existentes.has(nome)
+      )
+    ) {
       throw new Error('O arquivo não contém as tabelas obrigatórias do FinControl.')
     }
   } finally {
@@ -115,9 +119,11 @@ export async function aplicarRestauracaoValidada(origem: string): Promise<void> 
     copyFileSync(origem, atual)
     iniciarModelo()
     const integridade = obterBanco().prepare('PRAGMA integrity_check').get() as
-      | { integrity_check: string } | undefined
-    if (integridade?.integrity_check !== 'ok' ||
-        obterBanco().prepare('PRAGMA foreign_key_check').all().length !== 0) {
+      { integrity_check: string } | undefined
+    if (
+      integridade?.integrity_check !== 'ok' ||
+      obterBanco().prepare('PRAGMA foreign_key_check').all().length !== 0
+    ) {
       throw new Error('Falha na verificação do banco restaurado.')
     }
   } catch (erro) {

@@ -1,3 +1,4 @@
+import { criarTabelasInvestimentos } from '../src/main/investimentos.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
@@ -30,6 +31,7 @@ function bancoTeste(): DatabaseSync {
     INSERT INTO contas VALUES ('A', 'Banco', 'Conta A', 'corrente', '#2563eb', 10000, '2000-01-01');
     INSERT INTO contas VALUES ('B', 'Banco', 'Conta B', 'corrente', '#2563eb', 0, '2000-01-01');
   `)
+  criarTabelasInvestimentos(db)
   return db
 }
 
@@ -50,7 +52,9 @@ test('receita agendada no futuro não aumenta dinheiro disponível', () => {
     assert.equal(saldo(db, 'A'), 10000)
     db.exec(`INSERT INTO transacoes VALUES ('t2', 'A', 'receita', 1500, '2000-01-01')`)
     assert.equal(saldo(db, 'A'), 11500)
-  } finally { db.close() }
+  } finally {
+    db.close()
+  }
 })
 
 test('transferência agendada não movimenta saldo até a data', () => {
@@ -62,7 +66,9 @@ test('transferência agendada não movimenta saldo até a data', () => {
     db.exec(`INSERT INTO transferencias VALUES ('f2', 'A', 'B', 4000, '2000-01-01')`)
     assert.equal(saldo(db, 'A'), 6000)
     assert.equal(saldo(db, 'B'), 4000)
-  } finally { db.close() }
+  } finally {
+    db.close()
+  }
 })
 
 test('pagamento futuro não reduz conta, pagamento efetivo sim', () => {
@@ -72,7 +78,9 @@ test('pagamento futuro não reduz conta, pagamento efetivo sim', () => {
     assert.equal(saldo(db, 'A'), 10000)
     db.exec(`INSERT INTO pagamentos_parcelas VALUES ('p2', 'A', 1500, '2000-01-01', 0)`)
     assert.equal(saldo(db, 'A'), 8500)
-  } finally { db.close() }
+  } finally {
+    db.close()
+  }
 })
 
 test('estorno deixa de debitar o banco e preserva a linha do pagamento', () => {
@@ -83,9 +91,12 @@ test('estorno deixa de debitar o banco e preserva a linha do pagamento', () => {
     db.exec(`UPDATE pagamentos_fatura SET estornado = 1 WHERE id = 'f1'`)
     assert.equal(saldo(db, 'A'), 10000)
     assert.equal(
-      (db.prepare("SELECT count(*) AS n FROM pagamentos_fatura").get() as {n: number}).n, 1
+      (db.prepare('SELECT count(*) AS n FROM pagamentos_fatura').get() as { n: number }).n,
+      1
     )
-  } finally { db.close() }
+  } finally {
+    db.close()
+  }
 })
 
 test('ajustes com data futura não afetam saldo de hoje', () => {
@@ -95,7 +106,9 @@ test('ajustes com data futura não afetam saldo de hoje', () => {
     assert.equal(saldo(db, 'A'), 10000)
     db.exec(`INSERT INTO ajustes_saldo VALUES ('a2', 'A', -2000, '2000-01-01')`)
     assert.equal(saldo(db, 'A'), 8000)
-  } finally { db.close() }
+  } finally {
+    db.close()
+  }
 })
 
 test('nenhuma das consultas duplica valores entre pagamentos e transferências', () => {
@@ -106,5 +119,7 @@ test('nenhuma das consultas duplica valores entre pagamentos e transferências',
     db.exec(`INSERT INTO pagamentos_parcelas VALUES ('p1', 'A', 2500, '2000-01-01', 0)`)
     assert.equal(saldo(db, 'A'), 12500)
     assert.equal(saldo(db, 'B'), 5000)
-  } finally { db.close() }
+  } finally {
+    db.close()
+  }
 })

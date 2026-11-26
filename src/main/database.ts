@@ -118,7 +118,11 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
     throw new Error('Tipo inválido.')
   }
 
-  if (typeof dados.categoria !== 'string' || !dados.categoria.trim() || dados.categoria.length > 100) {
+  if (
+    typeof dados.categoria !== 'string' ||
+    !dados.categoria.trim() ||
+    dados.categoria.length > 100
+  ) {
     throw new Error('Categoria inválida.')
   }
 
@@ -135,15 +139,21 @@ export function salvarTransacao(dados: NovaTransacao): Transacao {
   // Não registrar manualmente um segundo salário na mesma competência quando
   // a recorrência já gerou aquele recebimento na conta.
   if (dados.tipo === 'receita' && ehCategoriaSalario(dados.categoria)) {
-    const duplicado = obterBanco().prepare(`
+    const duplicado = obterBanco()
+      .prepare(
+        `
       SELECT 1 FROM salarios_lancamentos sl
       JOIN transacoes t ON t.id = sl.transacao_id
       WHERE t.conta_id IS ? AND t.valor_centavos = ?
         AND substr(t.data, 1, 7) = ? AND t.categoria = 'Salário'
       LIMIT 1
-    `).get(contaId, dados.valorCentavos, dados.data.slice(0, 7))
+    `
+      )
+      .get(contaId, dados.valorCentavos, dados.data.slice(0, 7))
     if (duplicado) {
-      throw new Error('Esse salário já foi registrado pela recorrência neste mês. Confira o histórico antes de adicionar outra receita.')
+      throw new Error(
+        'Esse salário já foi registrado pela recorrência neste mês. Confira o histórico antes de adicionar outra receita.'
+      )
     }
   }
 
@@ -192,7 +202,9 @@ export function removerTransacao(id: string): void {
 
   const db = obterBanco()
   if (db.prepare('SELECT 1 FROM salarios_lancamentos WHERE transacao_id = ?').get(id)) {
-    throw new Error('Este lançamento pertence a um salário recorrente. Desative a programação para interromper os próximos recebimentos.')
+    throw new Error(
+      'Este lançamento pertence a um salário recorrente. Desative a programação para interromper os próximos recebimentos.'
+    )
   }
   db.prepare('DELETE FROM transacoes WHERE id = ?').run(id)
 }
@@ -247,13 +259,17 @@ export function editarTransacao(id: string, dados: NovaTransacao): Transacao {
   // A proteção de salário duplicado também precisa valer na edição. Do contrário,
   // uma despesa/receita comum poderia ser convertida em salário já recebido.
   if (dados.tipo === 'receita' && ehCategoriaSalario(dados.categoria)) {
-    const duplicado = banco.prepare(`
+    const duplicado = banco
+      .prepare(
+        `
       SELECT 1 FROM salarios_lancamentos sl
       JOIN transacoes t ON t.id = sl.transacao_id
       WHERE t.id <> ? AND t.conta_id IS ? AND t.valor_centavos = ?
         AND substr(t.data, 1, 7) = ? AND t.categoria = 'Salário'
       LIMIT 1
-    `).get(id, contaId, dados.valorCentavos, dados.data.slice(0, 7))
+    `
+      )
+      .get(id, contaId, dados.valorCentavos, dados.data.slice(0, 7))
     if (duplicado) {
       throw new Error('Esse salário já foi registrado pela recorrência neste mês.')
     }
