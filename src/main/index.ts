@@ -1,6 +1,27 @@
-import { sincronizarCotacoes, configurarChave, chaveConfigurada, obterFundamentos } from './servicoCotacoes'
+import {
+  sincronizarCotacoes,
+  configurarChave,
+  chaveConfigurada,
+  obterFundamentos
+} from './servicoCotacoes'
 import { hojeLocalISO } from './regrasFinanceiras'
-import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, registrarOperacao, registrarObservacaoCarteira, listarEvolucaoPatrimonio, listarHistoricoCotacoes, type NovoAtivo, type Operacao } from './investimentos'
+import {
+  criarTabelasInvestimentos,
+  cadastrarAtivo,
+  listarPosicoes,
+  listarMovimentos,
+  atualizarCotacao,
+  atualizarValorAtivo,
+  atualizarQuantidadeMercado,
+  excluirAtivo,
+  reativarAtivo,
+  registrarOperacao,
+  registrarObservacaoCarteira,
+  listarEvolucaoPatrimonio,
+  listarHistoricoCotacoes,
+  type NovoAtivo,
+  type Operacao
+} from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { appendFileSync, mkdtempSync } from 'node:fs'
@@ -26,13 +47,37 @@ import {
 } from './contas'
 
 import type { NovaConta, NovaTransferencia, AlteracaoConta, NovoAjusteSaldo } from './contas'
-import { criarTabelaSalarios, listarSalarios, cadastrarSalario, desativarSalario, processarSalariosVencidos } from './salarios'
+import {
+  criarTabelaSalarios,
+  listarSalarios,
+  cadastrarSalario,
+  desativarSalario,
+  processarSalariosVencidos
+} from './salarios'
 import type { NovoSalarioRecorrente } from './salarios'
 
 import type { NovaTransacao } from './database'
-import { criarTabelasCartoes, listarCartoes, cadastrarCartao, atualizarCartao, excluirCartao, cadastrarCompra, listarCompras, listarFaturasPrevistas, listarParcelasParaRelatorios, listarDespesasCartaoRealizadas, pagarFatura } from './cartoes'
+import {
+  criarTabelasCartoes,
+  listarCartoes,
+  cadastrarCartao,
+  atualizarCartao,
+  excluirCartao,
+  cadastrarCompra,
+  listarCompras,
+  listarFaturasPrevistas,
+  listarParcelasParaRelatorios,
+  listarDespesasCartaoRealizadas,
+  pagarFatura
+} from './cartoes'
 import type { NovoCartao, NovaCompra, NovoPagamentoFatura, NovoPagamentoParcelas } from './cartoes'
-import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParcela, estornarPagamento, listarEstornosPagamentos } from './cartoes'
+import {
+  listarParcelasPagamento,
+  pagarParcelasSelecionadas,
+  definirArquivoParcela,
+  estornarPagamento,
+  listarEstornosPagamentos
+} from './cartoes'
 import type { NovoEstornoPagamento } from './cartoes'
 
 const modoUISmoke = process.argv.includes('--fincontrol-ui-smoke-test')
@@ -41,8 +86,11 @@ function registrarLogUISmoke(mensagem: string): void {
   if (!modoUISmoke) return
   const destino = process.env.FINCONTROL_UI_SMOKE_LOG
   if (destino) {
-    try { appendFileSync(destino, mensagem + '\n', 'utf8') }
-    catch (erro) { console.error('Falha ao escrever diagnóstico do teste:', erro) }
+    try {
+      appendFileSync(destino, mensagem + '\n', 'utf8')
+    } catch (erro) {
+      console.error('Falha ao escrever diagnóstico do teste:', erro)
+    }
   }
 }
 
@@ -594,8 +642,12 @@ async function verificarResponsividadeInstalada(janela: BrowserWindow): Promise<
       })()
     `)
     if (Math.abs(resultado.viewport - largura) > 20) {
-      throw new Error('Viewport divergente no teste responsivo: esperado=' +
-        largura + ', obtido=' + resultado.viewport)
+      throw new Error(
+        'Viewport divergente no teste responsivo: esperado=' +
+          largura +
+          ', obtido=' +
+          resultado.viewport
+      )
     }
     registrarLogUISmoke('FINCONTROL_RESPONSIVO_OK: ' + JSON.stringify(resultado))
     console.info('FINCONTROL_RESPONSIVO_OK:', JSON.stringify(resultado))
@@ -625,7 +677,9 @@ function createWindow(): void {
 
   if (modoUISmoke) {
     mainWindow.webContents.once('did-fail-load', (_evento, codigo, descricao) => {
-      registrarLogUISmoke('FINCONTROL_UI_SMOKE_FAIL: Falha de carregamento ' + codigo + ' ' + descricao)
+      registrarLogUISmoke(
+        'FINCONTROL_UI_SMOKE_FAIL: Falha de carregamento ' + codigo + ' ' + descricao
+      )
       console.error('FINCONTROL_UI_SMOKE_FAIL: Falha de carregamento', codigo, descricao)
       app.exit(1)
     })
@@ -633,7 +687,10 @@ function createWindow(): void {
       void verificarInterfaceInstalada(mainWindow).then(
         () => app.exit(0),
         (erro: unknown) => {
-          registrarLogUISmoke('FINCONTROL_UI_SMOKE_FAIL: ' + (erro instanceof Error ? erro.stack ?? erro.message : String(erro)))
+          registrarLogUISmoke(
+            'FINCONTROL_UI_SMOKE_FAIL: ' +
+              (erro instanceof Error ? (erro.stack ?? erro.message) : String(erro))
+          )
           console.error('FINCONTROL_UI_SMOKE_FAIL:', erro)
           app.exit(1)
         }
@@ -717,37 +774,62 @@ app.whenReady().then(() => {
   }, 60_000)
   app.once('before-quit', () => clearInterval(verificadorSalarios))
 
-  ipcMain.handle('investimentos:sincronizar', (_evento, forcar: boolean) => sincronizarCotacoes(forcar === true))
+  ipcMain.handle('investimentos:sincronizar', (_evento, forcar: boolean) =>
+    sincronizarCotacoes(forcar === true)
+  )
   ipcMain.handle('investimentos:chave', (_evento, chave: string) => configurarChave(chave))
   ipcMain.handle('investimentos:chave-configurada', () => chaveConfigurada())
   ipcMain.handle('investimentos:reativar', (_evento, id: string) => reativarAtivo(obterBanco(), id))
   ipcMain.handle('investimentos:excluir', (_evento, id: string) => excluirAtivo(obterBanco(), id))
-  ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) => atualizarQuantidadeMercado(obterBanco(), id, quantidade))
+  ipcMain.handle('investimentos:quantidade', (_evento, id: string, quantidade: number) =>
+    atualizarQuantidadeMercado(obterBanco(), id, quantidade)
+  )
   ipcMain.handle('investimentos:listar', () => {
-    const db=obterBanco()
-    const posicoes=listarPosicoes(db)
-    registrarObservacaoCarteira(db,hojeLocalISO(),posicoes)
-    return { posicoes, movimentos:listarMovimentos(db), evolucao:listarEvolucaoPatrimonio(db) }
+    const db = obterBanco()
+    const posicoes = listarPosicoes(db)
+    registrarObservacaoCarteira(db, hojeLocalISO(), posicoes)
+    return { posicoes, movimentos: listarMovimentos(db), evolucao: listarEvolucaoPatrimonio(db) }
   })
-  ipcMain.handle('investimentos:fundamentos', (_evento,id:string) => obterFundamentos(id))
-  ipcMain.handle('investimentos:historico-cotacoes', (_evento,id:string) => listarHistoricoCotacoes(obterBanco(),id))
-  ipcMain.handle('investimentos:fonte-oficial', async (_evento,fonte: string) => {
-    const fontes: Record<string,string> = {
-      cvm:'https://sistemas.cvm.gov.br/central-index.asp',
-      sec:'https://www.sec.gov/search-filings',
-      bcb:'https://ptax.bcb.gov.br/ptax_internet/consultaBoletim.do?method=consultarBoletim'
+  ipcMain.handle('investimentos:fundamentos', (_evento, id: string) => obterFundamentos(id))
+  ipcMain.handle('investimentos:historico-cotacoes', (_evento, id: string) =>
+    listarHistoricoCotacoes(obterBanco(), id)
+  )
+  ipcMain.handle('investimentos:fonte-oficial', async (_evento, fonte: string) => {
+    const fontes: Record<string, string> = {
+      cvm: 'https://sistemas.cvm.gov.br/central-index.asp',
+      sec: 'https://www.sec.gov/search-filings',
+      bcb: 'https://ptax.bcb.gov.br/ptax_internet/consultaBoletim.do?method=consultarBoletim'
     }
-    if (typeof fonte!=='string'||!Object.hasOwn(fontes,fonte)) throw new Error('Fonte oficial inválida.')
+    if (typeof fonte !== 'string' || !Object.hasOwn(fontes, fonte))
+      throw new Error('Fonte oficial inválida.')
     await shell.openExternal(fontes[fonte])
   })
-  ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) => cadastrarAtivo(obterBanco(), dados))
-  ipcMain.handle('investimentos:valor', (_evento, id: string, centavos: number) => atualizarValorAtivo(obterBanco(), id, centavos))
-  ipcMain.handle('investimentos:cotacao', (_evento, id: string, centavos: number) => atualizarCotacao(obterBanco(), id, centavos))
-  ipcMain.handle('investimentos:operacao', (_evento, dados: Operacao) => registrarOperacao(obterBanco(), dados, id => listarContas().find(c => c.id === id)?.saldoAtualCentavos, hojeLocalISO()))
+  ipcMain.handle('investimentos:cadastrar', (_evento, dados: NovoAtivo) =>
+    cadastrarAtivo(obterBanco(), dados)
+  )
+  ipcMain.handle('investimentos:valor', (_evento, id: string, centavos: number) =>
+    atualizarValorAtivo(obterBanco(), id, centavos)
+  )
+  ipcMain.handle('investimentos:cotacao', (_evento, id: string, centavos: number) =>
+    atualizarCotacao(obterBanco(), id, centavos)
+  )
+  ipcMain.handle('investimentos:operacao', (_evento, dados: Operacao) =>
+    registrarOperacao(
+      obterBanco(),
+      dados,
+      (id) => listarContas().find((c) => c.id === id)?.saldoAtualCentavos,
+      hojeLocalISO()
+    )
+  )
   ipcMain.handle('cartoes:listar', () => listarCartoes())
   ipcMain.handle('cartoes:cadastrar', (_evento, dados: NovoCartao) => cadastrarCartao(dados))
-  ipcMain.handle('cartoes:atualizar', (_evento, id: string, dados: NovoCartao) => atualizarCartao(id, dados))
-  ipcMain.handle('cartoes:excluir', (_evento, id: string) => { excluirCartao(id); return true })
+  ipcMain.handle('cartoes:atualizar', (_evento, id: string, dados: NovoCartao) =>
+    atualizarCartao(id, dados)
+  )
+  ipcMain.handle('cartoes:excluir', (_evento, id: string) => {
+    excluirCartao(id)
+    return true
+  })
   ipcMain.handle('compras-cartao:listar', () => listarCompras())
   ipcMain.handle('compras-cartao:cadastrar', (_evento, dados: NovaCompra) => cadastrarCompra(dados))
   ipcMain.handle('faturas-previstas:listar', () => listarFaturasPrevistas())
@@ -755,8 +837,12 @@ app.whenReady().then(() => {
   ipcMain.handle('cartoes:despesas-realizadas', () => listarDespesasCartaoRealizadas())
   ipcMain.handle('faturas:pagar', (_evento, dados: NovoPagamentoFatura) => pagarFatura(dados))
   ipcMain.handle('parcelas:listar', () => listarParcelasPagamento())
-  ipcMain.handle('parcelas:arquivar', (_evento, id: string, arquivar: boolean) => definirArquivoParcela(id, arquivar))
-  ipcMain.handle('pagamentos:estornar', (_evento, dados: NovoEstornoPagamento) => estornarPagamento(dados))
+  ipcMain.handle('parcelas:arquivar', (_evento, id: string, arquivar: boolean) =>
+    definirArquivoParcela(id, arquivar)
+  )
+  ipcMain.handle('pagamentos:estornar', (_evento, dados: NovoEstornoPagamento) =>
+    estornarPagamento(dados)
+  )
   ipcMain.handle('pagamentos:estornos-listar', () => listarEstornosPagamentos())
   ipcMain.handle('backup:exportar', () => exportarBackup())
   ipcMain.handle('backup:restaurar', async (evento) => {
@@ -765,10 +851,12 @@ app.whenReady().then(() => {
     return restaurado
   })
   ipcMain.handle('parcelas:pagar-selecionadas', (_evento, dados: NovoPagamentoParcelas) =>
-    pagarParcelasSelecionadas(dados))
+    pagarParcelasSelecionadas(dados)
+  )
   ipcMain.handle('salarios:listar', () => listarSalarios())
   ipcMain.handle('salarios:cadastrar', (_evento, dados: NovoSalarioRecorrente) =>
-    cadastrarSalario(dados))
+    cadastrarSalario(dados)
+  )
   ipcMain.handle('salarios:desativar', (_evento, id: string) => desativarSalario(id))
 
   ipcMain.handle('contas:listar', () => {
@@ -785,9 +873,9 @@ app.whenReady().then(() => {
     return true
   })
   ipcMain.handle('contas:editar', (_evento, id: string, dados: AlteracaoConta) =>
-    editarConta(id, dados))
-  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) =>
-    ajustarSaldo(dados))
+    editarConta(id, dados)
+  )
+  ipcMain.handle('contas:ajustar-saldo', (_evento, dados: NovoAjusteSaldo) => ajustarSaldo(dados))
   ipcMain.handle('contas:listar-ajustes', () => listarAjustesSaldo())
 
   ipcMain.handle('transferencias:listar', () => listarTransferencias())

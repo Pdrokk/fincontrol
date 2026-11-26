@@ -5,7 +5,9 @@ interface FeedbackProps {
 }
 
 export default function Feedback({
-  mensagem, tipo = 'informacao', id
+  mensagem,
+  tipo = 'informacao',
+  id
 }: FeedbackProps): React.JSX.Element | null {
   if (!mensagem) return null
   return (
