@@ -1,5 +1,9 @@
-# Evolução e ficha do ativo — FinControl 1.5.0
+# Evolução e ficha do ativo — FinControl 1.6.4
 
-A carteira salva uma observação por dia local em que é consultada. A observação do mesmo dia é substituída pelo estado mais recente. Não são reconstruídas posições ou preços anteriores à implantação, nem preenchidos dias sem registro. Valor total desconhecido é nulo, não zero; valores conhecidos parciais são registrados separadamente. O patrimônio inclui aportes/retiradas e não equivale à rentabilidade. A cotação automática é registrada na data do provedor; o valor manual na data de observação. O gráfico consulta até 730 observações recentes, com seleção de 30/90 dias ou todas as disponíveis.
+Desde a v1.5.0, a carteira registra uma observação por dia local em que é consultada; a observação do mesmo dia é atualizada. Não reconstrói preços/posições anteriores nem preenche dias ausentes. Valores totais desconhecidos permanecem nulos; valores parciais conhecidos são registrados separadamente. Patrimônio inclui aportes/retiradas e não equivale à rentabilidade.
 
-A ficha apresenta cotação, quantidade, custo quando conhecido, resultado da posição, proventos e operações. O custo inicial desconhecido impede apresentar resultado fictício. Links públicos oficiais abrem CVM, SEC EDGAR e BCB PTAX em navegador externo. Não há associação automática de emissores, indicadores fundamentalistas ou importação de documentos nesta versão. A migração é aditiva, e os dados entram no backup SQLite existente.
+Desde a v1.6.1, a tela principal apresenta apenas a rosca de composição por ativo; o histórico patrimonial continua no SQLite, sem gráfico geral na interface. A ficha individual conserva gráfico de cotações (até 730 observações recentes, filtros de 30/90 dias ou todas), quantidade, custo quando conhecido, resultados e proventos. A cotação automática usa a data do provedor; a manual usa a data observada.
+
+Fundamentos de ações e FIIs via BRAPI sob demanda podem incluir P/L (ações), P/VP, dividend yield e outros indicadores de acordo com cobertura e plano. Ausência é explícita. A consulta não modifica saldo. Os links CVM, SEC EDGAR e BCB são consultas públicas externas, não integração automática de documentos.
+
+Operações e posição inicial têm funções distintas: somente compra/venda/provento registrados movimentam caixa. O Harden inclui prévia de valor líquido e quantidade. O Optimize pagina os históricos em 25 linhas. Todo histórico persistido integra o backup SQLite; a chave BRAPI fica fora dele.
