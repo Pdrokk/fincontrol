@@ -373,7 +373,7 @@ export default function Investimentos({
             </strong>
             <small>
               {ativas.length - zeradas.length}{' '}
-              {ativas.length - zeradas.length === 1 ? 'posição ativa' : 'posições ativas'} · {' '}
+              {ativas.length - zeradas.length === 1 ? 'posição ativa' : 'posições ativas'} ·{' '}
               {semCotacao} sem cotação
               {cotacoesAntigas ? ' · ' + cotacoesAntigas + ' com cotação antiga' : ''}
             </small>

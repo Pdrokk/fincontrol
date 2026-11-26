@@ -7,7 +7,7 @@
   "homepage": "https://github.com/Pdrokk/fincontrol",
   "scripts": {
     "format": "prettier --write .",
-    "lint": "eslint --cache .",
+    "lint": "eslint --cache . --max-warnings=0",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
@@ -20,6 +20,7 @@
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
     "test": "node --experimental-strip-types --test tests/regrasFinanceiras.test.ts tests/consistenciaSql.test.ts tests/performanceHistorico.test.mjs tests/investimentos.test.ts tests/cotacoes.test.ts tests/fundamentos.test.ts tests/composicaoCarteira.test.ts tests/previaOperacao.test.ts tests/historicoInvest.test.ts",
+    "test:coverage": "node --experimental-strip-types --experimental-test-coverage --test-coverage-include=\"src/**/*.ts\" --test-coverage-include=\"src/**/*.tsx\" --test tests/regrasFinanceiras.test.ts tests/consistenciaSql.test.ts tests/performanceHistorico.test.mjs tests/investimentos.test.ts tests/cotacoes.test.ts tests/fundamentos.test.ts tests/composicaoCarteira.test.ts tests/previaOperacao.test.ts tests/historicoInvest.test.ts",
     "prebuild:win": "node scripts/gerar-icones.mjs"
   },
   "dependencies": {

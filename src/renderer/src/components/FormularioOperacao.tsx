@@ -75,7 +75,7 @@ export default function FormularioOperacao({
         </button>
       </div>
       <p className="invest-detalhe">
-        Disponível: {qtd(ativo.quantidade)} un.  {'·'}
+        Disponível: {qtd(ativo.quantidade)} un. ·{' '}
         {tipo === 'compra' ? 'Debita a conta selecionada.' : 'Credita a conta selecionada.'} Nenhuma
         ordem é enviada à corretora.
       </p>

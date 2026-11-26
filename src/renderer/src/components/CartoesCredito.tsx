@@ -671,7 +671,7 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
                 <div className="transacao-info">
                   <strong>{c.descricao}</strong>
                   <span>
-                    {nomeCartao(c.cartaoId)} · {c.categoria}  {'·'}
+                    {nomeCartao(c.cartaoId)} · {c.categoria} ·{' '}
                     {c.data.split('-').reverse().join('/')} · {c.numeroParcelas}x
                   </span>
                 </div>
