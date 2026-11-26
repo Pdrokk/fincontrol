@@ -24,6 +24,17 @@ interface Props {
 
 const cores = ['#16a34a', '#2563eb', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#64748b']
 const mesesPagina = 6
+const estiloEixo = { fill: 'var(--muted)', fontSize: 12 }
+const estiloTooltip = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 8,
+  color: 'var(--text)'
+}
+const eixoMoeda = (v: number): string => 'R$ ' + v.toLocaleString('pt-BR', {
+  maximumFractionDigits: Math.abs(v) >= 10000 ? 1 : 2,
+  notation: Math.abs(v) >= 10000 ? 'compact' : 'standard'
+})
 const moeda = (reais: number): string =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(reais)
 
@@ -135,15 +146,16 @@ function GraficosFinanceiros({
             <div className="grafico-area" aria-hidden="true">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dados}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="mes" />
-                  <YAxis width={65} tickFormatter={(v: number): string => `R$ ${v}`} />
-                  <Tooltip formatter={(value): string => moeda(Number(value))} />
-                  <Legend />
+                  <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="mes" tick={estiloEixo} axisLine={false} tickLine={false} />
+                  <YAxis width={84} tick={estiloEixo} axisLine={false} tickLine={false} tickFormatter={eixoMoeda} />
+                  <Tooltip formatter={(value): string => typeof value === 'number' ? moeda(value) : 'Indisponível'}
+                      contentStyle={estiloTooltip} labelStyle={{ color: 'var(--muted)' }} itemStyle={{ color: 'var(--text)' }} />
+                  <Legend formatter={(value): React.JSX.Element => <span style={{ color: 'var(--text)' }}>{value}</span>} />
                   {modo === 'realizado' && (
-                    <Bar dataKey="receitas" name="Receitas" fill="#16a34a" radius={[5, 5, 0, 0]} />
+                    <Bar dataKey="receitas" name="Receitas" fill="#16a34a" radius={[5, 5, 0, 0]} isAnimationActive={false} />
                   )}
-                  <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[5, 5, 0, 0]} />
+                  <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[5, 5, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -158,8 +170,9 @@ function GraficosFinanceiros({
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={dadosCategorias} dataKey="valor" nameKey="nome"
-                      innerRadius="52%" outerRadius="78%" paddingAngle={2} />
-                    <Tooltip formatter={(value): string => moeda(Number(value))} />
+                      innerRadius="52%" outerRadius="78%" paddingAngle={2} stroke="var(--surface)" isAnimationActive={false} />
+                    <Tooltip formatter={(value): string => typeof value === 'number' ? moeda(value) : 'Indisponível'}
+                      contentStyle={estiloTooltip} labelStyle={{ color: 'var(--muted)' }} itemStyle={{ color: 'var(--text)' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -186,13 +199,14 @@ function GraficosFinanceiros({
               <div className="grafico-area" aria-hidden="true">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dados}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="mes" />
-                    <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
-                    <Tooltip formatter={(value): string => moeda(Number(value))} />
+                    <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="mes" tick={estiloEixo} axisLine={false} tickLine={false} />
+                    <YAxis width={84} tick={estiloEixo} axisLine={false} tickLine={false} tickFormatter={eixoMoeda} />
+                    <Tooltip formatter={(value): string => typeof value === 'number' ? moeda(value) : 'Indisponível'}
+                      contentStyle={estiloTooltip} labelStyle={{ color: 'var(--muted)' }} itemStyle={{ color: 'var(--text)' }} />
                     <Line type="monotone" dataKey="resultado"
                       name={modo === 'realizado' ? 'Resultado' : 'Parcelas pendentes acumuladas'}
-                      stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} />
+                      stroke="var(--grafico-linha)" strokeWidth={2.5} dot={{ r: 4 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

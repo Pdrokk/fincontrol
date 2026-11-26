@@ -66,6 +66,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         'Cartões e faturas', 'Investimentos', 'Configurações'
       ];
       const verificadas = [];
+      if (document.title !== 'FinControl' || document.documentElement.lang !== 'pt-BR') throw new Error('Título ou idioma do aplicativo incorretos.');
       for (const nome of paginas) {
         const botao = [...document.querySelectorAll('.sidebar nav button')]
           .find(b => b.getAttribute('title') === nome);
@@ -195,7 +196,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.6.4')) {
+          if (!document.body.textContent?.includes('Versão 1.6.5')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -220,6 +221,9 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         const estilo = getComputedStyle(aplicativo);
         const mut = estilo.getPropertyValue('--muted').trim();
         const bg = estilo.getPropertyValue('--bg').trim();
+        const surface = estilo.getPropertyValue('--surface').trim();
+        const coresValores = ['--valor-receita', '--valor-despesa'].map(v => estilo.getPropertyValue(v).trim());
+        if (contraste(mut, surface) < 4.5 || coresValores.some(c => contraste(c, surface) < 4.5 || contraste(c, bg) < 4.5)) throw new Error('Contraste dos valores financeiros insuficiente.');
         if (contraste(mut, bg) < 4.5) {
           throw new Error('Texto secundário com contraste inferior a 4,5:1 no tema ' +
             aplicativo.getAttribute('data-theme'));
@@ -302,6 +306,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       ficha.querySelector('button[aria-label="Fechar ficha do ativo"]').click();
       await dormir(150);
       if (document.querySelector('.carteira-ficha')) throw new Error('Ficha não foi fechada.');
+      if (document.activeElement !== abrirFicha) throw new Error('Foco não retornou ao ativo após fechar a ficha.');
       botaoPagina('Minhas contas')?.click();
       await dormir(450);
       if (!document.querySelector('.icone-banco')) throw new Error('Identificador de banco ausente.');
@@ -412,6 +417,20 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes+6000) throw new Error('Remoção alterou o caixa.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);
+      const verificarEixos = async () => {
+        for(let i=0;i<30&&!document.querySelector('.grafico-area .recharts-cartesian-axis-tick-value');i++) await dormir(100);
+        const eixos = [...document.querySelectorAll('.grafico-area .recharts-cartesian-axis-tick-value')];
+        if (!eixos.length) throw new Error('Gráfico com dados não renderizou eixos.');
+        const esperado = getComputedStyle(aplicativo).getPropertyValue('--muted').trim().replace('#','');
+        const rgb = 'rgb('+[0,2,4].map(i=>parseInt(esperado.slice(i,i+2),16)).join(', ')+')';
+        if(eixos.some(e=>getComputedStyle(e).fill!==rgb)) throw new Error('Eixos não acompanham o tema.');
+      };
+      await verificarEixos();
+      tema.click();
+      await dormir(250);
+      await verificarEixos();
+      tema.click();
+      await dormir(250);
       botaoPagina('Transações')?.click();
       await dormir(850);
       const tamanhoTeste = document.querySelector('#historico-tamanho');

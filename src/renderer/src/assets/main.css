@@ -2740,3 +2740,21 @@ body::-webkit-scrollbar-corner,
   .fincontrol .titulo-contas .acao-contextual { width:100%; }
   .fincontrol .historico-filtros .filtro-campo { flex:0 1 auto; width:100%; }
 }
+
+/* Polish: contraste temático de dados e estados interativos. */
+.fincontrol { --grafico-linha: #2563eb; --valor-receita: #15803d; --valor-despesa: #b91c1c; --foco-visivel: #2563eb; }
+.fincontrol[data-theme='dark'] { --grafico-linha: #60a5fa; --valor-receita: #4ade80; --valor-despesa: #f87171; --foco-visivel: #60a5fa; }
+.fincontrol .receita { color: var(--valor-receita); }
+.fincontrol .despesa { color: var(--valor-despesa); }
+.fincontrol .grafico-vazio { color: var(--muted); }
+.fincontrol .legenda-item { color: var(--muted); min-width: 0; }
+.fincontrol .legenda-item > span:not(.legenda-cor) { min-width: 0; overflow-wrap: anywhere; }
+.fincontrol .legenda-item strong { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.fincontrol .grafico-area .recharts-tooltip-wrapper { pointer-events: none; }
+.fincontrol .botao-primario:disabled { opacity: .55; cursor: not-allowed; }
+.fincontrol .botao-primario:disabled:hover { background: #2563eb; }
+.fincontrol :is(input, select, textarea, button, summary):focus-visible { outline: 2px solid var(--foco-visivel); outline-offset: 2px; }
+.fincontrol :is(.dashboard-kpi strong, .resumo-contas strong, .central-pagamento-total strong, .transacao-valor) { font-variant-numeric: tabular-nums; }
+@media (forced-colors: active) {
+  .fincontrol :is(input, select, textarea, button, summary):focus-visible { outline-color: Highlight; }
+}

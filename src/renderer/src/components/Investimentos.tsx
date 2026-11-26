@@ -226,7 +226,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           const editarQuantidade=automatico||manual
           const valorEdicao=manual?'':automatico?a.quantidade:a.cotacaoCentavos===null?'':a.cotacaoCentavos/100
           return <tr className="invest-ativo" key={a.id}>
-            <th scope="row"><span className="carteira-ativo-nome"><span className="carteira-icone-ativo" data-categoria={a.tipo}><Icone size={19} aria-hidden="true"/></span><span><button type="button" className="carteira-link-ativo" aria-label={'Abrir ficha de '+a.codigo} aria-expanded={fichaId===a.id} onClick={():void=>setFichaId(v=>v===a.id?null:a.id)}>{a.codigo}</button><small>{a.tipo}{a.instituicao?' · '+a.instituicao:''}{a.arquivado?' · Arquivado':''}</small></span></span></th>
+            <th scope="row"><span className="carteira-ativo-nome"><span className="carteira-icone-ativo" data-categoria={a.tipo}><Icone size={19} aria-hidden="true"/></span><span><button type="button" className="carteira-link-ativo" id={'ficha-ativo-'+a.id} aria-label={'Abrir ficha de '+a.codigo} aria-expanded={fichaId===a.id} onClick={():void=>setFichaId(v=>v===a.id?null:a.id)}>{a.codigo}</button><small>{a.tipo}{a.instituicao?' · '+a.instituicao:''}{a.arquivado?' · Arquivado':''}</small></span></span></th>
             <td>{manual?'A definir':qtd(a.quantidade)}</td>
             <td>{automatico?a.precoMercado===null?'—':preco(a.precoMercado):manual?'—':a.cotacaoCentavos===null?'—':moeda(a.cotacaoCentavos)}
               <small>{automatico?a.cotacaoEm? a.fonteCotacao+' · '+hora(a.cotacaoEm)+(agora-Date.parse(a.cotacaoEm)>72*3600000?' · Antiga':''):'Aguardando cotação':manual?'Valor total anterior':'Cotação manual'}</small>
@@ -245,7 +245,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           </tr>
         })}</tbody>
       </table></div>}
-      {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentosFicha} agora={agora} onFechar={():void=>setFichaId(null)} />}
+      {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentosFicha} agora={agora} onFechar={():void=>{setFichaId(null);requestAnimationFrame(()=>{(document.getElementById('ficha-ativo-'+ficha.id)??document.querySelector<HTMLInputElement>('input[aria-label="Buscar ativos"]'))?.focus({preventScroll:true})})}} />}
       {operacao&&ativoOperacao&&<FormularioOperacao key={operacao.id+operacao.tipo} ativo={ativoOperacao} tipo={operacao.tipo} contas={contas} ocupado={ocupado||sincronizando||recarregarNecessario} erro={erro} onCancelar={():void=>{setErro('');setOperacao(null)}} onConfirmar={(dados):void=>{void executar(async()=>{await window.fincontrol.registrarInvestimento(dados);setMostrarZeradas(true);setOperacao(null)},'Operação registrada.')}}/>}
     </section>
     <details className="painel invest-avancado" onToggle={(e):void=>setHistoricoAberto(e.currentTarget.open)}>
