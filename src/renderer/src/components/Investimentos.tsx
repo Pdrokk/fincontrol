@@ -245,7 +245,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           </tr>
         })}</tbody>
       </table></div>}
-      {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentosFicha} agora={agora} onFechar={():void=>{setFichaId(null);requestAnimationFrame(()=>{(document.getElementById('ficha-ativo-'+ficha.id)??document.querySelector<HTMLInputElement>('input[aria-label="Buscar ativos"]'))?.focus({preventScroll:true})})}} />}
+      {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentosFicha} agora={agora} onFechar={():void=>{setFichaId(null);(document.getElementById('ficha-ativo-'+ficha.id)??document.querySelector<HTMLInputElement>('input[aria-label="Buscar ativos"]'))?.focus({preventScroll:true})}} />}
       {operacao&&ativoOperacao&&<FormularioOperacao key={operacao.id+operacao.tipo} ativo={ativoOperacao} tipo={operacao.tipo} contas={contas} ocupado={ocupado||sincronizando||recarregarNecessario} erro={erro} onCancelar={():void=>{setErro('');setOperacao(null)}} onConfirmar={(dados):void=>{void executar(async()=>{await window.fincontrol.registrarInvestimento(dados);setMostrarZeradas(true);setOperacao(null)},'Operação registrada.')}}/>}
     </section>
     <details className="painel invest-avancado" onToggle={(e):void=>setHistoricoAberto(e.currentTarget.open)}>
