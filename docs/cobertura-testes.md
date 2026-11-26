@@ -34,4 +34,16 @@ Merge na develop: `812f25522db1f8b4bae30cff9f328e9145cd109b`. [Qualidade e cober
 
 Quatro cenários em testes existentes: HTTP 503; reativação por recadastro zerado com histórico preservado; edição de quantidade inicial manual sem impacto no caixa; rollback integral da observação patrimonial após falha de escrita SQLite, incluindo nova tentativa. Os testes usam mocks ou banco em memória. Nenhuma regra financeira alterada, nenhuma asserção anterior removida. A cobertura dos 49 testes previstos ainda precisa ser medida pela CI. Não é cobertura global; contas, cartões, backup e UI continuam dependentes da validação de integração e manual.
 
-Estado: linha de base aprovada; ampliação da suíte em validação. Segurança permanece pendente.
+## Resultado confirmado — PR 53
+
+Merge na develop: `31be7b5dc41ff6d2453a6017023d22df60b55708`. [Qualidade e cobertura](https://github.com/Pdrokk/fincontrol/actions/runs/45854167906) e [Windows](https://github.com/Pdrokk/fincontrol/actions/runs/45854168300) aprovados. 49 testes aprovados, zero falhas, lint sem avisos.
+
+| Indicador dos oito módulos carregados | Resultado |
+|---|---:|
+| Linhas | 100% |
+| Branches | 93,48% |
+| Funções | 100% |
+
+Cotações: 100% de linhas, 91,11% de branches. Investimentos: 100% de linhas, 90,24% de branches. A medição continua limitada aos módulos importados pela suíte isolada.
+
+Estado: ampliação aprovada; segurança retomada separadamente.
