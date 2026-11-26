@@ -1,6 +1,6 @@
 {
   "name": "fincontrol",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Aplicativo desktop offline para controle financeiro pessoal",
   "main": "./out/main/index.js",
   "author": "Projeto FinControl",

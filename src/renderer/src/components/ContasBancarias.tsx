@@ -1,7 +1,7 @@
 import { confirmarFinControl } from '../utils/dialogos'
 import IconeBanco from './IconeBanco'
 import { useEffect, useState } from 'react'
-import { ArrowLeftRight, Landmark, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { ArrowLeftRight, Plus, Wallet, Pencil, CirclePlus, SlidersHorizontal, Trash2 } from 'lucide-react'
 import GerenciarConta from './GerenciarConta'
 import SalarioRecorrente from './SalarioRecorrente'
 import Feedback from './Feedback'
@@ -206,7 +206,19 @@ export default function ContasBancarias(): React.JSX.Element {
             <h3>Contas cadastradas</h3>
             <p>Gerencie seus bancos e saldos financeiros.</p>
           </div>
-          <Landmark size={26} />
+          <button
+            type="button"
+            className="botao-primario acao-contextual"
+            aria-controls="formulario-conta"
+            disabled={salvando || carregando || Boolean(erro)}
+            onClick={(): void => {
+              const formulario = document.getElementById('formulario-conta')
+              formulario?.scrollIntoView({ block: 'start' })
+              formulario?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+            }}
+          >
+            <Plus size={17} aria-hidden="true" /> Nova conta
+          </button>
         </div>
         <div className="resumo-contas">
           <span>Saldo total disponível nas contas</span>
@@ -262,7 +274,7 @@ export default function ContasBancarias(): React.JSX.Element {
         />
       )}
 
-      <section className="painel">
+      <section className="painel" id="formulario-conta">
         <h3>Cadastrar nova conta</h3>
         <form
           className="formulario"
