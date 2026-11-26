@@ -4,6 +4,7 @@ Registro resumido das alterações relevantes à entrega; os PRs são as evidên
 
 | Versão | Alteração principal |
 |---|---|
+| 1.6.4 (pós-layout) | Polish ([PR 47](https://github.com/Pdrokk/fincontrol/pull/47)) e retirada das grades ([PR 48](https://github.com/Pdrokk/fincontrol/pull/48)); sem incremento de versão |
 | 1.6.4 | Layout: ações contextuais, filtros no histórico e atalhos de contas/cartões ([PR 44](https://github.com/Pdrokk/fincontrol/pull/44)) |
 | 1.6.3 | Optimize: paginação do histórico de investimentos, índice por ativo e recuperação de recarga ([PR 43](https://github.com/Pdrokk/fincontrol/pull/43)) |
 | 1.6.2 | Harden: prévia financeira, proteção contra envios duplicados, recarga e diagnóstico Windows ([PR 42](https://github.com/Pdrokk/fincontrol/pull/42)) |
