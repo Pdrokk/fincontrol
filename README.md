@@ -55,7 +55,7 @@ npm.cmd run build
 npm.cmd run build:win -- --x64
 ```
 
-O último comando gera `dist/FinControl-<versão>-portable.exe`. A CI usa Node 24 e valida o executável com bancos temporários. A versão 1.6.4 obteve 45 testes aprovados, zero falhas e 1.719 avisos de lint (sem erros); consulte as evidências em [homologação atual](docs/HOMOLOGACAO_V1.md). Não confunda testes automatizados com homologação manual em um computador do usuário.
+O último comando gera `dist/Fin Control.exe`. O workflow Windows da branch `main` disponibiliza o pacote `Fin Control` em Actions; artefatos antigos mantêm seus nomes históricos. A CI usa Node 24 e valida o executável com bancos temporários. A versão 1.6.4 obteve 45 testes aprovados, zero falhas e 1.719 avisos de lint (sem erros); consulte as evidências em [homologação atual](docs/HOMOLOGACAO_V1.md). Não confunda testes automatizados com homologação manual em um computador do usuário.
 
 ## Documentação
 

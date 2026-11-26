@@ -4,6 +4,7 @@ on:
     branches:
       - 'portable/fincontrol-v1.0.0'
       - develop
+      - main
   workflow_dispatch:
 
 permissions:
@@ -46,8 +47,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $exe = Join-Path $PWD "dist/FinControl-$version-portable.exe"
+          $exe = Join-Path $PWD "dist/Fin Control.exe"
           if (-not (Test-Path $exe)) { throw "EXE portátil ausente" }
           $env:FINCONTROL_UI_SMOKE_LOG = Join-Path $env:RUNNER_TEMP 'fincontrol-ui-smoke.log'
           if (Test-Path $env:FINCONTROL_UI_SMOKE_LOG) { Remove-Item $env:FINCONTROL_UI_SMOKE_LOG }
@@ -62,6 +62,6 @@ jobs:
         with:
           name: FinControl-Correcoes-Validacao-Windows-${{ github.run_number }}
           path: |
-            dist/FinControl-*-portable.exe
+            dist/Fin Control.exe
           if-no-files-found: error
           retention-days: 14
