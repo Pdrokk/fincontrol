@@ -31,7 +31,7 @@
 - [ ] Validar abertura do arquivo em outro Windows e registrar resultados.
 - [ ] Conferir links, versões, documentação e monografia antes do envio.
 
-Para gerar hash no PowerShell: `Get-FileHash .\dist\FinControl-<versão>-portable.exe -Algorithm SHA256` (substitua <versão> pelo número real). Não existe hash final registrado neste documento. A v1.6.4 é a referência aprovada atual; o artefato definitivo ainda depende da etapa de fechamento.
+Para gerar hash no PowerShell: `Get-FileHash '.\dist\Fin Control.exe' -Algorithm SHA256`. Não existe hash final registrado neste documento. A v1.6.4 é a referência aprovada atual; o artefato definitivo ainda depende da etapa de fechamento.
 
 ## Evidências
 

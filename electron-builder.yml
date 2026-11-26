@@ -19,7 +19,7 @@ win:
       arch:
         - x64
 portable:
-  artifactName: FinControl-${version}-portable.${ext}
+  artifactName: 'Fin Control.${ext}'
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

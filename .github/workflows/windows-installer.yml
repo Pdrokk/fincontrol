@@ -58,8 +58,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $portatil = Join-Path $PWD "dist/FinControl-$version-portable.exe"
+          $portatil = Join-Path $PWD "dist/Fin Control.exe"
           if (-not (Test-Path $portatil)) { throw "EXE portátil não gerado: $portatil" }
           $bytes = (Get-Item $portatil).Length
           if ($bytes -lt 10485760) { throw "EXE portátil inesperadamente pequeno: $bytes bytes" }
@@ -74,19 +73,18 @@ jobs:
       - name: Registrar checksum SHA-256
         shell: pwsh
         run: |
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $portatil = Join-Path $PWD "dist/FinControl-$version-portable.exe"
+          $portatil = Join-Path $PWD "dist/Fin Control.exe"
           $hash = (Get-FileHash -Path $portatil -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  FinControl-$version-portable.exe" |
+          "$hash  Fin Control.exe" |
             Out-File -FilePath "dist/SHA256SUMS.txt" -Encoding ascii
           Get-Content dist/SHA256SUMS.txt
 
       - name: Disponibilizar executável portátil
         uses: actions/upload-artifact@v4
         with:
-          name: FinControl-Portatil-Windows-x64-${{ github.run_number }}
+          name: Fin Control
           path: |
-            dist/FinControl-*-portable.exe
+            dist/Fin Control.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
