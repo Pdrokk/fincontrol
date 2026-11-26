@@ -101,6 +101,12 @@ function registrarLogUISmoke(mensagem: string): void {
 async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void> {
   const resultado = await janela.webContents.executeJavaScript(`
     (async () => {
+      if (typeof window.electron?.ipcRenderer !== 'undefined' ||
+          typeof window.api !== 'undefined' ||
+          typeof window.fincontrol?.listarContas !== 'function' ||
+          typeof window.electron?.process?.versions?.electron !== 'string') {
+        throw new Error('Contrato de exposição do preload inválido.');
+      }
       const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       for (let i = 0; i < 30 && !document.querySelector('.sidebar nav'); i++) {
         await dormir(100);
@@ -911,9 +917,6 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
 
   createWindow()
 
