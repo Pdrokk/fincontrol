@@ -165,7 +165,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.6.1')) {
+          if (!document.body.textContent?.includes('Versão 1.6.2')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -334,11 +334,17 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if (!formularioVenda || document.querySelector('select[name="ativo"]')) throw new Error('Operação não está vinculada à linha do ativo.');
       formularioVenda.querySelector('select[name="conta"]').value=contaTeste.id;
       formularioVenda.querySelector('input[name="quantidade"]').value='20';
-      formularioVenda.querySelector('input[name="valor"]').value='60';
+      const valorVenda = formularioVenda.querySelector('input[name="valor"]');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(valorVenda,'60');
+      valorVenda.dispatchEvent(new Event('input',{bubbles:true}));
+      await dormir(100);
+      if (!formularioVenda.querySelector('.previa-caixa')?.textContent.includes('60,00')) throw new Error('Prévia do valor líquido não aparece.');
+      formularioVenda.requestSubmit();
       formularioVenda.requestSubmit();
       await dormir(450);
       const posicaoVendida=(await window.fincontrol.listarInvestimentos()).posicoes.find(a=>a.id===idPatrimonio);
       if (posicaoVendida?.quantidade!==0) throw new Error('Venda total não zerou a posição.');
+      if ((await window.fincontrol.listarInvestimentos()).movimentos.filter(m=>m.ativoId===idPatrimonio&&m.tipo==='venda').length!==1) throw new Error('Envio duplicado de venda.');
       if ((await window.fincontrol.listarContas()).find(c=>c.id===contaTeste.id).saldoAtualCentavos!==saldoPatrimonioAntes+6000) throw new Error('Venda não creditou a conta.');
       const removerAtivo = document.querySelector('button[aria-label="Remover USD"]');
       if (!removerAtivo) throw new Error('Remoção de posição sem histórico ausente.');
