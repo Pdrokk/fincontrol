@@ -2709,3 +2709,15 @@ body::-webkit-scrollbar-corner,
 .fincontrol[data-theme='dark'] .carteira-cor-5 { --fatia-cor:#fb923c; }
 .fincontrol[data-theme='dark'] .carteira-cor-6 { --fatia-cor:#94a3b8; }
 @media(max-width:1200px) { .carteira-rosca-conteudo { grid-template-columns:1fr; gap:8px; } .carteira-rosca { justify-self:center; } }
+
+/* Harden: prévia e recuperação sem quebrar o layout com valores longos. */
+.carteira-previa { grid-column:1/-1; min-width:0; padding:12px 0; border-top:1px solid var(--border-color); }
+.carteira-previa dl { display:flex; flex-wrap:wrap; gap:12px 28px; margin:10px 0; }
+.carteira-previa dl>div { min-width:0; }
+.carteira-previa dt,.carteira-previa p { font-size:13px; color:var(--muted); overflow-wrap:anywhere; }
+.carteira-previa dd { margin:4px 0 0; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.carteira-recarga { flex-wrap:wrap; border:1px solid var(--border-color); border-radius:8px; padding:12px; }
+.carteira-recarga p { flex:1 1 220px; min-width:0; margin:0; overflow-wrap:anywhere; }
+.carteira-rosca-legenda li { grid-template-columns:8px minmax(0,1fr) minmax(0,1.5fr) minmax(42px,auto); }
+.carteira-rosca-legenda li>span:not(.carteira-rosca-nome) { text-align:right; overflow-wrap:anywhere; }
+.carteira-fonte,.carteira-ficha h3 { overflow-wrap:anywhere; }

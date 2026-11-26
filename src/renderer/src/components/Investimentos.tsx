@@ -1,9 +1,10 @@
 import { confirmarFinControl } from '../utils/dialogos'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TrendingUp, Plus, ArrowDownLeft, ArrowUpRight, Coins, Landmark, Building2, Wallet, ChartNoAxesCombined, RefreshCw, Pencil, X, Trash2, CheckCircle2, Search } from 'lucide-react'
 import Feedback from './Feedback'
 import ComposicaoCarteira from './ComposicaoCarteira'
 import FichaAtivo from './FichaAtivo'
+import FormularioOperacao from './FormularioOperacao'
 import type { Operacao, Posicao, Movimento } from '../../../main/investimentos'
 
 type Conta = Awaited<ReturnType<typeof window.fincontrol.listarContas>>[number]
@@ -15,7 +16,6 @@ const icones = { 'Ação': TrendingUp, ETF: ChartNoAxesCombined, FII: Building2,
 const moeda = (n: number): string => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n / 100)
 const preco = (n: number): string => n.toLocaleString('pt-BR', {style:'currency',currency:'BRL',maximumFractionDigits:4})
 const qtd = (n: number): string => n.toLocaleString('pt-BR', { maximumFractionDigits: 8 })
-const hoje = (): string => new Date().toLocaleDateString('sv-SE')
 const campo = (f: FormData, nome: string): string => String(f.get(nome) ?? '')
 const centavos = (f: FormData, nome: string): number => Math.round(Number(campo(f, nome)) * 100)
 const hora = (iso: string): string => new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
@@ -47,6 +47,11 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const [erro, setErro] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [ocupado, setOcupado] = useState(false)
+  const trava = useRef(false)
+  const travaSincronizacao = useRef(false)
+  const [recarregarNecessario, setRecarregarNecessario] = useState(false)
+  const bloqueioRecarga = useRef(false)
+  const [falhaCarga, setFalhaCarga] = useState(false)
   const [carregando, setCarregando] = useState(true)
   const [agora, setAgora] = useState(() => Date.now())
 
@@ -84,30 +89,56 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
         if (!ativo) return
         setPosicoes(dados.posicoes); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave); setCarregando(false)
         if (!dados.posicoes.some(a=>!a.arquivado && a.quantidadeMercado!==null)) return
+        travaSincronizacao.current = true
         setSincronizando(true)
         const r = await window.fincontrol.sincronizarCotacoes(false)
         const novos = await window.fincontrol.listarInvestimentos()
         if (ativo) {setPosicoes(novos.posicoes);setMovimentos(novos.movimentos);setStatusCotacoes(resumoCotacoes(r))}
       })
-      .catch((e: unknown) => { if (ativo) setErro(e instanceof Error ? e.message : 'Falha ao carregar investimentos.') })
-      .finally(() => { if (ativo) {setCarregando(false);setSincronizando(false)} })
+      .catch(() => { if (ativo) { setFalhaCarga(true); bloqueioRecarga.current = true; setRecarregarNecessario(true) } })
+      .finally(() => { if (ativo) {travaSincronizacao.current = false;setCarregando(false);setSincronizando(false)} })
     return (): void => { ativo = false }
   }, [])
   async function executar(acao: () => Promise<unknown>, sucesso: string, form?: HTMLFormElement): Promise<void> {
-    if (ocupado || sincronizando) return
+    if (trava.current || travaSincronizacao.current || bloqueioRecarga.current || ocupado || sincronizando || carregando) return
+    trava.current = true
     setOcupado(true); setErro(''); setMensagem('')
-    try { await acao(); form?.reset(); await carregar(); onAlteracao(); setMensagem(sucesso) }
-    catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível concluir a operação.') }
-    finally { setOcupado(false) }
+    try {
+      await acao()
+      form?.reset()
+      onAlteracao()
+      setMensagem(sucesso)
+      try { await carregar() }
+      catch {
+        bloqueioRecarga.current = true
+        setRecarregarNecessario(true)
+      }
+    } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível concluir a operação.') }
+    finally { trava.current = false; setOcupado(false) }
+  }
+  async function tentarRecarregar(): Promise<void> {
+    if (trava.current || travaSincronizacao.current || sincronizando) return
+    trava.current = true
+    setOcupado(true)
+    try {
+      await carregar()
+      bloqueioRecarga.current = false
+      setRecarregarNecessario(false)
+      setFalhaCarga(false)
+      setErro('')
+    } catch { setRecarregarNecessario(true) }
+    finally { trava.current = false; setOcupado(false) }
   }
   async function sincronizar(forcar = true): Promise<void> {
+    if (travaSincronizacao.current || bloqueioRecarga.current || (forcar && trava.current)) return
+    travaSincronizacao.current = true
     setSincronizando(true);setStatusCotacoes(null)
     try {
       const r=await window.fincontrol.sincronizarCotacoes(forcar)
       await carregar()
       setStatusCotacoes(resumoCotacoes(r) ?? {texto:'Nenhuma nova cotação recebida. Valores anteriores mantidos.',persistente:false})
     } catch {setStatusCotacoes({texto:'Não foi possível atualizar. Os últimos valores foram preservados.',persistente:true})}
-    finally {setSincronizando(false)}
+    finally {travaSincronizacao.current = false;setSincronizando(false)}
   }
   const valor = posicoes.reduce((n, a) => n + (a.valorAtualCentavos ?? 0), 0)
   const semCotacao = posicoes.filter(a => a.quantidade > 0 && a.valorAtualCentavos === null).length
@@ -124,9 +155,9 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const cotacoesAntigas = mercado.filter(a=>a.cotacaoEm && agora-Date.parse(a.cotacaoEm)>72*3600000).length
   const ficha = posicoes.find(a=>a.id===fichaId)
   const ativoOperacao = ativas.find(a=>a.id===operacao?.id)
-  const tituloOperacao = operacao?.tipo==='compra'?'Comprar':operacao?.tipo==='venda'?'Vender':'Registrar provento'
   return <div className="investimentos carteira-v3">
-    <Feedback mensagem={erro} tipo="erro" />
+    {!operacao&&<Feedback mensagem={erro} tipo="erro" />}
+    {recarregarNecessario&&<div className="carteira-aviso carteira-recarga" role="status"><p>{falhaCarga?'Não foi possível carregar a carteira. Nenhum saldo será considerado atualizado.':'Os dados não puderam ser recarregados após a operação. Não repita o registro; recarregue a carteira antes de continuar.'}</p><button type="button" className="botao-secundario" disabled={ocupado||sincronizando||recarregarNecessario} onClick={():void=>{void tentarRecarregar()}}>Recarregar carteira</button></div>}
     <div className="carteira-notificacoes" role="status" aria-live="polite" aria-atomic="true">
       {mensagem && <div className="carteira-toast"><CheckCircle2 size={18} aria-hidden="true"/><span>{mensagem}</span></div>}
       {statusCotacoes && !statusCotacoes.persistente && <div className="carteira-toast"><RefreshCw size={16} aria-hidden="true"/><span>{statusCotacoes.texto}</span></div>}
@@ -135,20 +166,20 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
       <header className="carteira-cabecalho">
         <div><h3>Minha carteira</h3><span className="invest-detalhe">Acompanhe o valor dos seus ativos em reais.</span></div>
         <div className="carteira-acoes">
-          <button className="botao-secundario" type="button" disabled={sincronizando || ocupado || !mercado.length} onClick={():void=>{void sincronizar()}}><RefreshCw size={16}/>{sincronizando?'Atualizando…':'Atualizar cotações'}</button>
+          <button className="botao-secundario" type="button" disabled={sincronizando || ocupado || recarregarNecessario || !mercado.length} onClick={():void=>{void sincronizar()}}><RefreshCw size={16}/>{sincronizando?'Atualizando…':'Atualizar cotações'}</button>
           <button className="botao-primario" type="button" aria-expanded={formAberto} onClick={():void=>setFormAberto(v=>!v)}><Plus size={17}/>Adicionar ativo</button>
         </div>
       </header>
       <div className="carteira-balanco">
-        <div><span>Patrimônio em investimentos {semCotacao ? '(parcial)' : ''}</span><strong>{carregando || (semCotacao>0 && posicoes.every(a=>a.valorAtualCentavos===null))?'—':moeda(valor)}</strong><small>{ativas.length-zeradas.length} {ativas.length-zeradas.length===1?'posição ativa':'posições ativas'} · {semCotacao} sem cotação{cotacoesAntigas ? ' · '+cotacoesAntigas+' com cotação antiga' : ''}</small></div>
-        {!carregando&&<ComposicaoCarteira posicoes={ativas} />}
+        <div><span>Patrimônio em investimentos {semCotacao ? '(parcial)' : ''}</span><strong>{carregando || recarregarNecessario || (semCotacao>0 && posicoes.every(a=>a.valorAtualCentavos===null))?'—':moeda(valor)}</strong><small>{ativas.length-zeradas.length} {ativas.length-zeradas.length===1?'posição ativa':'posições ativas'} · {semCotacao} sem cotação{cotacoesAntigas ? ' · '+cotacoesAntigas+' com cotação antiga' : ''}</small></div>
+        {!carregando&&!recarregarNecessario&&<ComposicaoCarteira posicoes={ativas} />}
       </div>
       <div className="carteira-fonte"><span>BRAPI · BCB PTAX · Dados com atraso; últimos valores disponíveis offline.</span><button className="botao-texto" type="button" onClick={():void=>setConfigurando(v=>!v)} aria-expanded={configurando}>{chaveAtiva?'Gerenciar chave BRAPI':'Configurar fonte de dados'}</button></div>
       {configurando && <form className="carteira-edicao formulario" onSubmit={(e):void=>{e.preventDefault();const f=e.currentTarget;const dados=new FormData(f);void executar(()=>window.fincontrol.configurarChaveCotacoes(campo(dados,'chave')),'Chave configurada neste dispositivo.',f)}}>
         <p>Obtenha uma chave gratuita em brapi.dev/dashboard. PETR4, VALE3, MGLU3 e ITUB4 podem funcionar sem chave. A chave é protegida localmente; não faz parte do backup.</p>
         <label>Chave BRAPI<input type="password" name="chave" autoComplete="off" maxLength={512} required /></label>
-        <button type="submit" className="botao-primario" disabled={ocupado || sincronizando}>Salvar chave</button>
-        {chaveAtiva && <button type="button" className="botao-secundario" disabled={ocupado || sincronizando} onClick={():void=>{void executar(()=>window.fincontrol.configurarChaveCotacoes(''),'Chave local removida.')}}>Remover chave local</button>}
+        <button type="submit" className="botao-primario" disabled={ocupado || sincronizando || recarregarNecessario}>Salvar chave</button>
+        {chaveAtiva && <button type="button" className="botao-secundario" disabled={ocupado || sincronizando || recarregarNecessario} onClick={():void=>{void executar(()=>window.fincontrol.configurarChaveCotacoes(''),'Chave local removida.')}}>Remover chave local</button>}
       </form>}
       {statusCotacoes?.persistente && <div className="carteira-aviso"><Feedback mensagem={statusCotacoes.texto} tipo="informacao"/><button className="botao-secundario carteira-editar" type="button" aria-label="Dispensar aviso de cotação" onClick={():void=>setStatusCotacoes(null)}><X size={16}/></button></div>}
       <section className="carteira-edicao" hidden={!formAberto}>
@@ -169,7 +200,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           {modo==='manual'&&<label>Cotação por unidade (R$)<input name="cotacaoInicial" type="number" min=".01" step=".01" max="10000000000" placeholder="Opcional"/></label>}
           <label>Nome (opcional)<input name="nome" maxLength={100}/></label>
           <label>Instituição (opcional)<input name="instituicao" maxLength={100}/></label>
-          <button className="botao-primario" type="submit" disabled={ocupado||sincronizando||carregando}><Plus size={17}/>Adicionar à carteira</button>
+          <button className="botao-primario" type="submit" disabled={ocupado||sincronizando||carregando||recarregarNecessario}><Plus size={17}/>Adicionar à carteira</button>
         </form>
         <p className="invest-detalhe">O cadastro registra uma posição que você já possui, sem movimentar contas. Para uma nova compra ou venda, use as ações na linha do ativo.</p>
       </section>
@@ -179,7 +210,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
         <select aria-label="Filtrar por categoria" value={categoriaFiltro} onChange={(e):void=>setCategoriaFiltro(e.target.value)}><option value="">Todas as categorias</option>{tipos.map(t=><option key={t} value={t}>{t}</option>)}</select>
         {(busca||categoriaFiltro)&&<button type="button" className="botao-secundario" onClick={():void=>{setBusca('');setCategoriaFiltro('')}}>Limpar filtros</button>}
       </div>}
-      {carregando?<p role="status">Carregando carteira…</p>:!posicoes.length?<div className="carteira-vazia"><Wallet size={28}/><strong>Sua carteira está vazia</strong><p>Adicione um ativo pelo código e a quantidade que possui.</p></div>:!visiveis.length?<div className="carteira-vazia"><Wallet size={28}/><strong>{busca||categoriaFiltro?'Nenhum ativo encontrado':'Nenhuma posição ativa'}</strong><p>{busca||categoriaFiltro?'Altere ou limpe os filtros para consultar sua carteira.':'Marque a opção acima para consultar as posições zeradas ou adicione outro ativo.'}</p></div>:<div className="carteira-tabela"><table>
+      {carregando?<p role="status">Carregando carteira…</p>:falhaCarga?<p className="vazio">Recarregue a carteira para consultar as posições.</p>:!posicoes.length?<div className="carteira-vazia"><Wallet size={28}/><strong>Sua carteira está vazia</strong><p>Adicione um ativo pelo código e a quantidade que possui.</p></div>:!visiveis.length?<div className="carteira-vazia"><Wallet size={28}/><strong>{busca||categoriaFiltro?'Nenhum ativo encontrado':'Nenhuma posição ativa'}</strong><p>{busca||categoriaFiltro?'Altere ou limpe os filtros para consultar sua carteira.':'Marque a opção acima para consultar as posições zeradas ou adicione outro ativo.'}</p></div>:<div className="carteira-tabela"><table>
         <thead><tr><th scope="col">Ativo</th><th scope="col">Quantidade</th><th scope="col">Cotação (R$)</th><th scope="col">Valor da posição</th><th scope="col">Ações</th></tr></thead>
         <tbody>{visiveis.map(a=>{
           const Icone=icones[a.tipo as keyof typeof icones]??Wallet
@@ -196,36 +227,21 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
               <small>{automatico?a.cotacaoEm? a.fonteCotacao+' · '+hora(a.cotacaoEm)+(agora-Date.parse(a.cotacaoEm)>72*3600000?' · Antiga':''):'Aguardando cotação':manual?'Valor total anterior':'Cotação manual'}</small>
             </td>
             <td><strong>{a.valorAtualCentavos===null?'Indisponível':moeda(a.valorAtualCentavos)}</strong>{!manual&&a.quantidade>0&&<small>{a.custoConhecido?'Preço médio: '+moeda(a.custoCentavos/a.quantidade):'Custo inicial não informado'}</small>}</td>
-            <td>{a.arquivado?<button className="botao-secundario" type="button" disabled={ocupado||sincronizando} onClick={():void=>{void executar(async()=>{await window.fincontrol.reativarAtivoInvestimento(a.id);setMostrarZeradas(true)},'Ativo reativado.')}} aria-label={'Reativar '+a.codigo}>Reativar</button>:editando===a.id?<form className="invest-cotacao carteira-editor" onSubmit={(e):void=>{e.preventDefault();const f=new FormData(e.currentTarget);void executar(async()=>{if(editarQuantidade)await window.fincontrol.atualizarQuantidadeMercado(a.id,Number(campo(f,'edicao')));else await window.fincontrol.atualizarCotacao(a.id,centavos(f,'edicao'));setEditando(null)},'Posição atualizada.')}}>
+            <td>{a.arquivado?<button className="botao-secundario" type="button" disabled={ocupado||sincronizando||recarregarNecessario} onClick={():void=>{void executar(async()=>{await window.fincontrol.reativarAtivoInvestimento(a.id);setMostrarZeradas(true)},'Ativo reativado.')}} aria-label={'Reativar '+a.codigo}>Reativar</button>:editando===a.id?<form className="invest-cotacao carteira-editor" onSubmit={(e):void=>{e.preventDefault();const f=new FormData(e.currentTarget);void executar(async()=>{if(editarQuantidade)await window.fincontrol.atualizarQuantidadeMercado(a.id,Number(campo(f,'edicao')));else await window.fincontrol.atualizarCotacao(a.id,centavos(f,'edicao'));setEditando(null)},'Posição atualizada.')}}>
               <input aria-label={editarQuantidade?'Quantidade de '+a.codigo:'Cotação de '+a.codigo} name="edicao" type="number" min={editarQuantidade?'.00000001':'.01'} step={editarQuantidade?'.00000001':'.01'} defaultValue={valorEdicao ?? ''} required/>
-              <button type="submit" className="botao-primario" disabled={ocupado || sincronizando}>Salvar</button><button type="button" className="botao-secundario" onClick={():void=>setEditando(null)} aria-label="Cancelar edição"><X size={16}/></button>
+              <button type="submit" className="botao-primario" disabled={ocupado || sincronizando || recarregarNecessario}>Salvar</button><button type="button" className="botao-secundario" onClick={():void=>setEditando(null)} aria-label="Cancelar edição"><X size={16}/></button>
             </form>:<div className="carteira-acoes-linha">
-              {!manual&&<><button className="botao-secundario" type="button" disabled={ocupado||sincronizando} aria-label={'Comprar '+a.codigo} onClick={():void=>{setOperacao({id:a.id,tipo:'compra'});setEditando(null)}}><ArrowDownLeft size={16}/>Comprar</button>
-              {a.quantidade>0&&<button className="botao-secundario" type="button" disabled={ocupado||sincronizando} aria-label={'Vender '+a.codigo} onClick={():void=>{setOperacao({id:a.id,tipo:'venda'});setEditando(null)}}><ArrowUpRight size={16}/>Vender</button>}
-              {a.quantidade>0&&<button className="botao-secundario carteira-editar" type="button" disabled={ocupado||sincronizando} aria-label={'Registrar provento '+a.codigo} title="Registrar provento" onClick={():void=>{setOperacao({id:a.id,tipo:'provento'});setEditando(null)}}><Coins size={16}/></button>}</>}
-              {(!automatico||!temHistorico)&&<button className="botao-secundario carteira-editar" type="button" disabled={ocupado||sincronizando} onClick={():void=>{setEditando(a.id);setOperacao(null)}} aria-label={manual?'Definir quantidade de '+a.codigo:'Editar '+a.codigo} title={manual?'Definir quantidade da posição anterior; cotação unitária será calculada':'Editar posição inicial ou cotação manual'}><Pencil size={16}/></button>}
-              {podeExcluir&&<button className="botao-secundario carteira-editar carteira-remover" type="button" disabled={ocupado||sincronizando} aria-label={'Remover '+a.codigo} title={'Remover '+a.codigo} onClick={():void=>{void (async()=>{if(await confirmarFinControl('A posição '+a.codigo+' será removida da carteira. O histórico e os saldos serão preservados.','Remover ativo','Remover',true)) await executar(async()=>{await window.fincontrol.excluirAtivoInvestimento(a.id);if(operacao?.id===a.id)setOperacao(null)},'Ativo removido.')})()}}><Trash2 size={16}/></button>}
+              {!manual&&<><button className="botao-secundario" type="button" disabled={ocupado||sincronizando||recarregarNecessario} aria-label={'Comprar '+a.codigo} onClick={():void=>{setOperacao({id:a.id,tipo:'compra'});setEditando(null)}}><ArrowDownLeft size={16}/>Comprar</button>
+              {a.quantidade>0&&<button className="botao-secundario" type="button" disabled={ocupado||sincronizando||recarregarNecessario} aria-label={'Vender '+a.codigo} onClick={():void=>{setOperacao({id:a.id,tipo:'venda'});setEditando(null)}}><ArrowUpRight size={16}/>Vender</button>}
+              {a.quantidade>0&&<button className="botao-secundario carteira-editar" type="button" disabled={ocupado||sincronizando||recarregarNecessario} aria-label={'Registrar provento '+a.codigo} title="Registrar provento" onClick={():void=>{setOperacao({id:a.id,tipo:'provento'});setEditando(null)}}><Coins size={16}/></button>}</>}
+              {(!automatico||!temHistorico)&&<button className="botao-secundario carteira-editar" type="button" disabled={ocupado||sincronizando||recarregarNecessario} onClick={():void=>{setEditando(a.id);setOperacao(null)}} aria-label={manual?'Definir quantidade de '+a.codigo:'Editar '+a.codigo} title={manual?'Definir quantidade da posição anterior; cotação unitária será calculada':'Editar posição inicial ou cotação manual'}><Pencil size={16}/></button>}
+              {podeExcluir&&<button className="botao-secundario carteira-editar carteira-remover" type="button" disabled={ocupado||sincronizando||recarregarNecessario} aria-label={'Remover '+a.codigo} title={'Remover '+a.codigo} onClick={():void=>{void (async()=>{if(await confirmarFinControl('A posição '+a.codigo+' será removida da carteira. O histórico e os saldos serão preservados.','Remover ativo','Remover',true)) await executar(async()=>{await window.fincontrol.excluirAtivoInvestimento(a.id);if(operacao?.id===a.id)setOperacao(null)},'Ativo removido.')})()}}><Trash2 size={16}/></button>}
             </div>}</td>
           </tr>
         })}</tbody>
       </table></div>}
       {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentos.filter(m=>m.ativoId===ficha.id)} agora={agora} onFechar={():void=>setFichaId(null)} />}
-      {operacao&&ativoOperacao&&<section className="carteira-edicao carteira-operacao" aria-labelledby="titulo-operacao" key={operacao.id+operacao.tipo}>
-        <div className="carteira-cabecalho"><h3 id="titulo-operacao">{tituloOperacao} {ativoOperacao.codigo}</h3><button type="button" className="botao-secundario carteira-editar" aria-label="Cancelar operação" onClick={():void=>setOperacao(null)}><X size={17}/></button></div>
-        <p className="invest-detalhe">Disponível: {qtd(ativoOperacao.quantidade)} un. · {operacao.tipo==='compra'?'Debita a conta selecionada.':'Credita a conta selecionada.'} Nenhuma ordem é enviada à corretora.</p>
-        <form className="formulario" onSubmit={(e):void=>{
-          e.preventDefault();const f=new FormData(e.currentTarget)
-          void executar(async()=>{await window.fincontrol.registrarInvestimento({ativoId:ativoOperacao.id,contaId:campo(f,'conta'),tipo:operacao.tipo,quantidade:operacao.tipo==='provento'?0:Number(campo(f,'quantidade')),valorCentavos:centavos(f,'valor'),taxasCentavos:centavos(f,'taxas'),data:campo(f,'data')});setMostrarZeradas(true);setOperacao(null)},'Operação registrada.')
-        }}>
-          <label>Conta bancária<select name="conta" required><option value="">Selecione</option>{contas.map(c=><option value={c.id} key={c.id}>{c.banco} · {c.nome} ({moeda(c.saldoAtualCentavos)})</option>)}</select></label>
-          {operacao.tipo!=='provento'&&<label>Quantidade<input name="quantidade" type="number" required step=".00000001" min=".00000001" max={operacao.tipo==='venda'?ativoOperacao.quantidade:10000}/></label>}
-          <label>Valor bruto total (R$)<input name="valor" type="number" required step=".01" min=".01" max="10000000000"/></label>
-          <label>Taxas (R$)<input name="taxas" type="number" required step=".01" min="0" defaultValue="0"/></label>
-          <label>Data<input name="data" type="date" defaultValue={hoje()} max={hoje()} required/></label>
-          <button className="botao-primario" type="submit" disabled={ocupado||sincronizando||!contas.length}>Confirmar {operacao.tipo}</button>
-        </form>
-        {!contas.length&&<p>Cadastre uma conta bancária antes de registrar a operação.</p>}
-      </section>}
+      {operacao&&ativoOperacao&&<FormularioOperacao key={operacao.id+operacao.tipo} ativo={ativoOperacao} tipo={operacao.tipo} contas={contas} ocupado={ocupado||sincronizando||recarregarNecessario} erro={erro} onCancelar={():void=>{setErro('');setOperacao(null)}} onConfirmar={(dados):void=>{void executar(async()=>{await window.fincontrol.registrarInvestimento(dados);setMostrarZeradas(true);setOperacao(null)},'Operação registrada.')}}/>}
     </section>
     <details className="painel invest-avancado">
       <summary>Histórico de operações ({movimentos.length})</summary>

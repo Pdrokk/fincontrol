@@ -49,7 +49,11 @@ jobs:
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $exe = Join-Path $PWD "dist/FinControl-$version-portable.exe"
           if (-not (Test-Path $exe)) { throw "EXE portátil ausente" }
+          $env:FINCONTROL_UI_SMOKE_LOG = Join-Path $env:RUNNER_TEMP 'fincontrol-ui-smoke.log'
+          if (Test-Path $env:FINCONTROL_UI_SMOKE_LOG) { Remove-Item $env:FINCONTROL_UI_SMOKE_LOG }
           $p = Start-Process -FilePath $exe -ArgumentList '--fincontrol-ui-smoke-test' -Wait -PassThru
+          if (Test-Path $env:FINCONTROL_UI_SMOKE_LOG) { Get-Content $env:FINCONTROL_UI_SMOKE_LOG -Encoding UTF8 }
+          else { Write-Warning 'O executável não gerou o diagnóstico de interface.' }
           if ($p.ExitCode -ne 0) { throw "Teste de interface falhou: $($p.ExitCode)" }
           $p2 = Start-Process -FilePath $exe -ArgumentList '--fincontrol-smoke-test' -Wait -PassThru
           if ($p2.ExitCode -ne 0) { throw "Regressão financeira portátil falhou: $($p2.ExitCode)" }

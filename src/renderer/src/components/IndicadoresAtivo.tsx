@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import type { Fundamentos } from '../../../main/fundamentos'
 import type { Posicao } from '../../../main/investimentos'
@@ -11,16 +11,18 @@ const formato=(n:number|null,tipo:'numero'|'percentual'|'moeda'='numero'):string
 export default function IndicadoresAtivo({ativo}:{ativo:Posicao}):React.JSX.Element {
   const [dados,setDados]=useState<Fundamentos|null>(null)
   const [ocupado,setOcupado]=useState(false)
+  const pendente=useRef(false)
   const [erro,setErro]=useState('')
   async function consultar():Promise<void>{
-    if(ocupado)return
+    if(pendente.current)return
+    pendente.current=true
     setOcupado(true);setErro('')
     try{setDados(await window.fincontrol.consultarFundamentos(ativo.id))}
     catch(e){setErro(e instanceof Error?e.message:'Não foi possível consultar os indicadores.')}
-    finally{setOcupado(false)}
+    finally{pendente.current=false;setOcupado(false)}
   }
   return <section className="carteira-fundamentos" aria-label="Indicadores fundamentalistas">
-    <div className="carteira-cabecalho"><h4>Indicadores fundamentalistas</h4><button className="botao-secundario" type="button" disabled={ocupado} onClick={():void=>{void consultar()}}><RefreshCw size={16}/>{ocupado?'Consultando…':dados?'Atualizar indicadores':'Consultar indicadores'}</button></div>
+    <div className="carteira-cabecalho"><h4>Indicadores fundamentalistas</h4><button className="botao-secundario" type="button" disabled={ocupado} onClick={():void=>{void consultar()}}><RefreshCw size={16}/>{ocupado?'Consultando…':erro?'Tentar novamente':dados?'Atualizar indicadores':'Consultar indicadores'}</button></div>
     <Feedback mensagem={erro} tipo="erro"/>
     {!dados?<p className="invest-detalhe">Consulte os dados de mercado da BRAPI. A disponibilidade depende do ativo e do plano de acesso. Não altera sua carteira.</p>:<>
       <p className="invest-detalhe">{[dados.nome,dados.setor,dados.segmento].filter(Boolean).join(' · ')}</p>
