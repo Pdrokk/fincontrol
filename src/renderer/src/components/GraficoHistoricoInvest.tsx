@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 interface Ponto { data:string; valor:number|null }
 interface Props { titulo:string; classe?:string; pontos:Ponto[]; agora:number; descricao:string; carregando?:boolean }
@@ -22,7 +22,6 @@ export default function GraficoHistoricoInvest({titulo,classe='',pontos,agora,de
     {carregando?<p role="status" className="carteira-grafico-vazio">Carregando histórico…</p>:!conhecidos.length?<p className="carteira-grafico-vazio">{dados.length?'Não há valores completos neste período.':'Ainda não há observações neste período. O histórico cresce conforme você utiliza a carteira.'}</p>:<div className="carteira-grafico-area">
       <ResponsiveContainer width="100%" height={220} minWidth={0}>
         <LineChart data={dados} margin={{top:12,right:14,bottom:4,left:4}} accessibilityLayer>
-          <CartesianGrid vertical={false} stroke="var(--border-color)" strokeDasharray="3 3"/>
           <XAxis type="number" dataKey="instante" domain={dominio} tickFormatter={dataCurta} tick={{fill:'var(--muted)',fontSize:12}} axisLine={false} tickLine={false} tickCount={5}/>
           <YAxis width={94} tickFormatter={(v:number):string=>v.toLocaleString('pt-BR',{maximumFractionDigits:2})} tick={{fill:'var(--muted)',fontSize:12}} axisLine={false} tickLine={false} domain={['auto','auto']}/>
           <Tooltip labelFormatter={(v):string=>dataCompleta(Number(v))} formatter={(v):string=>typeof v==='number'?formatar(v):'Indisponível'} contentStyle={{background:'var(--surface)',border:'1px solid var(--border-color)',borderRadius:8,color:'var(--text)'}} labelStyle={{color:'var(--muted)'}} itemStyle={{color:'var(--text)'}}/>
