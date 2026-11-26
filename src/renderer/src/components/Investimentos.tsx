@@ -165,13 +165,13 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
     {recarregarNecessario&&<div className="carteira-aviso carteira-recarga" role="status"><p>{falhaCarga?'Não foi possível carregar a carteira. Nenhum saldo será considerado atualizado.':'Os dados não puderam ser recarregados após a operação. Não repita o registro; recarregue a carteira antes de continuar.'}</p><button type="button" className="botao-secundario" disabled={ocupado||sincronizando} onClick={():void=>{void tentarRecarregar()}}>Recarregar carteira</button></div>}
     <div className="carteira-notificacoes" role="status" aria-live="polite" aria-atomic="true">
       {mensagem && <div className="carteira-toast"><CheckCircle2 size={18} aria-hidden="true"/><span>{mensagem}</span></div>}
-      {statusCotacoes && !statusCotacoes.persistente && <div className="carteira-toast"><RefreshCw size={16} aria-hidden="true"/><span>{statusCotacoes.texto}</span></div>}
+      {statusCotacoes && !statusCotacoes.persistente && <div className="carteira-toast carteira-toast--informacao"><RefreshCw size={16} aria-hidden="true"/><span>{statusCotacoes.texto}</span></div>}
     </div>
     <section className="painel carteira-painel">
       <header className="carteira-cabecalho">
         <div><h3>Minha carteira</h3><span className="invest-detalhe">Acompanhe o valor dos seus ativos em reais.</span></div>
         <div className="carteira-acoes">
-          <button className="botao-secundario" type="button" disabled={sincronizando || ocupado || recarregarNecessario || !mercado.length} onClick={():void=>{void sincronizar()}}><RefreshCw size={16}/>{sincronizando?'Atualizando…':'Atualizar cotações'}</button>
+          <button className="botao-secundario" type="button" disabled={carregando || sincronizando || ocupado || recarregarNecessario || !mercado.length} onClick={():void=>{void sincronizar()}}><RefreshCw size={16}/>{sincronizando?'Atualizando…':'Atualizar cotações'}</button>
           <button className="botao-primario" type="button" aria-expanded={formAberto} onClick={():void=>setFormAberto(v=>!v)}><Plus size={17}/>Adicionar ativo</button>
         </div>
       </header>
@@ -215,7 +215,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
         <select aria-label="Filtrar por categoria" value={categoriaFiltro} onChange={(e):void=>setCategoriaFiltro(e.target.value)}><option value="">Todas as categorias</option>{tipos.map(t=><option key={t} value={t}>{t}</option>)}</select>
         {(busca||categoriaFiltro)&&<button type="button" className="botao-secundario" onClick={():void=>{setBusca('');setCategoriaFiltro('')}}>Limpar filtros</button>}
       </div>}
-      {carregando?<p role="status">Carregando carteira…</p>:falhaCarga?<p className="vazio">Recarregue a carteira para consultar as posições.</p>:!posicoes.length?<div className="carteira-vazia"><Wallet size={28}/><strong>Sua carteira está vazia</strong><p>Adicione um ativo pelo código e a quantidade que possui.</p></div>:!visiveis.length?<div className="carteira-vazia"><Wallet size={28}/><strong>{busca||categoriaFiltro?'Nenhum ativo encontrado':'Nenhuma posição ativa'}</strong><p>{busca||categoriaFiltro?'Altere ou limpe os filtros para consultar sua carteira.':'Marque a opção acima para consultar as posições zeradas ou adicione outro ativo.'}</p></div>:<div className="carteira-tabela"><table>
+      {carregando?<p role="status">Carregando carteira…</p>:falhaCarga?<p className="vazio">Recarregue a carteira para consultar as posições.</p>:!posicoes.length?<div className="carteira-vazia"><Wallet size={28}/><strong>Sua carteira está vazia</strong><p>Adicione um ativo pelo código e a quantidade que possui.</p></div>:!visiveis.length?<div className="carteira-vazia"><Wallet size={28}/><strong>{busca||categoriaFiltro?'Nenhum ativo encontrado':'Nenhuma posição ativa'}</strong><p>{busca||categoriaFiltro?'Altere ou limpe os filtros para consultar sua carteira.':'Marque a opção acima para consultar as posições zeradas ou adicione outro ativo.'}</p></div>:<div className="carteira-tabela" role="region" aria-label="Posições da carteira" tabIndex={0}><table>
         <thead><tr><th scope="col">Ativo</th><th scope="col">Quantidade</th><th scope="col">Cotação (R$)</th><th scope="col">Valor da posição</th><th scope="col">Ações</th></tr></thead>
         <tbody>{visiveis.map(a=>{
           const Icone=icones[a.tipo as keyof typeof icones]??Wallet
@@ -226,7 +226,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           const editarQuantidade=automatico||manual
           const valorEdicao=manual?'':automatico?a.quantidade:a.cotacaoCentavos===null?'':a.cotacaoCentavos/100
           return <tr className="invest-ativo" key={a.id}>
-            <th scope="row"><span className="carteira-ativo-nome"><span className="carteira-icone-ativo" data-categoria={a.tipo}><Icone size={19} aria-hidden="true"/></span><span><button type="button" className="carteira-link-ativo" aria-label={'Abrir ficha de '+a.codigo} aria-expanded={fichaId===a.id} onClick={():void=>setFichaId(v=>v===a.id?null:a.id)}>{a.codigo}</button><small>{a.tipo}{a.instituicao?' · '+a.instituicao:''}{a.arquivado?' · Arquivado':''}</small></span></span></th>
+            <th scope="row"><span className="carteira-ativo-nome"><span className="carteira-icone-ativo" data-categoria={a.tipo}><Icone size={19} aria-hidden="true"/></span><span><button type="button" className="carteira-link-ativo" aria-label={(fichaId===a.id?'Fechar ficha de ':'Abrir ficha de ')+a.codigo} aria-expanded={fichaId===a.id} onClick={():void=>setFichaId(v=>v===a.id?null:a.id)}>{a.codigo}</button><small>{a.tipo}{a.instituicao?' · '+a.instituicao:''}{a.arquivado?' · Arquivado':''}</small></span></span></th>
             <td>{manual?'A definir':qtd(a.quantidade)}</td>
             <td>{automatico?a.precoMercado===null?'—':preco(a.precoMercado):manual?'—':a.cotacaoCentavos===null?'—':moeda(a.cotacaoCentavos)}
               <small>{automatico?a.cotacaoEm? a.fonteCotacao+' · '+hora(a.cotacaoEm)+(agora-Date.parse(a.cotacaoEm)>72*3600000?' · Antiga':''):'Aguardando cotação':manual?'Valor total anterior':'Cotação manual'}</small>
