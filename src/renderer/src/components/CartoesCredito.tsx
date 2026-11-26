@@ -1,7 +1,7 @@
 import { confirmarFinControl } from '../utils/dialogos'
 import IconeBanco from './IconeBanco'
 import { useEffect, useState } from 'react'
-import { CreditCard, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import Feedback from './Feedback'
 import { gradienteBanco } from '../utils/coresBancos'
 import CentralPagamentos from './CentralPagamentos'
@@ -293,7 +293,25 @@ export default function CartoesCredito({ onAlteracao }: Props): React.JSX.Elemen
             <h3>Meus cartões de crédito</h3>
             <p>Cartões cadastrados manualmente, sem conexão bancária.</p>
           </div>
-          <CreditCard size={26} />
+          {secao !== 'gerenciar' && (
+            <button
+              type="button"
+              className="botao-primario acao-contextual"
+              disabled={salvando || carregando || Boolean(erro)}
+              onClick={(): void => {
+                setErroFormulario('')
+                setSecao('gerenciar')
+                window.setTimeout(() => {
+                  const formulario = document.getElementById('formulario-cartao')
+                  formulario?.scrollIntoView({ block: 'start' })
+                  formulario?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+                }, 0)
+              }}
+            >
+              {cartaoEditandoId ? <Pencil size={17} aria-hidden="true" /> : <Plus size={17} aria-hidden="true" />}
+              {cartaoEditandoId ? 'Continuar edição' : 'Novo cartão'}
+            </button>
+          )}
         </div>
 
         <div className="resumo-contas">

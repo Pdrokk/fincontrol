@@ -79,7 +79,20 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
         if (document.body.textContent?.includes('Não foi possível carregar esta tela')) {
           throw new Error('React caiu ao entrar em ' + nome);
         }
+        const acaoGlobal = document.querySelector('.cabecalho .botao-primario');
+        if (nome === 'Visão Geral' ? !acaoGlobal?.textContent.includes('Nova transação') : Boolean(acaoGlobal)) {
+          throw new Error('Ação principal global fora de contexto: '+nome);
+        }
+        if (nome === 'Minhas contas') {
+          const novaConta = document.querySelector('.pagina-contas .acao-contextual');
+          if (!novaConta?.textContent.includes('Nova conta')) throw new Error('Atalho Nova conta ausente.');
+          for(let i=0;i<30&&novaConta.disabled;i++) await dormir(100);
+          novaConta.click();
+          await dormir(100);
+          if (!document.activeElement?.matches('#formulario-conta input')) throw new Error('Atalho Nova conta não direcionou ao formulário.');
+        }
         if (nome === 'Transações') {
+          if (!document.querySelector('.painel-transacao-historico #busca') || document.querySelector('.painel-transacao-form .filtros-avancados')) throw new Error('Filtros precisam pertencer ao histórico, não ao cadastro.');
           const ordenacao = document.querySelector('#historico-ordenacao');
           const tamanho = document.querySelector('#historico-tamanho');
           const resumo = document.querySelector('.historico-resumo');
@@ -143,6 +156,14 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!filtroCartao || filtroCartao.options[0]?.textContent !== 'Todos os cartões') {
             throw new Error('Filtro contextual de cartão ausente ou incorreto.');
           }
+          const novoCartao = document.querySelector('.pagina-cartoes .acao-contextual');
+          if (!novoCartao?.textContent.includes('Novo cartão')) throw new Error('Atalho Novo cartão ausente.');
+          for(let i=0;i<30&&novoCartao.disabled;i++) await dormir(100);
+          novoCartao.click();
+          for(let i=0;i<30&&!document.querySelector('#formulario-cartao');i++) await dormir(100);
+          if (!document.querySelector('#formulario-cartao')) throw new Error('Atalho Novo cartão não abriu cadastro.');
+          [...document.querySelectorAll('.cartoes-navegacao button')].find(b=>b.textContent.includes('Pagamentos e faturas')).click();
+          await dormir(200);
           const aba = (texto) => [...document.querySelectorAll('.cartoes-navegacao button')]
             .find((b) => b.textContent?.includes(texto));
           const compras = aba('Compras e parcelas');
@@ -174,7 +195,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.6.3')) {
+          if (!document.body.textContent?.includes('Versão 1.6.4')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }

@@ -82,6 +82,16 @@ const nomesPaginas: Record<Pagina, string> = {
   configuracoes: 'Configurações'
 }
 
+const descricoesPaginas: Record<Pagina, string> = {
+  dashboard: 'Acompanhe seus saldos, receitas, despesas e compromissos.',
+  transacoes: 'Registre movimentações e consulte seu histórico.',
+  relatorios: 'Compare os resultados realizados e previstos do período.',
+  contas: 'Organize suas contas, transferências e salários recorrentes.',
+  cartoes: 'Acompanhe limites, compras parceladas e pagamentos.',
+  investimentos: 'Acompanhe suas posições e registre operações.',
+  configuracoes: 'Consulte categorias, backups e informações do aplicativo.'
+}
+
 const iconesPaginas = {
   dashboard: LayoutDashboard,
   transacoes: ArrowLeftRight,
@@ -596,19 +606,21 @@ function App(): React.JSX.Element {
         <header className="cabecalho">
           <div>
             <h2>{nomesPaginas[pagina]}</h2>
-            <p>Organize seu dinheiro com praticidade.</p>
+            <p>{descricoesPaginas[pagina]}</p>
           </div>
 
-          <button
-            className="botao-primario"
-            type="button"
-            onClick={(): void => {
-              cancelarEdicao()
-              setPagina('transacoes')
-            }}
-          >
-            + Nova transação
-          </button>
+          {pagina === 'dashboard' && (
+            <button
+              className="botao-primario"
+              type="button"
+              onClick={(): void => {
+                cancelarEdicao()
+                setPagina('transacoes')
+              }}
+            >
+              + Nova transação
+            </button>
+          )}
         </header>
 
         {pagina === 'investimentos' && <Investimentos onAlteracao={(): void => setRevisaoFinanceira(a => a + 1)} />}
@@ -694,71 +706,11 @@ function App(): React.JSX.Element {
 
         {pagina === 'transacoes' && (
           <>
-            <section className="painel">
-              <h3>{editandoId ? 'Editar movimentação' : 'Adicionar movimentação'}</h3>
+            <section className="painel painel-transacao-form" aria-labelledby="titulo-transacao-form">
+              <h3 id="titulo-transacao-form">{editandoId ? 'Editar movimentação' : 'Adicionar movimentação'}</h3>
               <Feedback mensagem={erroOperacao} tipo="erro" />
               <Feedback mensagem={mensagemOperacao} tipo="sucesso" />
 
-              <div className="filtros-avancados">
-                <div className="filtro-campo">
-                  <label htmlFor="busca">Pesquisar</label>
-                  <input
-                    id="busca"
-                    type="text"
-                    placeholder="Descrição, categoria ou conta..."
-                    value={busca}
-                    onChange={(e): void => { setBusca(e.target.value); setPaginaHistorico(0) }}
-                  />
-                </div>
-
-                <div className="filtro-campo">
-                  <label htmlFor="tipoFiltro">Tipo</label>
-                  <select
-                    id="tipoFiltro"
-                    value={tipoFiltro}
-                    onChange={(e): void => {
-                      setTipoFiltro(e.target.value)
-                      setCategoriaFiltro('todas')
-                      setPaginaHistorico(0)
-                    }}
-                  >
-                    <option value="todos">Todos</option>
-                    <option value="receita">Receitas</option>
-                    <option value="despesa">Despesas</option>
-                  </select>
-                </div>
-
-                <div className="filtro-campo">
-                  <label htmlFor="categoriaFiltro">Categoria</label>
-
-                  <select
-                    id="categoriaFiltro"
-                    value={categoriaFiltro}
-                    onChange={(e): void => { setCategoriaFiltro(e.target.value); setPaginaHistorico(0) }}
-                  >
-                    <option value="todas">Todas as categorias</option>
-
-                    {categoriasVisiveis.map((nome) => (
-                      <option key={nome} value={nome}>
-                        {nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="button"
-                  className="botao-limpar"
-                  onClick={(): void => {
-                    setBusca('')
-                    setTipoFiltro('todos')
-                    setCategoriaFiltro('todas')
-                    setPaginaHistorico(0)
-                  }}
-                >
-                  Limpar busca
-                </button>
-              </div>
 
               <form
                 onSubmit={(e): void => {
@@ -853,7 +805,7 @@ function App(): React.JSX.Element {
               </form>
             </section>
 
-            <section className="painel">
+            <section className="painel painel-transacao-historico">
               <div className="historico-cabecalho">
                 <div>
                   <h3>Histórico de transações</h3>
@@ -886,6 +838,67 @@ function App(): React.JSX.Element {
                   </label>
                 </div>
               </div>
+              <div className="filtros-avancados historico-filtros" role="group" aria-label="Filtros do histórico de transações">
+                <div className="filtro-campo">
+                  <label htmlFor="busca">Pesquisar</label>
+                  <input
+                    id="busca"
+                    type="text"
+                    placeholder="Descrição, categoria ou conta..."
+                    value={busca}
+                    onChange={(e): void => { setBusca(e.target.value); setPaginaHistorico(0) }}
+                  />
+                </div>
+
+                <div className="filtro-campo">
+                  <label htmlFor="tipoFiltro">Tipo</label>
+                  <select
+                    id="tipoFiltro"
+                    value={tipoFiltro}
+                    onChange={(e): void => {
+                      setTipoFiltro(e.target.value)
+                      setCategoriaFiltro('todas')
+                      setPaginaHistorico(0)
+                    }}
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="receita">Receitas</option>
+                    <option value="despesa">Despesas</option>
+                  </select>
+                </div>
+
+                <div className="filtro-campo">
+                  <label htmlFor="categoriaFiltro">Categoria</label>
+
+                  <select
+                    id="categoriaFiltro"
+                    value={categoriaFiltro}
+                    onChange={(e): void => { setCategoriaFiltro(e.target.value); setPaginaHistorico(0) }}
+                  >
+                    <option value="todas">Todas as categorias</option>
+
+                    {categoriasVisiveis.map((nome) => (
+                      <option key={nome} value={nome}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  className="botao-limpar"
+                  onClick={(): void => {
+                    setBusca('')
+                    setTipoFiltro('todos')
+                    setCategoriaFiltro('todas')
+                    setPaginaHistorico(0)
+                  }}
+                >
+                  Limpar busca
+                </button>
+              </div>
+
               {transacoesOrdenadas.length === 0
                 ? <div className="historico-sem-resultados">
                     <p className="vazio">
@@ -1002,7 +1015,7 @@ function App(): React.JSX.Element {
             <section className="painel">
               <h3>Sobre o aplicativo</h3>
               <p>FinControl — Controle Financeiro Pessoal</p>
-              <p>Versão 1.6.3 · aplicativo desktop offline</p>
+              <p>Versão 1.6.4 · aplicativo desktop offline</p>
               <p>Moeda: Real brasileiro (BRL)</p>
               <p>Armazenamento: banco SQLite local.</p>
             </section>
