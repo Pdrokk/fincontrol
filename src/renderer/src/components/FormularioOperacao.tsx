@@ -34,7 +34,7 @@ export default function FormularioOperacao({ ativo, tipo, contas, ocupado, erro,
     <div className="carteira-cabecalho"><h3 id="titulo-operacao">{titulo} {ativo.codigo}</h3><button type="button" className="botao-secundario carteira-editar" disabled={ocupado} aria-label="Cancelar operação" onClick={onCancelar}><X size={17}/></button></div>
     <p className="invest-detalhe">Disponível: {qtd(ativo.quantidade)} un. · {tipo === 'compra' ? 'Debita a conta selecionada.' : 'Credita a conta selecionada.'} Nenhuma ordem é enviada à corretora.</p>
     <Feedback mensagem={erro} tipo="erro"/>
-    <form className="formulario" onChange={(e): void => setPrevia(ler(e.currentTarget).previa)} onSubmit={(e): void => {
+    <form className="formulario" onInput={(e): void => setPrevia(ler(e.currentTarget).previa)} onChange={(e): void => setPrevia(ler(e.currentTarget).previa)} onSubmit={(e): void => {
       e.preventDefault()
       if (ocupado) return
       const leitura = ler(e.currentTarget)

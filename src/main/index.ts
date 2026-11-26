@@ -3,7 +3,7 @@ import { hojeLocalISO } from './regrasFinanceiras'
 import { criarTabelasInvestimentos, cadastrarAtivo, listarPosicoes, listarMovimentos, atualizarCotacao, atualizarValorAtivo, atualizarQuantidadeMercado, excluirAtivo, reativarAtivo, registrarOperacao, registrarObservacaoCarteira, listarEvolucaoPatrimonio, listarHistoricoCotacoes, type NovoAtivo, type Operacao } from './investimentos'
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
-import { mkdtempSync } from 'node:fs'
+import { appendFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { iniciarBanco, obterBanco } from './database'
@@ -36,6 +36,15 @@ import { listarParcelasPagamento, pagarParcelasSelecionadas, definirArquivoParce
 import type { NovoEstornoPagamento } from './cartoes'
 
 const modoUISmoke = process.argv.includes('--fincontrol-ui-smoke-test')
+
+function registrarLogUISmoke(mensagem: string): void {
+  if (!modoUISmoke) return
+  const destino = process.env.FINCONTROL_UI_SMOKE_LOG
+  if (destino) {
+    try { appendFileSync(destino, mensagem + '\n', 'utf8') }
+    catch (erro) { console.error('Falha ao escrever diagnóstico do teste:', erro) }
+  }
+}
 
 /**
  * Exercita a interface React do executável de produção com o browser oculto.
@@ -332,13 +341,22 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       await dormir(150);
       const formularioVenda = document.querySelector('.carteira-operacao form');
       if (!formularioVenda || document.querySelector('select[name="ativo"]')) throw new Error('Operação não está vinculada à linha do ativo.');
-      formularioVenda.querySelector('select[name="conta"]').value=contaTeste.id;
-      formularioVenda.querySelector('input[name="quantidade"]').value='20';
-      const valorVenda = formularioVenda.querySelector('input[name="valor"]');
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(valorVenda,'60');
-      valorVenda.dispatchEvent(new Event('input',{bubbles:true}));
-      await dormir(100);
-      if (!formularioVenda.querySelector('.previa-caixa')?.textContent.includes('60,00')) throw new Error('Prévia do valor líquido não aparece.');
+      const contaVenda = formularioVenda.querySelector('select[name="conta"]');
+      contaVenda.value=contaTeste.id;
+      contaVenda.dispatchEvent(new Event('change',{bubbles:true}));
+      const preencherOperacao = (nome,valor) => {
+        const entrada = formularioVenda.querySelector('input[name="'+nome+'"]');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(entrada,valor);
+        entrada.dispatchEvent(new Event('input',{bubbles:true}));
+      };
+      preencherOperacao('quantidade','20');
+      preencherOperacao('valor','60');
+      preencherOperacao('taxas','2');
+      for(let i=0;i<30&&!formularioVenda.querySelector('.previa-caixa')?.textContent.includes('58,00');i++) await dormir(100);
+      if (!formularioVenda.querySelector('.previa-caixa')?.textContent.includes('58,00')) throw new Error('Prévia do valor líquido com taxas incorreta: '+formularioVenda.querySelector('.carteira-previa')?.textContent);
+      preencherOperacao('taxas','0');
+      for(let i=0;i<30&&!formularioVenda.querySelector('.previa-caixa')?.textContent.includes('60,00');i++) await dormir(100);
+      if (!formularioVenda.querySelector('.previa-caixa')?.textContent.includes('60,00')) throw new Error('Prévia do valor líquido sem taxas incorreta: '+formularioVenda.querySelector('.carteira-previa')?.textContent);
       formularioVenda.requestSubmit();
       formularioVenda.requestSubmit();
       await dormir(450);
@@ -433,6 +451,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       return { paginas: verificadas, tema: 'OK', scrollbar: 'OK', paginacao: 'OK', acoes: 'OK' };
     })()
   `)
+  registrarLogUISmoke('FINCONTROL_UI_SMOKE_OK: ' + JSON.stringify(resultado))
   console.info('FINCONTROL_UI_SMOKE_OK:', JSON.stringify(resultado))
   await verificarResponsividadeInstalada(janela)
 }
@@ -548,6 +567,7 @@ async function verificarResponsividadeInstalada(janela: BrowserWindow): Promise<
       throw new Error('Viewport divergente no teste responsivo: esperado=' +
         largura + ', obtido=' + resultado.viewport)
     }
+    registrarLogUISmoke('FINCONTROL_RESPONSIVO_OK: ' + JSON.stringify(resultado))
     console.info('FINCONTROL_RESPONSIVO_OK:', JSON.stringify(resultado))
   }
   janela.setContentSize(900, 670)
@@ -575,6 +595,7 @@ function createWindow(): void {
 
   if (modoUISmoke) {
     mainWindow.webContents.once('did-fail-load', (_evento, codigo, descricao) => {
+      registrarLogUISmoke('FINCONTROL_UI_SMOKE_FAIL: Falha de carregamento ' + codigo + ' ' + descricao)
       console.error('FINCONTROL_UI_SMOKE_FAIL: Falha de carregamento', codigo, descricao)
       app.exit(1)
     })
@@ -582,6 +603,7 @@ function createWindow(): void {
       void verificarInterfaceInstalada(mainWindow).then(
         () => app.exit(0),
         (erro: unknown) => {
+          registrarLogUISmoke('FINCONTROL_UI_SMOKE_FAIL: ' + (erro instanceof Error ? erro.stack ?? erro.message : String(erro)))
           console.error('FINCONTROL_UI_SMOKE_FAIL:', erro)
           app.exit(1)
         }
@@ -641,6 +663,7 @@ app.whenReady().then(() => {
   if (modoUISmoke) {
     const pasta = mkdtempSync(join(tmpdir(), 'fincontrol-ui-smoke-'))
     app.setPath('userData', pasta)
+    registrarLogUISmoke('FINCONTROL_UI_SMOKE_START')
   }
   iniciarBanco()
   criarTabelaContas()
