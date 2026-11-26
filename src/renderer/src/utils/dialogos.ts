@@ -1,7 +1,16 @@
-function abrir(mensagem: string, titulo: string, acao: string, perigo: boolean, pedirTexto: boolean): Promise<string | null> {
-  return new Promise(resolve => {
+function abrir(
+  mensagem: string,
+  titulo: string,
+  acao: string,
+  perigo: boolean,
+  pedirTexto: boolean
+): Promise<string | null> {
+  return new Promise((resolve) => {
     const raiz = document.querySelector('.fincontrol')
-    if (!raiz || raiz.querySelector('.fc-dialogo[open]')) { resolve(null); return }
+    if (!raiz || raiz.querySelector('.fc-dialogo[open]')) {
+      resolve(null)
+      return
+    }
     const anterior = document.activeElement
     const dialogo = document.createElement('dialog')
     dialogo.className = 'fc-dialogo'
@@ -47,11 +56,18 @@ function abrir(mensagem: string, titulo: string, acao: string, perigo: boolean, 
       resolve(valor)
     }
     cancelar.addEventListener('click', () => fechar(null))
-    dialogo.addEventListener('cancel', e => { e.preventDefault(); fechar(null) })
-    dialogo.addEventListener('close', () => fechar(null))
-    form.addEventListener('submit', e => {
+    dialogo.addEventListener('cancel', (e) => {
       e.preventDefault()
-      if (pedirTexto && input.value.trim().length < 5) { input.setCustomValidity('Informe pelo menos cinco caracteres.'); input.reportValidity(); return }
+      fechar(null)
+    })
+    dialogo.addEventListener('close', () => fechar(null))
+    form.addEventListener('submit', (e) => {
+      e.preventDefault()
+      if (pedirTexto && input.value.trim().length < 5) {
+        input.setCustomValidity('Informe pelo menos cinco caracteres.')
+        input.reportValidity()
+        return
+      }
       fechar(pedirTexto ? input.value.trim() : '')
     })
     input.addEventListener('input', () => input.setCustomValidity(''))
@@ -62,7 +78,12 @@ function abrir(mensagem: string, titulo: string, acao: string, perigo: boolean, 
   })
 }
 
-export async function confirmarFinControl(mensagem: string, titulo = 'Confirmar operação', acao = 'Confirmar', perigo = false): Promise<boolean> {
+export async function confirmarFinControl(
+  mensagem: string,
+  titulo = 'Confirmar operação',
+  acao = 'Confirmar',
+  perigo = false
+): Promise<boolean> {
   return (await abrir(mensagem, titulo, acao, perigo, false)) !== null
 }
 

@@ -15,7 +15,9 @@ export function naoEhFuturo(data: string, hoje: string = hojeLocalISO()): boolea
 
 export function validarOperacaoImediata(data: string, hoje: string = hojeLocalISO()): void {
   if (data > hoje) {
-    throw new Error('Esta operação movimenta dinheiro imediatamente. Escolha hoje ou uma data anterior.')
+    throw new Error(
+      'Esta operação movimenta dinheiro imediatamente. Escolha hoje ou uma data anterior.'
+    )
   }
 }
 

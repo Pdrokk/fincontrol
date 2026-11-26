@@ -42,17 +42,24 @@ interface Props {
 }
 
 function moeda(valorCentavos: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
-    .format(valorCentavos / 100)
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    valorCentavos / 100
+  )
 }
 
 function dataAtual(): string {
   const d = new Date()
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0')].join('-')
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0')
+  ].join('-')
 }
 
-export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }: Props): React.JSX.Element {
+export default function CentralPagamentos({
+  onPagamento,
+  cartaoInicialId = ''
+}: Props): React.JSX.Element {
   const [parcelas, setParcelas] = useState<Parcela[]>([])
   const [contas, setContas] = useState<ContaPagamento[]>([])
   const [cartoes, setCartoes] = useState<CartaoPagamento[]>([])
@@ -89,25 +96,35 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       window.fincontrol.listarContas(),
       window.fincontrol.listarCartoes(),
       window.fincontrol.listarEstornosPagamentos()
-    ]).then(([p, c, b, e]): void => {
-      if (!ativo) return
-      setParcelas(p)
-      setContas(c)
-      setCartoes(b)
-      setEstornos(e)
-    }).catch((falha: unknown): void => {
-      console.error(falha)
-      if (ativo) setErro('Não foi possível carregar os pagamentos.')
-    }).finally((): void => {
-      if (ativo) setCarregando(false)
-    })
-    return (): void => { ativo = false }
+    ])
+      .then(([p, c, b, e]): void => {
+        if (!ativo) return
+        setParcelas(p)
+        setContas(c)
+        setCartoes(b)
+        setEstornos(e)
+      })
+      .catch((falha: unknown): void => {
+        console.error(falha)
+        if (ativo) setErro('Não foi possível carregar os pagamentos.')
+      })
+      .finally((): void => {
+        if (ativo) setCarregando(false)
+      })
+    return (): void => {
+      ativo = false
+    }
   }, [])
 
-  const pendentes = parcelas.filter((p) => !p.paga && (!filtroCartaoId || p.cartaoId === filtroCartaoId))
-  const pagas = parcelas.filter((p) => p.paga &&
-    (!filtroCartaoId || p.cartaoId === filtroCartaoId) &&
-    (mostrarArquivadas || !p.arquivada))
+  const pendentes = parcelas.filter(
+    (p) => !p.paga && (!filtroCartaoId || p.cartaoId === filtroCartaoId)
+  )
+  const pagas = parcelas.filter(
+    (p) =>
+      p.paga &&
+      (!filtroCartaoId || p.cartaoId === filtroCartaoId) &&
+      (mostrarArquivadas || !p.arquivada)
+  )
   const totalPendente = pendentes.reduce((total, p) => total + p.valorCentavos, 0)
   const escolhidas = pendentes.filter((p) => selecionadas.includes(p.id))
   const valorEscolhido = escolhidas.reduce((total, p) => total + p.valorCentavos, 0)
@@ -131,15 +148,15 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
   }
 
   function marcar(id: string, ativo: boolean): void {
-    setSelecionadas((anterior) => ativo
-      ? [...new Set([...anterior, id])]
-      : anterior.filter((item) => item !== id))
+    setSelecionadas((anterior) =>
+      ativo ? [...new Set([...anterior, id])] : anterior.filter((item) => item !== id)
+    )
   }
 
   function marcarGrupo(ids: string[], ativo: boolean): void {
-    setSelecionadas((anterior) => ativo
-      ? [...new Set([...anterior, ...ids])]
-      : anterior.filter((item) => !ids.includes(item)))
+    setSelecionadas((anterior) =>
+      ativo ? [...new Set([...anterior, ...ids])] : anterior.filter((item) => !ids.includes(item))
+    )
   }
 
   async function pagarSelecionadas(): Promise<void> {
@@ -152,9 +169,12 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       setErro('Saldo insuficiente na conta escolhida. Selecione outra conta ou menos parcelas.')
       return
     }
-    if (!await confirmarFinControl(
-      `Confirmar pagamento de ${escolhidas.length} parcela(s), total ${moeda(valorEscolhido)}, usando ${conta.nome}?`
-    )) return
+    if (
+      !(await confirmarFinControl(
+        `Confirmar pagamento de ${escolhidas.length} parcela(s), total ${moeda(valorEscolhido)}, usando ${conta.nome}?`
+      ))
+    )
+      return
     let confirmado = false
     try {
       setSalvando(true)
@@ -168,9 +188,13 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       await carregar()
     } catch (falha) {
       console.error(falha)
-      setErro(confirmado
-        ? 'Pagamento concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
-        : falha instanceof Error ? falha.message : 'Não foi possível confirmar o pagamento.')
+      setErro(
+        confirmado
+          ? 'Pagamento concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
+          : falha instanceof Error
+            ? falha.message
+            : 'Não foi possível confirmar o pagamento.'
+      )
     } finally {
       setSalvando(false)
     }
@@ -179,7 +203,9 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         await onPagamento()
       } catch (falha) {
         console.error('Pagamento confirmado; falha ao atualizar outros painéis:', falha)
-        setErro('Pagamento concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.')
+        setErro(
+          'Pagamento concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.'
+        )
       }
     }
   }
@@ -188,19 +214,27 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
     if (salvando || !parcela.pagamentoId || !parcela.pagamentoTipo) return
     setErro('')
     setMensagem('')
-    const valor = parcela.pagamentoTipo === 'fatura'
-      ? parcelas.filter((p) => p.pagamentoId === parcela.pagamentoId)
-          .reduce((total, p) => total + p.valorCentavos, 0)
-      : parcela.valorCentavos
-    const motivo = await solicitarFinControl('Motivo do estorno (mínimo 5 caracteres):', 'Estornar pagamento')
+    const valor =
+      parcela.pagamentoTipo === 'fatura'
+        ? parcelas
+            .filter((p) => p.pagamentoId === parcela.pagamentoId)
+            .reduce((total, p) => total + p.valorCentavos, 0)
+        : parcela.valorCentavos
+    const motivo = await solicitarFinControl(
+      'Motivo do estorno (mínimo 5 caracteres):',
+      'Estornar pagamento'
+    )
     if (motivo === null) return
     if (motivo.trim().length < 5) {
       setErro('Informe um motivo com pelo menos 5 caracteres para registrar o estorno.')
       return
     }
-    if (!await confirmarFinControl(
-      `Estornar ${moeda(valor)}? O valor voltará à conta pagadora e o limite disponível do cartão será reduzido. ${parcela.pagamentoTipo === 'fatura' ? 'Isso estornará toda a fatura.' : 'Isso estornará esta parcela.'}`
-    )) return
+    if (
+      !(await confirmarFinControl(
+        `Estornar ${moeda(valor)}? O valor voltará à conta pagadora e o limite disponível do cartão será reduzido. ${parcela.pagamentoTipo === 'fatura' ? 'Isso estornará toda a fatura.' : 'Isso estornará esta parcela.'}`
+      ))
+    )
+      return
     let estornoConfirmado = false
     try {
       setSalvando(true)
@@ -214,9 +248,13 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       await carregar()
     } catch (falha) {
       console.error(falha)
-      setErro(estornoConfirmado
-        ? 'Estorno concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
-        : falha instanceof Error ? falha.message : 'Não foi possível estornar.')
+      setErro(
+        estornoConfirmado
+          ? 'Estorno concluído, mas não foi possível atualizar a lista. Abra novamente a tela para atualizar.'
+          : falha instanceof Error
+            ? falha.message
+            : 'Não foi possível estornar.'
+      )
     } finally {
       setSalvando(false)
     }
@@ -225,7 +263,9 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
         await onPagamento()
       } catch (falha) {
         console.error('Estorno confirmado; falha ao atualizar outros painéis:', falha)
-        setErro('Estorno concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.')
+        setErro(
+          'Estorno concluído, mas alguns indicadores não foram atualizados. Abra novamente a tela para atualizar.'
+        )
       }
     }
   }
@@ -237,7 +277,9 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       await window.fincontrol.arquivarParcela(id, arquivar)
       await carregar()
       setErro('')
-      setMensagem(arquivar ? 'Parcela arquivada sem apagar o histórico.' : 'Parcela restaurada ao histórico.')
+      setMensagem(
+        arquivar ? 'Parcela arquivada sem apagar o histórico.' : 'Parcela restaurada ao histórico.'
+      )
     } catch (falha) {
       console.error(falha)
       setErro('Não foi possível atualizar a visibilidade da parcela. Tente novamente.')
@@ -257,29 +299,58 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       </div>
 
       <div className="central-resumo">
-        <div><span>Total em aberto</span><strong>{moeda(totalPendente)}</strong></div>
-        <div><span>Parcelas pendentes</span><strong>{pendentes.length}</strong></div>
-        <div><span>Parcelas pagas</span><strong>{parcelas.filter((p) => p.paga && (!filtroCartaoId || p.cartaoId === filtroCartaoId)).length}</strong></div>
+        <div>
+          <span>Total em aberto</span>
+          <strong>{moeda(totalPendente)}</strong>
+        </div>
+        <div>
+          <span>Parcelas pendentes</span>
+          <strong>{pendentes.length}</strong>
+        </div>
+        <div>
+          <span>Parcelas pagas</span>
+          <strong>
+            {
+              parcelas.filter((p) => p.paga && (!filtroCartaoId || p.cartaoId === filtroCartaoId))
+                .length
+            }
+          </strong>
+        </div>
       </div>
 
       <div className="central-filtro-cartao">
         <label htmlFor="central-cartao-filtro">Visualizar cartão</label>
-        <select id="central-cartao-filtro" value={filtroCartaoId}
-          onChange={(e): void => filtrarCartao(e.target.value)}>
+        <select
+          id="central-cartao-filtro"
+          value={filtroCartaoId}
+          onChange={(e): void => filtrarCartao(e.target.value)}
+        >
           <option value="">Todos os cartões</option>
           {cartoes.map((cartao) => (
-            <option key={cartao.id} value={cartao.id}>{cartao.banco} · {cartao.nome}</option>
+            <option key={cartao.id} value={cartao.id}>
+              {cartao.banco} · {cartao.nome}
+            </option>
           ))}
         </select>
       </div>
 
       <div className="central-abas" role="group" aria-label="Filtrar pagamentos">
-        <button type="button" aria-pressed={aba === 'pendentes'}
+        <button
+          type="button"
+          aria-pressed={aba === 'pendentes'}
           className={aba === 'pendentes' ? 'selecionada' : ''}
-          onClick={(): void => setAba('pendentes')}>Em aberto</button>
-        <button type="button" aria-pressed={aba === 'historico'}
+          onClick={(): void => setAba('pendentes')}
+        >
+          Em aberto
+        </button>
+        <button
+          type="button"
+          aria-pressed={aba === 'historico'}
           className={aba === 'historico' ? 'selecionada' : ''}
-          onClick={(): void => setAba('historico')}>Histórico de pagos</button>
+          onClick={(): void => setAba('historico')}
+        >
+          Histórico de pagos
+        </button>
       </div>
 
       {carregando && <p>Carregando pagamentos...</p>}
@@ -288,7 +359,9 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
 
       {aba === 'pendentes' && (
         <>
-          {pendentes.length === 0 && !carregando && <p className="vazio">Tudo em dia! Nenhuma parcela pendente.</p>}
+          {pendentes.length === 0 && !carregando && (
+            <p className="vazio">Tudo em dia! Nenhuma parcela pendente.</p>
+          )}
           <div className="central-grupos">
             {[...agrupadas.entries()].map(([chave, itens]) => {
               const ids = itens.map((p) => p.id)
@@ -297,18 +370,26 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
               return (
                 <div className="central-grupo" key={chave}>
                   <label className="central-grupo-titulo">
-                    <input type="checkbox" checked={todas}
-                      onChange={(e): void => marcarGrupo(ids, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={todas}
+                      onChange={(e): void => marcarGrupo(ids, e.target.checked)}
+                    />
                     <span>
                       <strong>{nomeCartao(itens[0].cartaoId)}</strong>
-                      <small>Fatura {itens[0].competencia} · {itens.length} parcela(s)</small>
+                      <small>
+                        Fatura {itens[0].competencia} · {itens.length} parcela(s)
+                      </small>
                     </span>
                     <strong>{moeda(total)}</strong>
                   </label>
                   {itens.map((parcela) => (
                     <label className="central-parcela" key={parcela.id}>
-                      <input type="checkbox" checked={selecionadas.includes(parcela.id)}
-                        onChange={(e): void => marcar(parcela.id, e.target.checked)} />
+                      <input
+                        type="checkbox"
+                        checked={selecionadas.includes(parcela.id)}
+                        onChange={(e): void => marcar(parcela.id, e.target.checked)}
+                      />
                       <span>{parcela.descricao}</span>
                       <strong>{moeda(parcela.valorCentavos)}</strong>
                     </label>
@@ -322,13 +403,16 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
               <span>{escolhidas.length} parcela(s) selecionada(s)</span>
               <strong>{moeda(valorEscolhido)}</strong>
             </div>
-            {contaId && contas.find((c) => c.id === contaId && c.saldoAtualCentavos < valorEscolhido) && (
-              <p className="central-saldo-aviso" role="alert">
-                Saldo insuficiente nesta conta. Escolha outra conta ou reduza as parcelas selecionadas.
-              </p>
-            )}
+            {contaId &&
+              contas.find((c) => c.id === contaId && c.saldoAtualCentavos < valorEscolhido) && (
+                <p className="central-saldo-aviso" role="alert">
+                  Saldo insuficiente nesta conta. Escolha outra conta ou reduza as parcelas
+                  selecionadas.
+                </p>
+              )}
             <div className="central-pagamento-campos">
-              <label>Conta pagadora
+              <label>
+                Conta pagadora
                 <select value={contaId} onChange={(e): void => setContaId(e.target.value)}>
                   <option value="">Selecione uma conta</option>
                   {contas.map((conta) => (
@@ -338,13 +422,30 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
                   ))}
                 </select>
               </label>
-              <label>Data do pagamento
-                <input type="date" max={dataAtual()} value={dataPagamento}
-                  onChange={(e): void => setDataPagamento(e.target.value)} />
+              <label>
+                Data do pagamento
+                <input
+                  type="date"
+                  max={dataAtual()}
+                  value={dataPagamento}
+                  onChange={(e): void => setDataPagamento(e.target.value)}
+                />
               </label>
-              <button type="button" className="botao-primario"
-                disabled={salvando || !contaId || escolhidas.length === 0 || Boolean(contas.find((c) => c.id === contaId && c.saldoAtualCentavos < valorEscolhido))}
-                onClick={(): void => { void pagarSelecionadas() }}>
+              <button
+                type="button"
+                className="botao-primario"
+                disabled={
+                  salvando ||
+                  !contaId ||
+                  escolhidas.length === 0 ||
+                  Boolean(
+                    contas.find((c) => c.id === contaId && c.saldoAtualCentavos < valorEscolhido)
+                  )
+                }
+                onClick={(): void => {
+                  void pagarSelecionadas()
+                }}
+              >
                 <CheckCircle2 size={17} /> {salvando ? 'Processando...' : 'Confirmar pagamento'}
               </button>
             </div>
@@ -355,42 +456,66 @@ export default function CentralPagamentos({ onPagamento, cartaoInicialId = '' }:
       {aba === 'historico' && (
         <div className="central-historico">
           <label className="central-arquivadas">
-            <input type="checkbox" checked={mostrarArquivadas}
-              onChange={(e): void => setMostrarArquivadas(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={mostrarArquivadas}
+              onChange={(e): void => setMostrarArquivadas(e.target.checked)}
+            />
             Mostrar parcelas arquivadas
           </label>
           {pagas.length === 0 && <p className="vazio">Nenhuma parcela paga para exibir.</p>}
           {pagas.map((parcela) => (
             <div className="central-parcela historico" key={parcela.id}>
               <CheckCircle2 size={17} color="#16a34a" />
-              <span>{nomeCartao(parcela.cartaoId)} · {parcela.descricao}
+              <span>
+                {nomeCartao(parcela.cartaoId)} · {parcela.descricao}
                 <small>Fatura {parcela.competencia}</small>
               </span>
               <strong>{moeda(parcela.valorCentavos)}</strong>
-              <button type="button" className="central-icone"
+              <button
+                type="button"
+                className="central-icone"
                 disabled={salvando || !parcela.pagamentoId}
                 title={parcela.arquivada ? 'Restaurar ao histórico' : 'Ocultar do histórico'}
                 aria-label={`${parcela.arquivada ? 'Restaurar' : 'Arquivar'} parcela: ${parcela.descricao}`}
-                onClick={(): void => { void alterarArquivo(parcela.id, !parcela.arquivada) }}>
+                onClick={(): void => {
+                  void alterarArquivo(parcela.id, !parcela.arquivada)
+                }}
+              >
                 {parcela.arquivada ? <RotateCcw size={17} /> : <Archive size={17} />}
               </button>
               {parcela.pagamentoId && (
-                <button type="button" className="central-icone" title="Estornar pagamento"
-                  aria-label={`Estornar pagamento da parcela: ${parcela.descricao}`} disabled={salvando}
-                  onClick={(): void => { void estornarParcela(parcela) }}>
+                <button
+                  type="button"
+                  className="central-icone"
+                  title="Estornar pagamento"
+                  aria-label={`Estornar pagamento da parcela: ${parcela.descricao}`}
+                  disabled={salvando}
+                  onClick={(): void => {
+                    void estornarParcela(parcela)
+                  }}
+                >
                   <Undo2 size={17} />
                 </button>
               )}
             </div>
           ))}
-          <p className="central-nota"><ArrowDownRight size={15} /> Arquivar oculta uma parcela sem apagar seu histórico. Estornar reverte o saldo e o limite, preservando a justificativa.</p>
+          <p className="central-nota">
+            <ArrowDownRight size={15} /> Arquivar oculta uma parcela sem apagar seu histórico.
+            Estornar reverte o saldo e o limite, preservando a justificativa.
+          </p>
           {estornos.length > 0 && (
             <div className="central-estornos">
               <h4>Estornos registrados</h4>
               {estornos.map((e) => (
                 <div className="dashboard-item" key={e.id}>
-                  <div><strong>{e.tipo === 'fatura' ? 'Fatura estornada' : 'Parcela estornada'}</strong>
-                    <small>{e.motivo} · {e.estornadoEm.slice(0, 10).split('-').reverse().join('/')}</small>
+                  <div>
+                    <strong>
+                      {e.tipo === 'fatura' ? 'Fatura estornada' : 'Parcela estornada'}
+                    </strong>
+                    <small>
+                      {e.motivo} · {e.estornadoEm.slice(0, 10).split('-').reverse().join('/')}
+                    </small>
                   </div>
                   <strong>{moeda(e.valorCentavos)}</strong>
                 </div>

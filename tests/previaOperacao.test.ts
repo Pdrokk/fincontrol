@@ -3,11 +3,23 @@ import test from 'node:test'
 import { preverOperacao } from '../src/renderer/src/utils/previaOperacao.ts'
 
 test('compra considera taxas e quantidade resultante', () => {
-  assert.deepEqual(preverOperacao('compra', 10000, 150, 2, 3, 20000), { caixa: -10150, restante: 5, erro: '' })
+  assert.deepEqual(preverOperacao('compra', 10000, 150, 2, 3, 20000), {
+    caixa: -10150,
+    restante: 5,
+    erro: ''
+  })
 })
 test('venda total e provento preservam o impacto correto', () => {
-  assert.deepEqual(preverOperacao('venda', 6000, 200, 20, 20), { caixa: 5800, restante: 0, erro: '' })
-  assert.deepEqual(preverOperacao('provento', 500, 10, 0, 20), { caixa: 490, restante: 20, erro: '' })
+  assert.deepEqual(preverOperacao('venda', 6000, 200, 20, 20), {
+    caixa: 5800,
+    restante: 0,
+    erro: ''
+  })
+  assert.deepEqual(preverOperacao('provento', 500, 10, 0, 20), {
+    caixa: 490,
+    restante: 20,
+    erro: ''
+  })
 })
 test('saldo insuficiente, quantidade excedente e taxas inválidas', () => {
   assert.match(preverOperacao('compra', 100, 1, 1, 2, 100).erro, /Saldo insuficiente/)

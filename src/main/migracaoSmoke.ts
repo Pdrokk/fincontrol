@@ -59,19 +59,20 @@ export function executarMigracaoLegadaSmoke(): void {
     criarTabelasInvestimentos(obterBanco())
     obterBanco().exec('PRAGMA foreign_keys = ON')
 
-    const conta = listarContas().find(c => c.id === 'legado-1')
+    const conta = listarContas().find((c) => c.id === 'legado-1')
     assert.ok(conta)
     assert.equal(conta.saldoAtualCentavos, 12000)
     assert.equal(conta.cor, '#ff8800', 'Não apagar a cor do banco antigo')
-    const tx = listarTransacoes().find(t => t.id === 'transacao-antiga')
+    const tx = listarTransacoes().find((t) => t.id === 'transacao-antiga')
     assert.ok(tx)
     assert.equal(tx.contaId, null)
     assert.equal(tx.valorCentavos, 1000)
 
     for (const tabela of ['transacoes', 'contas', 'pagamentos_parcelas', 'pagamentos_fatura']) {
-      const colunas = obterBanco().prepare(`PRAGMA table_info(${tabela})`)
-        .all() as { name: string }[]
-      const nomes = new Set(colunas.map(c => c.name))
+      const colunas = obterBanco().prepare(`PRAGMA table_info(${tabela})`).all() as {
+        name: string
+      }[]
+      const nomes = new Set(colunas.map((c) => c.name))
       if (tabela === 'contas') assert.ok(nomes.has('cor'))
       if (tabela === 'transacoes') assert.ok(nomes.has('conta_id'))
       if (tabela.startsWith('pagamentos')) assert.ok(nomes.has('estornado'))
@@ -82,19 +83,29 @@ export function executarMigracaoLegadaSmoke(): void {
       ['pagamentos_fatura', 'cartao_id,competencia'],
       ['pagamentos_parcelas', 'parcela_id']
     ]) {
-      const indices = obterBanco().prepare(`PRAGMA index_list("${tabela}")`).all() as
-        { name: string; origin: string }[]
-      assert.ok(!indices.some((idx) => {
-        if (idx.origin !== 'u') return false
-        const nomes = (obterBanco().prepare(`PRAGMA index_info("${idx.name}")`).all() as
-          { name: string }[]).map(c => c.name).join(',')
-        return nomes === colunas
-      }), 'Migração não removeu a unicidade global de ' + tabela)
-      assert.ok(indices.some(idx => idx.origin === 'c' && idx.name.includes('ativa')),
-        'Índice ativo ausente em ' + tabela)
+      const indices = obterBanco().prepare(`PRAGMA index_list("${tabela}")`).all() as {
+        name: string
+        origin: string
+      }[]
+      assert.ok(
+        !indices.some((idx) => {
+          if (idx.origin !== 'u') return false
+          const nomes = (
+            obterBanco().prepare(`PRAGMA index_info("${idx.name}")`).all() as { name: string }[]
+          )
+            .map((c) => c.name)
+            .join(',')
+          return nomes === colunas
+        }),
+        'Migração não removeu a unicidade global de ' + tabela
+      )
+      assert.ok(
+        indices.some((idx) => idx.origin === 'c' && idx.name.includes('ativa')),
+        'Índice ativo ausente em ' + tabela
+      )
     }
     const resultado = obterBanco().prepare('PRAGMA integrity_check').get() as
-      | { integrity_check: string } | undefined
+      { integrity_check: string } | undefined
     assert.equal(resultado?.integrity_check, 'ok')
     console.info('FINCONTROL_MIGRACAO_OK: SQLite legado preservado e migrado')
   } finally {
