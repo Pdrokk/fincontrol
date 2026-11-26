@@ -174,7 +174,7 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
           if (!document.body.textContent?.includes('Backup e restauração')) {
             throw new Error('Configurações sem backup/restauração.');
           }
-          if (!document.body.textContent?.includes('Versão 1.6.2')) {
+          if (!document.body.textContent?.includes('Versão 1.6.3')) {
             throw new Error('Versão exibida em Configurações desatualizada.');
           }
         }
@@ -379,6 +379,15 @@ async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void>
       if (!(await window.fincontrol.listarInvestimentos()).posicoes.find(a=>a.id===idPatrimonio)?.arquivado) throw new Error('Ativo não foi arquivado.');
       if (!(await window.fincontrol.listarInvestimentos()).movimentos.some(m=>m.ativoId===idPatrimonio && m.tipo==='venda')) throw new Error('Histórico da venda foi perdido.');
       if (!document.querySelector('.carteira-toast')?.textContent.includes('Ativo removido.')) throw new Error('Notificação de sucesso ausente.');
+      const historicoInvest = document.querySelector('.invest-avancado');
+      if (!historicoInvest || historicoInvest.querySelector('table')) throw new Error('Histórico fechado não deve renderizar tabela.');
+      historicoInvest.querySelector('summary').click();
+      for(let i=0;i<30&&!historicoInvest.querySelector('tbody tr');i++) await dormir(100);
+      const linhasInvest = [...historicoInvest.querySelectorAll('tbody tr')];
+      if (!linhasInvest.some(l=>l.textContent.includes('USD')&&l.textContent.includes('Venda')) || linhasInvest.length>25) throw new Error('Histórico paginado não preservou venda arquivada.');
+      historicoInvest.querySelector('summary').click();
+      for(let i=0;i<30&&historicoInvest.querySelector('table');i++) await dormir(100);
+      if (historicoInvest.querySelector('table')) throw new Error('Histórico recolhido não liberou tabela.');
       if ((await window.fincontrol.listarContas()).find(c => c.id === contaTeste.id).saldoAtualCentavos !== saldoPatrimonioAntes+6000) throw new Error('Remoção alterou o caixa.');
       botaoPagina('Visão Geral')?.click();
       await dormir(350);

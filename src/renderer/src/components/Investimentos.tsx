@@ -1,9 +1,11 @@
 import { confirmarFinControl } from '../utils/dialogos'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { TrendingUp, Plus, ArrowDownLeft, ArrowUpRight, Coins, Landmark, Building2, Wallet, ChartNoAxesCombined, RefreshCw, Pencil, X, Trash2, CheckCircle2, Search } from 'lucide-react'
 import Feedback from './Feedback'
 import ComposicaoCarteira from './ComposicaoCarteira'
 import FichaAtivo from './FichaAtivo'
+import HistoricoOperacoes from './HistoricoOperacoes'
+import { indexarAtivos } from '../utils/historicoInvest'
 import FormularioOperacao from './FormularioOperacao'
 import type { Operacao, Posicao, Movimento } from '../../../main/investimentos'
 
@@ -30,6 +32,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const [posicoes, setPosicoes] = useState<Posicao[]>([])
   const [fichaId,setFichaId] = useState<string|null>(null)
   const [movimentos, setMovimentos] = useState<Movimento[]>([])
+  const [historicoAberto, setHistoricoAberto] = useState(false)
   const [contas, setContas] = useState<Conta[]>([])
   const [modo, setModo] = useState<Modo>('mercado')
   const [tipoCadastro,setTipoCadastro] = useState('Ação')
@@ -142,7 +145,8 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   }
   const valor = posicoes.reduce((n, a) => n + (a.valorAtualCentavos ?? 0), 0)
   const semCotacao = posicoes.filter(a => a.quantidade > 0 && a.valorAtualCentavos === null).length
-  const ativas = posicoes.filter(a=>!a.arquivado)
+  const ativas = useMemo(()=>posicoes.filter(a=>!a.arquivado),[posicoes])
+  const indiceAtivos = useMemo(()=>indexarAtivos(posicoes),[posicoes])
   const arquivadas = posicoes.filter(a=>a.arquivado)
   const zeradas = ativas.filter(a=>a.valorAtualCentavos===0 && (a.valorInformadoCentavos!==null || a.quantidade===0))
   const idsZeradas = new Set(zeradas.map(a=>a.id))
@@ -151,13 +155,14 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const consulta = normalizar(busca)
   const visiveis = baseVisivel.filter(a=>(!categoriaFiltro||a.tipo===categoriaFiltro)&&(!consulta||normalizar([a.codigo,a.nome,a.instituicao].join(' ')).includes(consulta)))
   const mercado = ativas.filter(a=>a.quantidadeMercado!==null)
-  const ativosComHistorico = new Set(movimentos.map(m=>m.ativoId))
+  const ativosComHistorico = useMemo(()=>new Set(movimentos.map(m=>m.ativoId)),[movimentos])
   const cotacoesAntigas = mercado.filter(a=>a.cotacaoEm && agora-Date.parse(a.cotacaoEm)>72*3600000).length
-  const ficha = posicoes.find(a=>a.id===fichaId)
+  const ficha = fichaId ? indiceAtivos.get(fichaId) : undefined
+  const movimentosFicha = useMemo(()=>fichaId ? movimentos.filter(m=>m.ativoId===fichaId) : [],[movimentos,fichaId])
   const ativoOperacao = ativas.find(a=>a.id===operacao?.id)
   return <div className="investimentos carteira-v3">
     {!operacao&&<Feedback mensagem={erro} tipo="erro" />}
-    {recarregarNecessario&&<div className="carteira-aviso carteira-recarga" role="status"><p>{falhaCarga?'Não foi possível carregar a carteira. Nenhum saldo será considerado atualizado.':'Os dados não puderam ser recarregados após a operação. Não repita o registro; recarregue a carteira antes de continuar.'}</p><button type="button" className="botao-secundario" disabled={ocupado||sincronizando||recarregarNecessario} onClick={():void=>{void tentarRecarregar()}}>Recarregar carteira</button></div>}
+    {recarregarNecessario&&<div className="carteira-aviso carteira-recarga" role="status"><p>{falhaCarga?'Não foi possível carregar a carteira. Nenhum saldo será considerado atualizado.':'Os dados não puderam ser recarregados após a operação. Não repita o registro; recarregue a carteira antes de continuar.'}</p><button type="button" className="botao-secundario" disabled={ocupado||sincronizando} onClick={():void=>{void tentarRecarregar()}}>Recarregar carteira</button></div>}
     <div className="carteira-notificacoes" role="status" aria-live="polite" aria-atomic="true">
       {mensagem && <div className="carteira-toast"><CheckCircle2 size={18} aria-hidden="true"/><span>{mensagem}</span></div>}
       {statusCotacoes && !statusCotacoes.persistente && <div className="carteira-toast"><RefreshCw size={16} aria-hidden="true"/><span>{statusCotacoes.texto}</span></div>}
@@ -240,14 +245,12 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
           </tr>
         })}</tbody>
       </table></div>}
-      {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentos.filter(m=>m.ativoId===ficha.id)} agora={agora} onFechar={():void=>setFichaId(null)} />}
+      {ficha&&<FichaAtivo key={ficha.id} ativo={ficha} movimentos={movimentosFicha} agora={agora} onFechar={():void=>setFichaId(null)} />}
       {operacao&&ativoOperacao&&<FormularioOperacao key={operacao.id+operacao.tipo} ativo={ativoOperacao} tipo={operacao.tipo} contas={contas} ocupado={ocupado||sincronizando||recarregarNecessario} erro={erro} onCancelar={():void=>{setErro('');setOperacao(null)}} onConfirmar={(dados):void=>{void executar(async()=>{await window.fincontrol.registrarInvestimento(dados);setMostrarZeradas(true);setOperacao(null)},'Operação registrada.')}}/>}
     </section>
-    <details className="painel invest-avancado">
+    <details className="painel invest-avancado" onToggle={(e):void=>setHistoricoAberto(e.currentTarget.open)}>
       <summary>Histórico de operações ({movimentos.length})</summary>
-      {!movimentos.length ? <p>Nenhuma operação registrada.</p> : <div className="invest-historico"><table><thead><tr><th>Data</th><th>Ativo</th><th>Operação</th><th>Quantidade</th><th>Movimento bancário</th></tr></thead><tbody>
-        {movimentos.map(m => <tr key={m.id}><td>{m.data.split('-').reverse().join('/')}</td><td>{posicoes.find(a => a.id === m.ativoId)?.codigo ?? 'Ativo'}</td><td>{m.tipo==='compra'?'Compra':m.tipo==='venda'?'Venda':'Provento'}</td><td>{m.tipo === 'provento' ? '—' : qtd(m.quantidade)}</td><td>{moeda(m.caixaCentavos)}</td></tr>)}
-      </tbody></table></div>}
+      {historicoAberto&&<HistoricoOperacoes movimentos={movimentos} ativos={indiceAtivos}/>}
     </details>
   </div>
 }
