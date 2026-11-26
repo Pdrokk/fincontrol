@@ -14,4 +14,24 @@ O relatório **não mede a cobertura integral do aplicativo**: módulos não imp
 
 Identificar arquivos ausentes e linhas/branches descobertos; priorizar integridade de saldos, pagamentos/estornos, investimentos, migrações, backup e validações. Acrescentar testes significativos e medir novamente antes de definir limiares por módulo. Segurança PR 50 permanece isolada e deverá ser reaplicada sobre a base limpa.
 
-Estado: instrumentação proposta; aguardando execução da CI. Nenhum resultado de cobertura registrado nesta revisão.
+## Linha de base medida — PR 52
+
+Merge na develop: `812f25522db1f8b4bae30cff9f328e9145cd109b`. [Qualidade e cobertura](https://github.com/Pdrokk/fincontrol/actions/runs/45741552108) e [Windows](https://github.com/Pdrokk/fincontrol/actions/runs/45741552102): sucesso. ESLint com `--max-warnings=0` aprovado; 45 testes, 45 aprovados, zero falhas.
+
+| Módulo medido | Linhas (%) | Branches (%) | Funções (%) |
+|---|---:|---:|---:|
+| consultasFinanceiras.ts | 100 | 100 | 100 |
+| cotacoes.ts | 97,83 | 88,64 | 100 |
+| fundamentos.ts | 100 | 98,72 | 100 |
+| investimentos.ts | 98,46 | 87,19 | 100 |
+| regrasFinanceiras.ts | 100 | 100 | 100 |
+| composicaoCarteira.ts | 100 | 94,12 | 100 |
+| historicoInvest.ts | 100 | 100 | 100 |
+| previaOperacao.ts | 100 | 100 | 100 |
+| Total dos módulos carregados | 98,91 | 91,67 | 100 |
+
+## Regressões adicionais propostas
+
+Quatro cenários em testes existentes: HTTP 503; reativação por recadastro zerado com histórico preservado; edição de quantidade inicial manual sem impacto no caixa; rollback integral da observação patrimonial após falha de escrita SQLite, incluindo nova tentativa. Os testes usam mocks ou banco em memória. Nenhuma regra financeira alterada, nenhuma asserção anterior removida. A cobertura dos 49 testes previstos ainda precisa ser medida pela CI. Não é cobertura global; contas, cartões, backup e UI continuam dependentes da validação de integração e manual.
+
+Estado: linha de base aprovada; ampliação da suíte em validação. Segurança permanece pendente.

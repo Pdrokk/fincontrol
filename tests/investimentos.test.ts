@@ -459,3 +459,68 @@ test('carteira vazia não fabrica histórico e exclusão não apaga observaçõe
     db.close()
   }
 })
+
+test('recadastro zerado reativa ativo arquivado sem perder operações ou movimentar caixa', () => {
+  const { db, id, saldo, operar } = ambiente()
+  try {
+    operar({})
+    operar({ tipo: 'venda' })
+    excluirAtivo(db, id)
+    const caixa = saldo()
+    const historico = listarMovimentos(db)
+    const dados = {
+      codigo: 'BOVA11',
+      nome: 'ETF',
+      tipo: 'ETF',
+      instituicao: 'Corretora'
+    }
+    assert.throws(() => cadastrarAtivo(db, { ...dados, quantidadeInicial: 1 }), /arquivado/)
+    assert.equal(cadastrarAtivo(db, dados), id)
+    assert.equal(listarPosicoes(db)[0].arquivado, false)
+    assert.equal(listarPosicoes(db)[0].quantidade, 0)
+    assert.equal(saldo(), caixa)
+    assert.deepEqual(listarMovimentos(db), historico)
+  } finally {
+    db.close()
+  }
+})
+
+test('edição de quantidade manual inicial mantém cotação e caixa', () => {
+  const { db, id, saldo } = ambiente()
+  try {
+    atualizarCotacao(db, id, 1000)
+    atualizarQuantidadeMercado(db, id, 3)
+    assert.equal(listarPosicoes(db)[0].quantidade, 3)
+    assert.equal(listarPosicoes(db)[0].valorAtualCentavos, 3000)
+    assert.equal(saldo(), 100000)
+    assert.equal(listarMovimentos(db).length, 0)
+  } finally {
+    db.close()
+  }
+})
+
+test('falha ao gravar cotação desfaz a observação patrimonial inteira', () => {
+  const { db, id, saldo } = ambiente()
+  try {
+    atualizarCotacao(db, id, 1000)
+    atualizarQuantidadeMercado(db, id, 3)
+    registrarObservacaoCarteira(db, '2026-11-23')
+    const antes = listarEvolucaoPatrimonio(db)
+    const cotacoes = listarHistoricoCotacoes(db, id)
+    db.exec(`
+      CREATE TRIGGER falha_teste BEFORE INSERT ON historico_cotacoes_invest
+      BEGIN SELECT RAISE(ABORT, 'falha simulada'); END;
+    `)
+    assert.throws(() => registrarObservacaoCarteira(db, '2026-11-24'), /falha simulada/)
+    assert.deepEqual(listarEvolucaoPatrimonio(db), antes)
+    assert.deepEqual(listarHistoricoCotacoes(db, id), cotacoes)
+    assert.equal(saldo(), 100000)
+    db.exec('DROP TRIGGER falha_teste')
+    registrarObservacaoCarteira(db, '2026-11-24')
+    assert.equal(listarEvolucaoPatrimonio(db).length, 2)
+    assert.equal(listarHistoricoCotacoes(db, id).length, 2)
+    assert.equal(db.prepare('PRAGMA integrity_check').get()?.integrity_check, 'ok')
+  } finally {
+    db.close()
+  }
+})
