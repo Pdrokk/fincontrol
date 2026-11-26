@@ -1,8 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-// Expor somente versões de diagnóstico, não IPC genérico.
+// Expor somente diagnóstico de versão e isolamento, não IPC genérico.
 contextBridge.exposeInMainWorld('electron', {
   process: {
+    sandboxed: process.sandboxed === true,
+    contextIsolated: process.contextIsolated === true,
     versions: {
       electron: process.versions.electron,
       chrome: process.versions.chrome,

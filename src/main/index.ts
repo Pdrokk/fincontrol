@@ -78,16 +78,14 @@ function registrarLogUISmoke(mensagem: string): void {
  * Usa um perfil SQLite isolado, criado apenas no modo de teste.
  */
 async function verificarInterfaceInstalada(janela: BrowserWindow): Promise<void> {
-  const preferencias = janela.webContents.getLastWebPreferences()
-  if (!preferencias?.sandbox || !preferencias.contextIsolation || preferencias.nodeIntegration ||
-      preferencias.webSecurity !== true || preferencias.webviewTag) {
-    throw new Error('Preferências de segurança do renderer inválidas.')
-  }
   const resultado = await janela.webContents.executeJavaScript(`
     (async () => {
       if (typeof window.require !== 'undefined' || typeof window.process !== 'undefined' ||
           typeof window.electron?.ipcRenderer !== 'undefined' || typeof window.api !== 'undefined' ||
-          typeof window.fincontrol?.listarContas !== 'function') {
+          typeof window.fincontrol?.listarContas !== 'function' ||
+          window.electron?.process?.sandboxed !== true ||
+          window.electron?.process?.contextIsolated !== true ||
+          document.querySelector('webview')) {
         throw new Error('Isolamento do renderer ou contrato do preload inválido.');
       }
       const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

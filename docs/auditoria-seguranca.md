@@ -23,4 +23,10 @@ Base: develop `407f72b40a460ca35764dd089eda71037c45a235` (1.6.4). Revisão está
 
 Quatro novos testes de remetente e links; smoke Windows reforçado para conferir isolamento, preferências e ausência de API genérica. Validar também links, modo dev, backup/restauração, instância única e sete páginas no EXE. Analisar npm audit antes de aprovar; não usar npm audit fix --force. Pendências: revisão aprofundada de backup/concorrência, fuses, assinatura, criptografia e vulnerabilidades conforme resultado real.
 
-Status: correções propostas, CI e homologação manual pendentes. Sem alteração financeira, de schema ou versão numérica.
+## Primeira execução da CI (PR 50)
+
+- [Qualidade](https://github.com/Pdrokk/fincontrol/actions/runs/45738008675) e [Windows](https://github.com/Pdrokk/fincontrol/actions/runs/45738009178) falharam na mesma etapa TypeScript: TS2339, método getLastWebPreferences não disponível na tipagem de WebContents. Testes e build não executados.
+- Correção: smoke verifica os indicadores reais process.sandboxed e process.contextIsolated, expostos pelo preload como booleanos somente de diagnóstico, além da ausência de APIs Node/IPC genéricas e webview. A configuração explícita de segurança da janela permanece inalterada.
+- npm audit --audit-level=high retornou sucesso, mas identificou 12 ocorrências moderadas na cadeia de dependências de ferramentas de build/lint, relacionadas a minimatch ([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)). A correção forçada sugerida pelo npm altera a versão principal do electron-builder; não aplicada. Avaliar atualização compatível e repetir auditoria antes da release. Não declarar ausência de vulnerabilidades.
+
+Status: correção de tipagem submetida; CI do novo commit e homologação manual pendentes. Sem alteração financeira, de schema ou versão numérica.
