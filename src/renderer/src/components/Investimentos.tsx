@@ -16,7 +16,6 @@ const icones = { 'Ação': TrendingUp, ETF: ChartNoAxesCombined, FII: Building2,
 const moeda = (n: number): string => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n / 100)
 const preco = (n: number): string => n.toLocaleString('pt-BR', {style:'currency',currency:'BRL',maximumFractionDigits:4})
 const qtd = (n: number): string => n.toLocaleString('pt-BR', { maximumFractionDigits: 8 })
-const hoje = (): string => new Date().toLocaleDateString('sv-SE')
 const campo = (f: FormData, nome: string): string => String(f.get(nome) ?? '')
 const centavos = (f: FormData, nome: string): number => Math.round(Number(campo(f, nome)) * 100)
 const hora = (iso: string): string => new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
@@ -49,6 +48,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
   const [mensagem, setMensagem] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const trava = useRef(false)
+  const travaSincronizacao = useRef(false)
   const [recarregarNecessario, setRecarregarNecessario] = useState(false)
   const bloqueioRecarga = useRef(false)
   const [falhaCarga, setFalhaCarga] = useState(false)
@@ -89,17 +89,18 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
         if (!ativo) return
         setPosicoes(dados.posicoes); setMovimentos(dados.movimentos); setContas(bancos); setChaveAtiva(chave); setCarregando(false)
         if (!dados.posicoes.some(a=>!a.arquivado && a.quantidadeMercado!==null)) return
+        travaSincronizacao.current = true
         setSincronizando(true)
         const r = await window.fincontrol.sincronizarCotacoes(false)
         const novos = await window.fincontrol.listarInvestimentos()
         if (ativo) {setPosicoes(novos.posicoes);setMovimentos(novos.movimentos);setStatusCotacoes(resumoCotacoes(r))}
       })
       .catch(() => { if (ativo) { setFalhaCarga(true); bloqueioRecarga.current = true; setRecarregarNecessario(true) } })
-      .finally(() => { if (ativo) {setCarregando(false);setSincronizando(false)} })
+      .finally(() => { if (ativo) {travaSincronizacao.current = false;setCarregando(false);setSincronizando(false)} })
     return (): void => { ativo = false }
   }, [])
   async function executar(acao: () => Promise<unknown>, sucesso: string, form?: HTMLFormElement): Promise<void> {
-    if (trava.current || bloqueioRecarga.current || ocupado || sincronizando || carregando) return
+    if (trava.current || travaSincronizacao.current || bloqueioRecarga.current || ocupado || sincronizando || carregando) return
     trava.current = true
     setOcupado(true); setErro(''); setMensagem('')
     try {
@@ -116,7 +117,7 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
     finally { trava.current = false; setOcupado(false) }
   }
   async function tentarRecarregar(): Promise<void> {
-    if (trava.current || sincronizando) return
+    if (trava.current || travaSincronizacao.current || sincronizando) return
     trava.current = true
     setOcupado(true)
     try {
@@ -129,13 +130,15 @@ export default function Investimentos({ onAlteracao }: { onAlteracao: () => void
     finally { trava.current = false; setOcupado(false) }
   }
   async function sincronizar(forcar = true): Promise<void> {
+    if (travaSincronizacao.current || bloqueioRecarga.current || (forcar && trava.current)) return
+    travaSincronizacao.current = true
     setSincronizando(true);setStatusCotacoes(null)
     try {
       const r=await window.fincontrol.sincronizarCotacoes(forcar)
       await carregar()
       setStatusCotacoes(resumoCotacoes(r) ?? {texto:'Nenhuma nova cotação recebida. Valores anteriores mantidos.',persistente:false})
     } catch {setStatusCotacoes({texto:'Não foi possível atualizar. Os últimos valores foram preservados.',persistente:true})}
-    finally {setSincronizando(false)}
+    finally {travaSincronizacao.current = false;setSincronizando(false)}
   }
   const valor = posicoes.reduce((n, a) => n + (a.valorAtualCentavos ?? 0), 0)
   const semCotacao = posicoes.filter(a => a.quantidade > 0 && a.valorAtualCentavos === null).length
