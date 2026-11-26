@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import {
-  Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart,
+  Bar, BarChart, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -135,7 +135,6 @@ function GraficosFinanceiros({
             <div className="grafico-area" aria-hidden="true">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dados}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="mes" />
                   <YAxis width={65} tickFormatter={(v: number): string => `R$ ${v}`} />
                   <Tooltip formatter={(value): string => moeda(Number(value))} />
@@ -186,7 +185,6 @@ function GraficosFinanceiros({
               <div className="grafico-area" aria-hidden="true">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dados}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="mes" />
                     <YAxis width={75} tickFormatter={(v: number): string => `R$ ${v}`} />
                     <Tooltip formatter={(value): string => moeda(Number(value))} />
