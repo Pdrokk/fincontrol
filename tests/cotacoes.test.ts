@@ -77,3 +77,8 @@ test('PTAX não envia token BRAPI ao Banco Central', async () => {
   }
   assert.equal((await consultarCotacao('USD', 'Moeda', 'segredo', fake)).preco, 5.1234)
 })
+
+test('HTTP 503 rejeita a consulta sem fabricar cotação', async () => {
+  const fake: typeof fetch = async () => new Response('', { status: 503 })
+  await assert.rejects(consultarCotacao('PETR4', 'Ação', '', fake), /Cotação indisponível/)
+})
