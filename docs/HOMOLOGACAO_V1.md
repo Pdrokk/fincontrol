@@ -4,19 +4,21 @@
 
 | Item | Resultado |
 |---|---|
-| PR 44 | Mesclado na develop |
-| SHA testado | `f92af6ea1ddbec1f6aa49550ec0d45790f2cead2` |
-| Qualidade | [Run 45729602315](https://github.com/Pdrokk/fincontrol/actions/runs/45729602315) — sucesso |
-| Windows | [Run 45729602359](https://github.com/Pdrokk/fincontrol/actions/runs/45729602359) — sucesso |
+| PRs 47 e 48 | Mesclados na develop |
+| SHA do PR 48 | `d862bafc5a4f2d1be4dedd0681a1906cb6d93320` |
+| SHA da develop verificada | `407f72b40a460ca35764dd089eda71037c45a235` |
+| Árvore Git idêntica nos dois SHAs | `a930ab77571dd4de1d0f4606aab998c900cb0d59` |
+| Qualidade | [Run 45733822723](https://github.com/Pdrokk/fincontrol/actions/runs/45733822723) — sucesso |
+| Windows | [Run 45733822820](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820) — sucesso |
 | Testes unitários | 45 aprovados; 0 falhas |
-| ESLint | 0 erros; 1.721 avisos de formatação/análise, não tratados como falhas |
+| ESLint | 0 erros; 1.719 avisos de formatação/análise, não tratados como falhas |
 | Build | EXE portátil gerado |
 | Smoke financeiro | Pagamentos, estornos, migrações e backup no EXE empacotado; regressão portátil aprovada |
 | Smoke de interface | Sete páginas; tema, scrollbar, paginação e ações aprovados |
 | Responsividade | Seis larguras solicitadas, 14 combinações página/tema por largura |
-| Artefato | [FinControl-Correcoes-Validacao-Windows-44](https://github.com/Pdrokk/fincontrol/actions/runs/45729602359/artifacts/15076108412) |
+| Artefato | [FinControl-Correcoes-Validacao-Windows-48](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820/artifacts/15078142692) |
 
-Os valores de viewport observados nos logs foram 630, 758, 890, 1270, 1910 e 2550px. São testes automatizados, não avaliação visual humana ou certificação de acessibilidade. Os resultados se referem ao SHA acima, não a futuras alterações.
+Os valores de viewport observados nos logs foram 630, 758, 890, 1270, 1910 e 2550px. São testes automatizados, não avaliação visual humana ou certificação de acessibilidade. Os resultados se referem ao código testado acima, cuja árvore Git coincide com a develop após o PR 48; não há execução direta no SHA de merge consultado. Logs verificados em 25/11/2026 (Brasília). Consulte a [matriz final](homologacao-final.md) para critérios de aceite e casos manuais.
 
 ## Roteiro manual obrigatório para a versão final
 

@@ -21,7 +21,9 @@
 ## Checklist de fechamento
 
 - [x] v1.6.4: PR 44 mesclado e CI aprovada.
-- [ ] Concluir Polish sem ampliar escopo.
+- [x] Concluir Polish sem ampliar escopo (PR 47) e corrigir grades (PR 48).
+- [x] Confirmar CI do PR 48, 45 testes aprovados e equivalência da árvore Git à develop após merge.
+- [ ] Executar [matriz de homologação manual](homologacao-final.md) em ambiente isolado e registrar evidências.
 - [ ] Aprovar testes e revisão manual da versão final.
 - [ ] Promover o código homologado à main conforme fluxo do projeto; não sobrescrever a branch.
 - [ ] Identificar versão/commit final e publicar o arquivo de entrega.

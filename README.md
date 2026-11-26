@@ -6,8 +6,8 @@ Aplicativo desktop de controle financeiro pessoal com dados locais em SQLite. De
 
 ## Abrir sem instalação
 
-1. Abra a [execução Windows aprovada da v1.6.4](https://github.com/Pdrokk/fincontrol/actions/runs/45729602359).
-2. Baixe o [artefato portátil homologado](https://github.com/Pdrokk/fincontrol/actions/runs/45729602359/artifacts/15076108412) (ZIP; pode exigir login no GitHub). Extraia o arquivo `FinControl-1.6.4-portable.exe`.
+1. Abra a [execução Windows aprovada da v1.6.4](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820).
+2. Baixe o [artefato portátil homologado](https://github.com/Pdrokk/fincontrol/actions/runs/45733822820/artifacts/15078142692) (ZIP; pode exigir login no GitHub). Extraia o arquivo `FinControl-1.6.4-portable.exe`.
 3. Execute o EXE com duplo clique. Não é necessário instalar Node.js nem VS Code. A extração temporária pode tornar o primeiro início mais lento.
 4. Confirme a versão em **Configurações → Sobre o aplicativo**.
 
@@ -55,7 +55,7 @@ npm.cmd run build
 npm.cmd run build:win -- --x64
 ```
 
-O último comando gera `dist/FinControl-<versão>-portable.exe`. A CI usa Node 24 e valida o executável com bancos temporários. A versão 1.6.4 obteve 45 testes aprovados, zero falhas e 1.721 avisos de lint (sem erros); consulte as evidências em [homologação atual](docs/HOMOLOGACAO_V1.md). Não confunda testes automatizados com homologação manual em um computador do usuário.
+O último comando gera `dist/FinControl-<versão>-portable.exe`. A CI usa Node 24 e valida o executável com bancos temporários. A versão 1.6.4 obteve 45 testes aprovados, zero falhas e 1.719 avisos de lint (sem erros); consulte as evidências em [homologação atual](docs/HOMOLOGACAO_V1.md). Não confunda testes automatizados com homologação manual em um computador do usuário.
 
 ## Documentação
 
@@ -63,6 +63,7 @@ O último comando gera `dist/FinControl-<versão>-portable.exe`. A CI usa Node 2
 - [Arquitetura e regras técnicas](docs/arquitetura.md)
 - [Design system](DESIGN.md)
 - [Homologação e evidências](docs/HOMOLOGACAO_V1.md)
+- [Matriz de homologação final](docs/homologacao-final.md)
 - [Roteiro de entrega e apresentação](docs/entrega-tcc.md)
 - [Histórico de versões](CHANGELOG.md)
 - [Investimentos](docs/evolucao-investimentos.md) e [referências CVM/SEC](docs/referencia-cvm-sec.md)
