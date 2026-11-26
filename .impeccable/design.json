@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-26T00:45:50.884Z",
+  "title": "Design System: FinControl",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary"
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "primary-hover"
+      },
+      "focus": {
+        "role": "secondary",
+        "displayName": "focus"
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "success"
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "error"
+      },
+      "light-bg": {
+        "role": "neutral",
+        "displayName": "light-bg"
+      },
+      "light-surface": {
+        "role": "neutral",
+        "displayName": "light-surface"
+      },
+      "light-text": {
+        "role": "neutral",
+        "displayName": "light-text"
+      },
+      "light-muted": {
+        "role": "neutral",
+        "displayName": "light-muted"
+      },
+      "light-border": {
+        "role": "neutral",
+        "displayName": "light-border"
+      },
+      "light-sidebar": {
+        "role": "neutral",
+        "displayName": "light-sidebar"
+      },
+      "light-input": {
+        "role": "neutral",
+        "displayName": "light-input"
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "dark-bg"
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "dark-surface"
+      },
+      "dark-text": {
+        "role": "neutral",
+        "displayName": "dark-text"
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "dark-muted"
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "dark-border"
+      },
+      "dark-sidebar": {
+        "role": "neutral",
+        "displayName": "dark-sidebar"
+      },
+      "dark-input": {
+        "role": "neutral",
+        "displayName": "dark-input"
+      },
+      "nav-active": {
+        "role": "neutral",
+        "displayName": "nav-active"
+      },
+      "nav-active-text": {
+        "role": "neutral",
+        "displayName": "nav-active-text"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título de página",
+        "purpose": "Identifica a área de trabalho."
+      },
+      "metric": {
+        "displayName": "Valor financeiro",
+        "purpose": "KPI e leitura de patrimônio."
+      }
+    },
+    "shadows": [
+      {
+        "name": "nav-active",
+        "value": "0 4px 12px #2563eb33",
+        "purpose": "Estado ativo do menu, herdado do CSS."
+      }
+    ],
+    "motion": [
+      {
+        "name": "secondary",
+        "value": "background-color .15s ease, border-color .15s ease, color .15s ease",
+        "purpose": "Feedback dos botões secundários."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "max-720",
+        "value": "720px"
+      },
+      {
+        "name": "max-750",
+        "value": "750px"
+      },
+      {
+        "name": "max-800",
+        "value": "800px"
+      },
+      {
+        "name": "max-900",
+        "value": "900px"
+      },
+      {
+        "name": "max-950",
+        "value": "950px"
+      },
+      {
+        "name": "max-1100",
+        "value": "1100px"
+      },
+      {
+        "name": "max-1150",
+        "value": "1150px"
+      },
+      {
+        "name": "max-1200",
+        "value": "1200px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação de cadastro ou confirmação.",
+      "html": "<button class=\"ds-primary\">Nova transação</button>",
+      "css": ".ds-primary{background:#2563eb;color:#fff;border:0;border-radius:10px;padding:11px 16px;font:600 14px 'Segoe UI',Arial,sans-serif}.ds-primary:hover{background:#1d4ed8}.ds-primary:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}"
+    },
+    {
+      "name": "Botão secundário light",
+      "kind": "button",
+      "refersTo": "button-secondary-light",
+      "description": "Ação de apoio.",
+      "html": "<button class=\"ds-secondary\">Atualizar cotações</button>",
+      "css": ".ds-secondary{background:#ffffff;color:#0f172a;border:1px solid #e2e8f0;border-radius:9px;min-height:44px;padding:10px 14px;font:600 14px 'Segoe UI',Arial,sans-serif;transition:background-color .15s ease,border-color .15s ease,color .15s ease}.ds-secondary:hover{background:#f1f5f9;border-color:#60a5fa}.ds-secondary:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}.ds-secondary:disabled{opacity:.48;cursor:not-allowed}"
+    },
+    {
+      "name": "Botão secundário dark",
+      "kind": "button",
+      "refersTo": "button-secondary-dark",
+      "description": "Ação de apoio.",
+      "html": "<button class=\"ds-secondary\">Atualizar cotações</button>",
+      "css": ".ds-secondary{background:#273449;color:#f8fafc;border:1px solid #334155;border-radius:9px;min-height:44px;padding:10px 14px;font:600 14px 'Segoe UI',Arial,sans-serif;transition:background-color .15s ease,border-color .15s ease,color .15s ease}.ds-secondary:hover{background:#0b1220;border-color:#60a5fa}.ds-secondary:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}.ds-secondary:disabled{opacity:.48;cursor:not-allowed}"
+    },
+    {
+      "name": "Campo de formulário",
+      "kind": "input",
+      "description": "Campo identificado em tema claro.",
+      "html": "<label class=\"ds-label\">Valor (R$)<input class=\"ds-field\" placeholder=\"0,00\" inputmode=\"decimal\"></label>",
+      "css": ".ds-label{display:flex;flex-direction:column;gap:8px;font:600 14px 'Segoe UI',Arial,sans-serif;color:#0f172a}.ds-field{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px;padding:12px;font:inherit}.ds-field:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}"
+    },
+    {
+      "name": "Painel de indicador",
+      "kind": "card",
+      "refersTo": "panel-dark",
+      "description": "Saldo em tema escuro; valor ilustrativo.",
+      "html": "<div class=\"ds-kpi\"><span>Saldo nas contas</span><strong>R$ 1.000,00</strong><small>Dinheiro disponível nos bancos</small></div>",
+      "css": ".ds-kpi{display:flex;flex-direction:column;gap:10px;background:#1e293b;border:1px solid #334155;border-radius:14px;padding:20px;font:13px 'Segoe UI',Arial,sans-serif;color:#94a3b8}.ds-kpi strong{font-size:24px;letter-spacing:-.6px;color:#f8fafc}.ds-kpi small{font-size:12px}"
+    },
+    {
+      "name": "Navegação compacta",
+      "kind": "nav",
+      "description": "Atalho ativo com nome acessível.",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-nav-item\" aria-label=\"Visão Geral\" aria-current=\"page\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg></button></nav>",
+      "css": ".ds-nav{background:#080f1c;padding:12px;display:inline-flex}.ds-nav-item{display:grid;place-items:center;width:48px;height:48px;border:0;border-radius:10px;background:rgba(96,165,250,.13);color:#bfdbfe}.ds-nav-item:hover{background:#1d4ed8}.ds-nav-item:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Painel financeiro de trabalho",
+    "overview": "Interface desktop de operação: leitura rápida de valores, ações específicas por tela e detalhes sob demanda. O conteúdo financeiro tem prioridade sobre decoração. A direção descritiva abaixo registra o sistema existente da v1.6.4; não é uma proposta de redesign.",
+    "keyCharacteristics": [
+      "Tema claro e escuro com superfícies neutras e ação azul.",
+      "Menu lateral compacto, rótulos acessíveis e áreas de trabalho previsíveis.",
+      "Valores monetários legíveis, histórico paginado e composição da carteira em rosca."
+    ],
+    "rules": [
+      {
+        "name": "The Semantic Color Rule",
+        "body": "Cor nunca é a única indicação de status, ativo ou resultado financeiro.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Use os tokens de tema existentes para superfícies, textos, bordas e campos.",
+      "Mantenha valores e percentuais acompanhados de rótulos; use BRL e pt-BR.",
+      "Agrupe filtros com os resultados e mantenha as ações financeiras no contexto correto.",
+      "Preserve foco visível, alternativa textual dos gráficos e estados de erro."
+    ],
+    "donts": [
+      "Não adicione gráficos de investimentos à Visão Geral nem duplique a rosca.",
+      "Não represente cotação ausente como zero ou patrimônio como rentabilidade.",
+      "Não substitua as regras financeiras por cálculos exclusivos do renderer.",
+      "Não introduza uma terceira paleta ou novos componentes sem necessidade comprovada."
+    ]
+  }
+}

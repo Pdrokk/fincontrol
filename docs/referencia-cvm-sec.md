@@ -1,8 +1,10 @@
-# Referências de informação financeira — CVM e SEC
+# Referências de informação financeira — CVM, SEC, BCB e BRAPI
 
-A carteira do FinControl mantém sua identidade visual e controle local. A consulta de fundos da CVM e a busca de documentos do EDGAR são referências para busca por ativo, organização de informações, fontes explícitas e detalhamento sob demanda. Não são fontes de cotação em tempo real para a carteira.
+A CVM e o SEC EDGAR inspiram a organização de busca, identificação de fontes e detalhamento por ativo. São links externos de consulta pública, não provedores integrados de cotação em tempo real.
 
-- CVM: https://dados.cvm.gov.br/ e https://sistemas.cvm.gov.br/cvmweb.asp — cadastro de emissores, fundos e documentos.
-- SEC EDGAR: https://www.sec.gov/search-filings — consulta de documentos, entidades e dados financeiros estruturados.
+- CVM: https://dados.cvm.gov.br/ e https://sistemas.cvm.gov.br/cvmweb.asp
+- SEC EDGAR: https://www.sec.gov/search-filings
+- Banco Central do Brasil: https://www.bcb.gov.br/ — PTAX para USD/EUR.
+- BRAPI: https://brapi.dev/ — cotações de mercado brasileiro e fundamentos quando disponíveis.
 
-Nesta versão: barra proporcional de composição por categoria, legenda compacta, busca por código/nome/instituição e filtro por categoria. Filtros não mudam patrimônio nem alocação total; cotações ausentes continuam explícitas. Futuras evoluções: ficha do ativo, documentos oficiais e dados fundamentais, mediante verificação de identidade do emissor, fonte e cobertura. Nenhum acesso a dados regulatórios ou provedor novo foi implementado nesta versão.
+Na v1.6.4, a carteira usa rosca por ativo, busca por código/nome/instituição e filtro por categoria. Os filtros não mudam patrimônio nem alocação total. A ficha abre fontes oficiais e consulta fundamentos sob demanda. Não há importação automática de documentos nem identificação automática de emissores via CVM/SEC. A qualidade dos dados depende de fonte, data, cobertura e plano. Os registros não são recomendação de investimentos.
